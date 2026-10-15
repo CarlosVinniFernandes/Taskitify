@@ -1,0 +1,12 @@
+bin/
+obj/
+publish/
+publish-*/
+.vs/
+*.user
+*.suo
+TestResults/
+
+# Distribution zips are built locally and uploaded to GitHub Releases.
+dist/*
+!dist/LEIA-ME.txt

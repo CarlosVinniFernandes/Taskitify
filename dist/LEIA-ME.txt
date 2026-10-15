@@ -1,0 +1,33 @@
+Taskitify
+=========
+
+Letras sincronizadas do Spotify no lugar do clima da barra de tarefas do Windows.
+
+Requisitos
+- Windows 11 (ou Windows 10 versão 1809 ou mais nova), 64 bits (x64)
+- Spotify instalado no computador (o app de desktop, não o site)
+- Não precisa instalar .NET nem ter permissão de administrador
+
+Como usar
+1. Extraia o Taskitify.exe para uma pasta fixa (por exemplo, Documentos\Taskitify).
+   Não rode de dentro do .zip.
+2. Abra o Taskitify.exe.
+   Se aparecer "O Windows protegeu o computador", clique em "Mais informações" e depois
+   em "Executar assim mesmo". O aviso aparece porque o programa não tem assinatura
+   digital paga, não porque tenha algo errado.
+3. Na primeira vez, as configurações abrem sozinhas. Toque uma música no Spotify: a letra
+   aparece no lugar do clima.
+
+Dicas
+- Clique na letra para abrir o mini player.
+- Clique com o botão direito na letra para buscar a letra de novo, calibrar a posição ou sair.
+- Em Configurações > Estilo > "Monte a sua barra", clique nos elementos para escolher o
+  que aparece (verde aparece, branco fica escondido).
+- Para abrir com o Windows: Configurações > Geral > "Iniciar com o Windows".
+- Se o widget aparecer no lugar errado: clique com o botão direito > "Calibrar posição",
+  arraste-o e ajuste a largura com a roda do mouse.
+
+As letras vêm do LRCLIB (lrclib.net). Algumas músicas não têm letra lá; nesse caso aparece
+o nome da música.
+
+Código aberto (licença MIT): https://github.com/CarlosVinniFernandes/Taskitify

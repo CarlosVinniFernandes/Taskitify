@@ -1,0 +1,173 @@
+<UserControl x:Class="Taskitify.Views.PlayerPicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- A replica of the taskbar player. Every element is a toggle bound to a BarLayoutViewModel:
+         green = shown on the taskbar, white = hidden. Used for the normal and the minimized player. -->
+    <UserControl.Resources>
+        <!-- Player picker toggles: white = off, green = on. -->
+        <SolidColorBrush x:Key="PickOnBrush" Color="#FF1ED760" />
+        <SolidColorBrush x:Key="PickOffBrush" Color="#E6FFFFFF" />
+        <Style x:Key="PickGlyph" TargetType="ToggleButton">
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{StaticResource PickOffBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Bg" CornerRadius="15" Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#22FFFFFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource PickOnBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="PickPlay" TargetType="ToggleButton" BasedOn="{StaticResource PickGlyph}">
+            <Setter Property="Margin" Value="3,0" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Grid>
+                            <Ellipse x:Name="Circle" Fill="{StaticResource PickOffBrush}" />
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" TextElement.Foreground="#FF121212" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Circle" Property="Fill" Value="{StaticResource PickOnBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Circle" Property="Opacity" Value="0.85" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="PickCover" TargetType="ToggleButton">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Frame" CornerRadius="4" BorderThickness="2" BorderBrush="{StaticResource PickOffBrush}" Background="#26FFFFFF">
+                            <TextBlock x:Name="Glyph" Text="&#xE8D6;" FontFamily="{StaticResource IconFont}" FontSize="13"
+                                       Foreground="{StaticResource PickOffBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource PickOnBrush}" />
+                                <Setter TargetName="Glyph" Property="Foreground" Value="{StaticResource PickOnBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Frame" Property="Background" Value="#40FFFFFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="PickText" TargetType="ToggleButton">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{StaticResource PickOffBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Bg" CornerRadius="3" Background="Transparent" Padding="2,0">
+                            <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#22FFFFFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Foreground" Value="{StaticResource PickOnBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="PickProgress" TargetType="ToggleButton">
+            <Setter Property="Height" Value="10" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Grid Background="Transparent">
+                            <Border x:Name="Line" Height="3" CornerRadius="1.5" VerticalAlignment="Center" Background="{StaticResource PickOffBrush}" Opacity="0.8" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Line" Property="Background" Value="{StaticResource PickOnBrush}" />
+                                <Setter TargetName="Line" Property="Opacity" Value="1" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Line" Property="Height" Value="4" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="PickMainText" TargetType="ToggleButton" BasedOn="{StaticResource PickText}">
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Height="48">
+        <Border CornerRadius="6" BorderBrush="#22FFFFFF" BorderThickness="1">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                    <GradientStop Offset="0" Color="#FF1B1B22" />
+                    <GradientStop Offset="1" Color="#FF3A3A48" />
+                </LinearGradientBrush>
+            </Border.Background>
+        </Border>
+        <Grid Margin="8,0,6,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ToggleButton Style="{StaticResource PickCover}" IsChecked="{Binding ShowCover}"
+                          Width="{Binding PickerCoverSize}" Height="{Binding PickerCoverSize}"
+                          ToolTip="Capa do álbum" AutomationProperties.Name="Capa do álbum" />
+            <StackPanel Grid.Column="1" Margin="10,0,8,0" VerticalAlignment="Center">
+                <ToggleButton Style="{StaticResource PickMainText}" IsChecked="{Binding ShowText}" Content="{Binding TextLabel}"
+                              HorizontalAlignment="Left" ToolTip="{Binding TextLabel}"
+                              AutomationProperties.Name="{Binding TextLabel}" />
+                <ToggleButton Style="{StaticResource PickText}" IsChecked="{Binding ShowCaption}" Content="{Binding CaptionLabel}"
+                              HorizontalAlignment="Left" ToolTip="{Binding CaptionLabel}"
+                              AutomationProperties.Name="{Binding CaptionLabel}" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowShuffle}" Content="&#xE8B1;" ToolTip="Aleatório" AutomationProperties.Name="Aleatório" />
+                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowPrevious}" Content="&#xE892;" ToolTip="Anterior" AutomationProperties.Name="Anterior" />
+                <ToggleButton Style="{StaticResource PickPlay}" IsChecked="{Binding ShowPlayPause}" Content="&#xE769;" ToolTip="Tocar/Pausar" AutomationProperties.Name="Tocar/Pausar" />
+                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowNext}" Content="&#xE893;" ToolTip="Próxima" AutomationProperties.Name="Próxima" />
+                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowRepeat}" Content="&#xE8EE;" ToolTip="Repetir" AutomationProperties.Name="Repetir" />
+                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowVolume}" Content="&#xE995;"
+                              ToolTip="Volume do Spotify no mixer do Windows (clique silencia, roda do mouse ajusta)" AutomationProperties.Name="Volume" />
+            </StackPanel>
+        </Grid>
+        <ToggleButton Style="{StaticResource PickProgress}" IsChecked="{Binding ShowProgress}" VerticalAlignment="Bottom" Margin="{Binding PickerProgressMargin}"
+                      ToolTip="Barra de progresso" AutomationProperties.Name="Barra de progresso" />
+    </Grid>
+</UserControl>

@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- The Windows SDK TFM gives access to Windows.Media.Control (GSMTC) through CsWinRT. -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <!-- Only for NotifyIcon (tray) and Screen; both ship with the Windows Desktop runtime. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>Taskitify</AssemblyName>
+    <RootNamespace>Taskitify</RootNamespace>
+    <Version>1.0.0</Version>
+    <Product>Taskitify</Product>
+    <Description>Letras sincronizadas do Spotify na barra de tarefas do Windows 11.</Description>
+    <Authors>Carlos Fernandes</Authors>
+    <Copyright>Copyright (c) 2026 Carlos Fernandes</Copyright>
+    <RepositoryUrl>https://github.com/CarlosVinniFernandes/Taskitify</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <ApplicationIcon>Resources\Taskitify.ico</ApplicationIcon>
+    <Platforms>AnyCPU;x64</Platforms>
+    <!-- WinForms analyzer wants Application.SetHighDpiMode; this is a WPF app, so the manifest is right. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WinForms and WPF share type names (Application, Color, MessageBox...). Keep WinForms explicit. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Window icons (pack URI) and the tray icon (embedded stream). -->
+    <Resource Include="Resources\Taskitify.ico" />
+    <EmbeddedResource Include="Resources\Taskitify.ico" LogicalName="Taskitify.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Taskitify.Core\Taskitify.Core.csproj" />
+  </ItemGroup>
+
+</Project>

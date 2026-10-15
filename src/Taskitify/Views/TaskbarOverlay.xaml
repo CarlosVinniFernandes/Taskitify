@@ -1,0 +1,189 @@
+<Window x:Class="Taskitify.Views.TaskbarOverlay"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Taskitify.Views"
+        Title="Taskitify"
+        WindowStyle="None"
+        AllowsTransparency="False"
+        Background="{Binding TaskbarBrush}"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Topmost="True"
+        Focusable="False"
+        Width="200" Height="48"
+        FontFamily="{StaticResource UiFont}"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        UseLayoutRounding="True">
+
+    <!-- Opaque window filled with the sampled taskbar colour, so the weather widget is fully
+         hidden and the corners around the gradient "pill" blend with the taskbar.
+         Not a layered window (AllowsTransparency=False): WPF renders it on the GPU. -->
+    <Window.Resources>
+        <!-- Small borderless glyph button; colour comes from the overlay (not the app theme). -->
+        <Style x:Key="BarButton" TargetType="Button">
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" CornerRadius="15" Background="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#22FFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#14FFFFFF" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="BarPlayButton" TargetType="Button" BasedOn="{StaticResource BarButton}">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Margin" Value="3,0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <Ellipse x:Name="Circle" Fill="{TemplateBinding Background}" />
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Circle" Property="Opacity" Value="0.88" />
+                                <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+                                <Setter Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="1.06" ScaleY="1.06" />
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Circle" Property="Opacity" Value="0.7" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <!-- The taskbar's own 1px top edge continues over us. -->
+        <Border BorderBrush="{Binding TopLine}" BorderThickness="0,1,0,0" />
+
+        <!-- Album gradient pill (only in "album gradient" mode). -->
+        <Border x:Name="Pill" Margin="2,4" CornerRadius="6" BorderBrush="#14FFFFFF" BorderThickness="1">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                    <GradientStop x:Name="GradientStartStop" Offset="0" />
+                    <GradientStop x:Name="GradientEndStop" Offset="1" />
+                </LinearGradientBrush>
+            </Border.Background>
+        </Border>
+        <Border x:Name="HoverPlate" Margin="2,4" CornerRadius="6" Background="Transparent" />
+
+        <Grid Margin="8,4,6,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Cover art in place of the weather icon. -->
+            <Grid x:Name="CoverHost" Width="{Binding CoverSize}" Height="{Binding CoverSize}" VerticalAlignment="Center" Margin="0,0,10,0"
+                  Visibility="{Binding ShowCover, Converter={StaticResource BoolToVisibility}}">
+                <Border CornerRadius="4" Background="#26FFFFFF">
+                    <TextBlock Text="&#xE8D6;" FontFamily="{StaticResource IconFont}" FontSize="14" Foreground="{Binding Foreground}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <Border CornerRadius="4">
+                    <Border.Background>
+                        <ImageBrush ImageSource="{Binding Cover}" Stretch="UniformToFill" />
+                    </Border.Background>
+                </Border>
+            </Grid>
+
+            <StackPanel x:Name="TextHost" Grid.Column="1" VerticalAlignment="Center"
+                        Visibility="{Binding ShowTextArea, Converter={StaticResource BoolToVisibility}}">
+                <!-- Two stacked lines cross-fade on change. -->
+                <local:MarqueePanel x:Name="LineHost" Visibility="{Binding ShowMainText, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock x:Name="LineA" VerticalAlignment="Center" Foreground="{Binding Foreground}" FontSize="{Binding FontSize}"
+                               TextTrimming="CharacterEllipsis" TextWrapping="NoWrap">
+                        <TextBlock.RenderTransform><TranslateTransform /></TextBlock.RenderTransform>
+                    </TextBlock>
+                    <TextBlock x:Name="LineB" VerticalAlignment="Center" Foreground="{Binding Foreground}" FontSize="{Binding FontSize}"
+                               TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Opacity="0">
+                        <TextBlock.RenderTransform><TranslateTransform /></TextBlock.RenderTransform>
+                    </TextBlock>
+                </local:MarqueePanel>
+                <TextBlock x:Name="CaptionText" Text="{Binding Caption}" Foreground="{Binding Secondary}" Margin="0,1,0,0"
+                           FontSize="{Binding CaptionFontSize}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
+                           Visibility="{Binding ShowCaption, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+
+            <!-- Playback controls (optional). -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0"
+                        Visibility="{Binding ShowControls, Converter={StaticResource BoolToVisibility}}">
+                <Button Style="{StaticResource BarButton}" Command="{Binding ShuffleCommand}" Content="&#xE8B1;"
+                        Foreground="{Binding ShuffleBrush}" ToolTip="Aleatório"
+                        Visibility="{Binding ShowShuffle, Converter={StaticResource BoolToVisibility}}" />
+                <Button Style="{StaticResource BarButton}" Command="{Binding PreviousCommand}" Content="&#xE892;"
+                        Foreground="{Binding Foreground}" ToolTip="Anterior"
+                        Visibility="{Binding ShowPrevious, Converter={StaticResource BoolToVisibility}}" />
+                <Button Style="{StaticResource BarPlayButton}" Command="{Binding PlayPauseCommand}" Content="{Binding PlayGlyph}"
+                        Background="{Binding Foreground}" Foreground="{Binding InverseForeground}" ToolTip="Tocar/Pausar"
+                        Visibility="{Binding ShowPlayPause, Converter={StaticResource BoolToVisibility}}" />
+                <Button Style="{StaticResource BarButton}" Command="{Binding NextCommand}" Content="&#xE893;"
+                        Foreground="{Binding Foreground}" ToolTip="Próxima"
+                        Visibility="{Binding ShowNext, Converter={StaticResource BoolToVisibility}}" />
+                <Button Style="{StaticResource BarButton}" Command="{Binding RepeatCommand}" Content="{Binding RepeatGlyph}"
+                        Foreground="{Binding RepeatBrush}" ToolTip="Repetir"
+                        Visibility="{Binding ShowRepeat, Converter={StaticResource BoolToVisibility}}" />
+                <Button x:Name="VolumeButton" Style="{StaticResource BarButton}" Command="{Binding MuteCommand}" Content="{Binding VolumeGlyph}"
+                        Foreground="{Binding Foreground}" ToolTip="{Binding VolumeTip}"
+                        Visibility="{Binding ShowVolume, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Thin progress line along the bottom of the pill (optional). -->
+        <Grid Margin="{Binding ProgressMargin}" Height="1" VerticalAlignment="Bottom" IsHitTestVisible="False"
+              Visibility="{Binding ShowProgress, Converter={StaticResource BoolToVisibility}}">
+            <Border CornerRadius="1" Background="{Binding Secondary}" Opacity="0.35" />
+            <Border CornerRadius="1" Background="{Binding Foreground}" RenderTransformOrigin="0,0.5">
+                <Border.RenderTransform>
+                    <ScaleTransform ScaleX="{Binding Progress}" />
+                </Border.RenderTransform>
+            </Border>
+        </Grid>
+
+        <!-- Calibration frame -->
+        <Border x:Name="CalibrationFrame" BorderThickness="2" Visibility="Collapsed" IsHitTestVisible="False">
+            <Border.BorderBrush>
+                <DrawingBrush Viewport="0,0,8,8" ViewportUnits="Absolute" TileMode="Tile">
+                    <DrawingBrush.Drawing>
+                        <DrawingGroup>
+                            <GeometryDrawing Brush="#FF4CC2FF">
+                                <GeometryDrawing.Geometry>
+                                    <GeometryGroup>
+                                        <RectangleGeometry Rect="0,0,4,4" />
+                                        <RectangleGeometry Rect="4,4,4,4" />
+                                    </GeometryGroup>
+                                </GeometryDrawing.Geometry>
+                            </GeometryDrawing>
+                        </DrawingGroup>
+                    </DrawingBrush.Drawing>
+                </DrawingBrush>
+            </Border.BorderBrush>
+        </Border>
+    </Grid>
+</Window>
