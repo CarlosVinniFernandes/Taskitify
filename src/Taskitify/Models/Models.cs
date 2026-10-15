@@ -122,6 +122,8 @@ public sealed class BarLayout
 /// <summary>Persisted to %AppData%\Taskitify\settings.json.</summary>
 public sealed class AppSettings
 {
+    public string Language { get; set; } = "en";
+
     public OverlayBackground Background { get; set; } = OverlayBackground.AlbumGradient;
 
     public PrimaryText PrimaryText { get; set; } = PrimaryText.Lyrics;

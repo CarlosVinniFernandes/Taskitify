@@ -58,6 +58,7 @@ public sealed class SettingsService
     public void Update(Action<AppSettings> change)
     {
         change(Current);
+        LocalizationService.SetLanguage(Current.Language);
         Changed?.Invoke(this, EventArgs.Empty);
         _saveTimer.Stop();
         _saveTimer.Start();

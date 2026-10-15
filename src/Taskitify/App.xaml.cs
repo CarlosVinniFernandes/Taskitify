@@ -76,6 +76,7 @@ public partial class App : Application
 
         _settings = new SettingsService();
         _settings.Load();
+        LocalizationService.SetLanguage(_settings.Current.Language);
         Log.WriteToFile = _settings.Current.DebugMode;
         Log.Info($"Taskitify starting (Windows {Environment.OSVersion.Version}, background={background})");
 
@@ -116,14 +117,14 @@ public partial class App : Application
         catch (Exception ex)
         {
             Log.Error("Could not access Windows media sessions", ex);
-            MessageBox.Show("Não foi possível acessar as sessões de mídia do Windows.\n\n" + ex.Message,
+            MessageBox.Show(LocalizationService.Get("MediaError") + "\n\n" + ex.Message,
                 "Taskitify", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
         if (_settings.IsFirstRun)
             ShowSettings();
         else if (!background && _tray.Visible)
-            _tray.ShowBalloon("Taskitify", "Rodando em segundo plano. A letra aparece no lugar do clima quando o Spotify tocar.");
+            _tray.ShowBalloon("Taskitify", LocalizationService.Get("BackgroundNotice"));
     }
 
     protected override void OnExit(ExitEventArgs e)

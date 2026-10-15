@@ -46,18 +46,21 @@ public partial class DebugWindow : Window
     private void Render()
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"Sessões de mídia : {string.Join(" | ", _monitor.AllSessionAppIds.DefaultIfEmpty("(nenhuma)"))}");
-        sb.AppendLine($"Sessão Spotify   : {_monitor.SessionAppId ?? "(não encontrada)"}");
-        sb.AppendLine($"Estado           : {_monitor.Status}");
-        sb.AppendLine($"Música           : {_monitor.Track?.Title ?? "-"}");
-        sb.AppendLine($"Artista / Álbum  : {_monitor.Track?.Artist ?? "-"} / {_monitor.Track?.Album ?? "-"}");
-        sb.AppendLine($"Posição          : {_monitor.Position:mm\\:ss\\.fff} / {(_monitor.Duration is { } d ? d.ToString(@"mm\:ss\.fff") : "?")}");
-        sb.AppendLine($"Controles        : seek={_monitor.CanSeek} next={_monitor.CanGoNext} prev={_monitor.CanGoPrevious} shuffle={_monitor.CanShuffle}:{_monitor.IsShuffleActive} repeat={_monitor.CanRepeat}:{_monitor.RepeatMode}");
-        sb.AppendLine($"Letra            : {_sync.State} ({_sync.Timeline?.Count ?? 0} linhas) linha {_sync.CurrentIndex}");
-        sb.AppendLine($"Linha atual      : {_sync.CurrentLine?.Text ?? "-"}");
+        static string T(string key) => LocalizationService.Get(key);
+        static string B(bool value) => T(value ? "Yes" : "No");
+        void Line(string key, object value) => sb.AppendLine($"{T(key)}: {value}");
+        Line("MediaSessions", string.Join(" | ", _monitor.AllSessionAppIds.DefaultIfEmpty(T("None"))));
+        Line("SpotifySession", _monitor.SessionAppId ?? T("NotFound"));
+        Line("State", T(_monitor.Status.ToString()));
+        Line("Track", _monitor.Track?.Title ?? "-");
+        Line("ArtistAlbum", $"{_monitor.Track?.Artist ?? "-"} / {_monitor.Track?.Album ?? "-"}");
+        Line("Position", $"{_monitor.Position:mm\\:ss\\.fff} / {(_monitor.Duration is { } d ? d.ToString(@"mm\:ss\.fff") : "?")}");
+        Line("Controls", $"{T("Seek")}={B(_monitor.CanSeek)} {T("Next")}={B(_monitor.CanGoNext)} {T("Previous")}={B(_monitor.CanGoPrevious)} {T("Shuffle")}={B(_monitor.CanShuffle)}:{B(_monitor.IsShuffleActive)} {T("Repeat")}={B(_monitor.CanRepeat)}:{T(_monitor.RepeatMode.ToString())}");
+        Line("Lyrics", LocalizationService.Format("LyricsDiagnostic", T(_sync.State.ToString()), _sync.Timeline?.Count ?? 0, _sync.CurrentIndex));
+        Line("CurrentLine", _sync.CurrentLine?.Text ?? "-");
         var p = _overlay.Placement;
-        sb.AppendLine($"Barra            : {(p is null ? "?" : $"{p.Taskbar} em {p.MonitorName}, escala {p.Scale:0.##}, auto-ocultar={p.AutoHide}")}");
-        sb.Append($"Widget / overlay : {(p is null ? "?" : $"{p.Widget} (detectado={p.WidgetDetected})")} / {_overlay.Bounds} visível={_overlay.IsShown}");
+        Line("Taskbar", p is null ? "?" : LocalizationService.Format("PlacementDiagnostic", p.Taskbar, p.MonitorName, p.Scale, B(p.AutoHide)));
+        sb.Append(LocalizationService.Format("OverlayDiagnostic", p?.Widget.ToString() ?? "?", p is null ? "?" : B(p.WidgetDetected), _overlay.Bounds, B(_overlay.IsShown)));
         StateText.Text = sb.ToString();
     }
 }

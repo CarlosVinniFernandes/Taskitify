@@ -59,13 +59,13 @@
 
                 <!-- Controls -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,4">
-                    <Button Style="{StaticResource IconButton}" Command="{Binding PreviousCommand}" Content="&#xE892;" ToolTip="Anterior" />
+                    <Button Style="{StaticResource IconButton}" Command="{Binding PreviousCommand}" Content="&#xE892;" ToolTip="{DynamicResource Loc.Previous}" />
                     <Button Style="{StaticResource PlayButton}" Command="{Binding PlayPauseCommand}" Margin="16,0" x:Name="PlayPauseButton"
-                            ToolTip="Tocar/Pausar">
+                            ToolTip="{DynamicResource Loc.PlayPause}">
                         <TextBlock x:Name="PlayPauseGlyph" Text="&#xE768;" FontFamily="{StaticResource IconFont}"
                                    Foreground="{DynamicResource WindowBackgroundBrush}" />
                     </Button>
-                    <Button Style="{StaticResource IconButton}" Command="{Binding NextCommand}" Content="&#xE893;" ToolTip="Próxima" />
+                    <Button Style="{StaticResource IconButton}" Command="{Binding NextCommand}" Content="&#xE893;" ToolTip="{DynamicResource Loc.Next}" />
                 </StackPanel>
 
                 <!-- Lyrics: a fixed viewport; the list is translated so the current line sits in the middle. -->

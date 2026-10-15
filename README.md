@@ -43,8 +43,9 @@ No Spicetify, no Spotify login and no Premium needed. Taskitify reads what is pl
 | 🎛️ **Taskbar player** | Previous, play/pause, next, shuffle, repeat, volume and a progress bar. You choose which ones appear. |
 | 🪟 **Mini player** | One click on the lyric shows the album art, controls and the full scrolling lyrics with the current line highlighted. Click a line to jump to it. |
 | ⏸️ **Minimized player** | When paused, Taskitify can shrink to the size of the weather widget (art, title and a play button) instead of hiding. |
-| 🧩 **Build your bar** | A replica of the player in the settings: click each element to turn it on (green) or off (white). |
+| 🧩 **Customize your bar** | A replica of the player in the settings: click each element to turn it on (green) or off (white). |
 | 🖥️ **Made for Windows 11** | Hides with the taskbar in fullscreen, never steals focus, stays out of Alt+Tab and handles DPI scaling and dark mode. |
+| 🌍 **6 languages** | English, Português, Español, Français, Deutsch and Italiano. Switch in Settings → General → Language. |
 | 🪶 **Lightweight** | About 60 MB of RAM and ~1% of one CPU core while playing; idle when paused. Never runs as administrator. |
 
 <p align="center">
@@ -73,7 +74,7 @@ No Spicetify, no Spotify login and no Premium needed. Taskitify reads what is pl
 | `Esc` or click outside | Closes the mini player |
 | Click a line in the mini player | Jumps the song to that line |
 | Mouse wheel on the volume button | Changes Spotify's volume (click to mute) |
-| Right-click the lyric | Search lyrics again, show song and artist, calibrate position, settings, exit |
+| Right-click the lyric | Fetch lyrics again, show song and artist, calibrate position, settings, exit |
 | Tray icon | Settings, mini player and exit |
 
 To start with Windows: **Settings → General → Start with Windows**.
@@ -94,7 +95,7 @@ You can also choose:
 - **When paused:** hide (the weather comes back) or minimize the player.
 - **No synced lyrics:** show the song title or hide.
 - **Font size, width, animations** and scrolling for text that does not fit.
-- **Timing offset**, if the lyrics run early or late.
+- **Timing adjustment (offset)**, if the lyrics run early or late.
 - **Position calibration**, in case Windows places the weather widget somewhere else.
 
 ## Privacy
@@ -105,9 +106,9 @@ You can also choose:
 
 ## FAQ
 
-**The lyrics did not show up.** Some songs are not on LRCLIB; in that case the taskbar shows the song title. When LRCLIB is under heavy load, lyrics may take a few seconds to arrive. Right-click the lyric → **Search lyrics again** to force a new lookup.
+**The lyrics did not show up.** Some songs are not on LRCLIB; in that case the taskbar shows the song title. When LRCLIB is under heavy load, lyrics may take a few seconds to arrive. Right-click the lyric → **Fetch lyrics again** to force a new lookup.
 
-**The lyrics are early or late.** Settings → Sync → **Timing offset**.
+**The lyrics are early or late.** Settings → Synchronization → **Timing adjustment (offset)**.
 
 **The widget showed up in the wrong place.** Right-click → **Calibrate position**, drag it and adjust the width with the mouse wheel.
 
@@ -121,7 +122,7 @@ Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
 
 ```powershell
 dotnet build                                   # build
-dotnet test                                    # 74 tests (lyrics, sync, colors, layout)
+dotnet test                                    # 81 tests (lyrics, sync, colors, layout)
 dotnet run --project src/Taskitify             # run
 
 # Single executable that needs no .NET installed (~179 MB; ~69 MB zipped)

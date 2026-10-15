@@ -148,7 +148,7 @@
             </Grid.ColumnDefinitions>
             <ToggleButton Style="{StaticResource PickCover}" IsChecked="{Binding ShowCover}"
                           Width="{Binding PickerCoverSize}" Height="{Binding PickerCoverSize}"
-                          ToolTip="Capa do álbum" AutomationProperties.Name="Capa do álbum" />
+                          ToolTip="{DynamicResource Loc.Cover}" AutomationProperties.Name="{DynamicResource Loc.Cover}" />
             <StackPanel Grid.Column="1" Margin="10,0,8,0" VerticalAlignment="Center">
                 <ToggleButton Style="{StaticResource PickMainText}" IsChecked="{Binding ShowText}" Content="{Binding TextLabel}"
                               HorizontalAlignment="Left" ToolTip="{Binding TextLabel}"
@@ -158,16 +158,16 @@
                               AutomationProperties.Name="{Binding CaptionLabel}" />
             </StackPanel>
             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowShuffle}" Content="&#xE8B1;" ToolTip="Aleatório" AutomationProperties.Name="Aleatório" />
-                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowPrevious}" Content="&#xE892;" ToolTip="Anterior" AutomationProperties.Name="Anterior" />
-                <ToggleButton Style="{StaticResource PickPlay}" IsChecked="{Binding ShowPlayPause}" Content="&#xE769;" ToolTip="Tocar/Pausar" AutomationProperties.Name="Tocar/Pausar" />
-                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowNext}" Content="&#xE893;" ToolTip="Próxima" AutomationProperties.Name="Próxima" />
-                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowRepeat}" Content="&#xE8EE;" ToolTip="Repetir" AutomationProperties.Name="Repetir" />
+                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowShuffle}" Content="&#xE8B1;" ToolTip="{DynamicResource Loc.Shuffle}" AutomationProperties.Name="{DynamicResource Loc.Shuffle}" />
+                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowPrevious}" Content="&#xE892;" ToolTip="{DynamicResource Loc.Previous}" AutomationProperties.Name="{DynamicResource Loc.Previous}" />
+                <ToggleButton Style="{StaticResource PickPlay}" IsChecked="{Binding ShowPlayPause}" Content="&#xE769;" ToolTip="{DynamicResource Loc.PlayPause}" AutomationProperties.Name="{DynamicResource Loc.PlayPause}" />
+                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowNext}" Content="&#xE893;" ToolTip="{DynamicResource Loc.Next}" AutomationProperties.Name="{DynamicResource Loc.Next}" />
+                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowRepeat}" Content="&#xE8EE;" ToolTip="{DynamicResource Loc.Repeat}" AutomationProperties.Name="{DynamicResource Loc.Repeat}" />
                 <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowVolume}" Content="&#xE995;"
-                              ToolTip="Volume do Spotify no mixer do Windows (clique silencia, roda do mouse ajusta)" AutomationProperties.Name="Volume" />
+                              ToolTip="{DynamicResource Loc.MixerVolume}" AutomationProperties.Name="{DynamicResource Loc.Volume}" />
             </StackPanel>
         </Grid>
         <ToggleButton Style="{StaticResource PickProgress}" IsChecked="{Binding ShowProgress}" VerticalAlignment="Bottom" Margin="{Binding PickerProgressMargin}"
-                      ToolTip="Barra de progresso" AutomationProperties.Name="Barra de progresso" />
+                      ToolTip="{DynamicResource Loc.Progress}" AutomationProperties.Name="{DynamicResource Loc.Progress}" />
     </Grid>
 </UserControl>

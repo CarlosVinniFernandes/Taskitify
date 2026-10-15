@@ -17,16 +17,17 @@ public sealed class BarLayoutViewModel : ObservableObject
     {
         _settings = settings;
         _select = select;
-        TextLabel = textLabel;
-        CaptionLabel = captionLabel;
+        _textKey = textLabel;
+        _captionKey = captionLabel;
         MinWidth = minWidth;
         MaxWidth = maxWidth;
         _settings.Changed += (_, _) => OnPropertyChanged(string.Empty);
     }
 
-    public string TextLabel { get; }
-
-    public string CaptionLabel { get; }
+    private readonly string _textKey;
+    private readonly string _captionKey;
+    public string TextLabel => LocalizationService.Get(_textKey);
+    public string CaptionLabel => LocalizationService.Get(_captionKey);
 
     public int MinWidth { get; }
 

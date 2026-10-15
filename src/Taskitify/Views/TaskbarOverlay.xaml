@@ -135,19 +135,19 @@
             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0"
                         Visibility="{Binding ShowControls, Converter={StaticResource BoolToVisibility}}">
                 <Button Style="{StaticResource BarButton}" Command="{Binding ShuffleCommand}" Content="&#xE8B1;"
-                        Foreground="{Binding ShuffleBrush}" ToolTip="Aleatório"
+                        Foreground="{Binding ShuffleBrush}" ToolTip="{DynamicResource Loc.Shuffle}"
                         Visibility="{Binding ShowShuffle, Converter={StaticResource BoolToVisibility}}" />
                 <Button Style="{StaticResource BarButton}" Command="{Binding PreviousCommand}" Content="&#xE892;"
-                        Foreground="{Binding Foreground}" ToolTip="Anterior"
+                        Foreground="{Binding Foreground}" ToolTip="{DynamicResource Loc.Previous}"
                         Visibility="{Binding ShowPrevious, Converter={StaticResource BoolToVisibility}}" />
                 <Button Style="{StaticResource BarPlayButton}" Command="{Binding PlayPauseCommand}" Content="{Binding PlayGlyph}"
-                        Background="{Binding Foreground}" Foreground="{Binding InverseForeground}" ToolTip="Tocar/Pausar"
+                        Background="{Binding Foreground}" Foreground="{Binding InverseForeground}" ToolTip="{DynamicResource Loc.PlayPause}"
                         Visibility="{Binding ShowPlayPause, Converter={StaticResource BoolToVisibility}}" />
                 <Button Style="{StaticResource BarButton}" Command="{Binding NextCommand}" Content="&#xE893;"
-                        Foreground="{Binding Foreground}" ToolTip="Próxima"
+                        Foreground="{Binding Foreground}" ToolTip="{DynamicResource Loc.Next}"
                         Visibility="{Binding ShowNext, Converter={StaticResource BoolToVisibility}}" />
                 <Button Style="{StaticResource BarButton}" Command="{Binding RepeatCommand}" Content="{Binding RepeatGlyph}"
-                        Foreground="{Binding RepeatBrush}" ToolTip="Repetir"
+                        Foreground="{Binding RepeatBrush}" ToolTip="{DynamicResource Loc.Repeat}"
                         Visibility="{Binding ShowRepeat, Converter={StaticResource BoolToVisibility}}" />
                 <Button x:Name="VolumeButton" Style="{StaticResource BarButton}" Command="{Binding MuteCommand}" Content="{Binding VolumeGlyph}"
                         Foreground="{Binding Foreground}" ToolTip="{Binding VolumeTip}"

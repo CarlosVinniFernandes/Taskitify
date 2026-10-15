@@ -117,6 +117,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
                 return;
             if (value)
             {
+                LocalizationService.Changed += OnTrackChanged;
                 _monitor.TrackChanged += OnTrackChanged;
                 _monitor.PlaybackChanged += OnPlaybackChanged;
                 _monitor.TimelineChanged += OnTimelineChanged;
@@ -149,6 +150,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     private void Unsubscribe()
     {
+        LocalizationService.Changed -= OnTrackChanged;
         _monitor.TrackChanged -= OnTrackChanged;
         _monitor.PlaybackChanged -= OnPlaybackChanged;
         _monitor.TimelineChanged -= OnTimelineChanged;
@@ -182,8 +184,8 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     private void RefreshAll()
     {
         var track = _monitor.Track;
-        Title = track?.Title ?? "Nada tocando";
-        Artist = track?.Artist ?? "Abra o Spotify para começar";
+        Title = track?.Title ?? LocalizationService.Get("NothingPlaying");
+        Artist = track?.Artist ?? LocalizationService.Get("OpenSpotify");
         Cover = _monitor.Thumbnail;
         IsPlaying = _monitor.IsPlaying;
         OnPropertyChanged(nameof(CanSeek));
@@ -204,11 +206,11 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         StatusMessage = _monitor.Track is null ? null : _sync.State switch
         {
             LyricsState.Synced => null,
-            LyricsState.Loading => "Buscando letra…",
-            LyricsState.Instrumental => "Faixa instrumental",
-            LyricsState.PlainOnly => "Não há letra sincronizada disponível para esta música.",
-            LyricsState.Error => "Não foi possível buscar a letra agora. Nova tentativa em instantes.",
-            _ => "Não há letra sincronizada disponível para esta música.",
+            LyricsState.Loading => LocalizationService.Get("LoadingLyrics"),
+            LyricsState.Instrumental => LocalizationService.Get("Instrumental"),
+            LyricsState.PlainOnly => LocalizationService.Get("UnavailableLyrics"),
+            LyricsState.Error => LocalizationService.Get("LyricsError"),
+            _ => LocalizationService.Get("UnavailableLyrics"),
         };
         UpdateCurrentLine();
     }

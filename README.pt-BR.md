@@ -45,6 +45,7 @@ Não precisa de Spicetify, de login no Spotify nem de Premium. O app lê a músi
 | ⏸️ **Player minimizado** | Ao pausar, o Taskitify pode encolher para o tamanho do clima (capa, nome e botão de tocar) em vez de sumir. |
 | 🧩 **Monte a sua barra** | Uma réplica do player nas configurações: clique em cada elemento para ligar (verde) ou desligar (branco). |
 | 🖥️ **Feito para o Windows 11** | Some junto com a barra em tela cheia, não rouba o foco, não aparece no Alt+Tab e respeita DPI e tema escuro. |
+| 🌍 **6 idiomas** | Português, English, Español, Français, Deutsch e Italiano. Troque em Configurações → Geral → Idioma (o padrão é inglês). |
 | 🪶 **Leve** | Cerca de 60 MB de memória e ~1% de um núcleo enquanto toca; pausado, fica parado. Nada roda como administrador. |
 
 <p align="center">
@@ -121,7 +122,7 @@ Requer o [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
 
 ```powershell
 dotnet build                                   # compila
-dotnet test                                    # 74 testes (letras, sincronização, cores, layout)
+dotnet test                                    # 81 testes (letras, sincronização, cores, layout)
 dotnet run --project src/Taskitify             # roda
 
 # Executável único, sem precisar de .NET instalado (~179 MB; ~69 MB zipado)

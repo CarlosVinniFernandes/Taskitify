@@ -15,7 +15,7 @@
     <RootNamespace>Taskitify</RootNamespace>
     <Version>1.0.0</Version>
     <Product>Taskitify</Product>
-    <Description>Letras sincronizadas do Spotify na barra de tarefas do Windows 11.</Description>
+    <Description>Synced Spotify lyrics on the Windows 11 taskbar.</Description>
     <Authors>Carlos Fernandes</Authors>
     <Copyright>Copyright (c) 2026 Carlos Fernandes</Copyright>
     <RepositoryUrl>https://github.com/CarlosVinniFernandes/Taskitify</RepositoryUrl>
@@ -35,6 +35,7 @@
   <ItemGroup>
     <!-- Window icons (pack URI) and the tray icon (embedded stream). -->
     <Resource Include="Resources\Taskitify.ico" />
+    <EmbeddedResource Include="Resources\Languages\*.json" LogicalName="Taskitify.Languages.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Resources\Taskitify.ico" LogicalName="Taskitify.ico" />
   </ItemGroup>
 

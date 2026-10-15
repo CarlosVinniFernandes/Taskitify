@@ -1,3 +1,26 @@
+Taskitify (English)
+===================
+
+Synced Spotify lyrics on the Windows taskbar, in place of the weather widget.
+
+Requirements
+- 64-bit Windows 11 (or Windows 10 version 1809 or later)
+- Spotify Desktop installed (the app, not the website)
+- No .NET installation or administrator rights needed
+
+How to use
+1. Extract Taskitify.exe to a permanent folder (for example, Documents\Taskitify).
+   Do not run it from inside the .zip.
+2. Open Taskitify.exe.
+   If "Windows protected your PC" appears, click "More info" and then "Run anyway".
+   The warning appears because the program has no paid code-signing certificate.
+3. Play a song on Spotify: the lyrics replace the weather widget.
+   Settings > General > Language switches between English, Português, Español,
+   Français, Deutsch and Italiano.
+
+Open source (MIT license): https://github.com/CarlosVinniFernandes/Taskitify
+
+
 Taskitify
 =========
 

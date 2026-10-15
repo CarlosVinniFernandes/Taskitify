@@ -169,14 +169,14 @@ public sealed class TaskbarOverlayService : IDisposable
     private System.Windows.Controls.ContextMenu BuildContextMenu()
     {
         var menu = new System.Windows.Controls.ContextMenu();
-        var calibrate = new System.Windows.Controls.MenuItem { Header = "Calibrar posição" };
+        var calibrate = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("CalibratePosition") };
         calibrate.Click += (_, _) => SetCalibrating(!IsCalibrating);
-        var settings = new System.Windows.Controls.MenuItem { Header = "Configurações…" };
+        var settings = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("Settings") };
         settings.Click += (_, _) => ((App)Application.Current).ShowSettings();
-        var exit = new System.Windows.Controls.MenuItem { Header = "Sair" };
+        var exit = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("Exit") };
         exit.Click += (_, _) => Application.Current.Shutdown();
         // Off: the caption row disappears and the lyric may use both lines.
-        var showCaption = new System.Windows.Controls.MenuItem { Header = "Mostrar música e artista", IsCheckable = true };
+        var showCaption = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("ShowCaption"), IsCheckable = true };
         showCaption.Click += (_, _) => _settings.Update(s => s.Bar.ShowCaption = showCaption.IsChecked);
         // The overlay never takes focus, so WPF cannot tell when the user clicks elsewhere;
         // a low-level mouse hook (only while the menu is open) closes it on an outside click.
@@ -192,7 +192,10 @@ public sealed class TaskbarOverlayService : IDisposable
         });
         menu.Opened += (_, _) =>
         {
-            calibrate.Header = IsCalibrating ? "Concluir calibração" : "Calibrar posição";
+            calibrate.Header = IsCalibrating ? LocalizationService.Get("FinishCalibration") : LocalizationService.Get("CalibratePosition");
+            settings.Header = LocalizationService.Get("Settings");
+            exit.Header = LocalizationService.Get("Exit");
+            showCaption.Header = LocalizationService.Get("ShowCaption");
             showCaption.IsChecked = _settings.Current.Bar.ShowCaption;
             outside.Start();
             NativeMethods.GetAsyncKeyState(NativeMethods.VK_ESCAPE); // clear a stale "pressed since" bit
@@ -211,7 +214,8 @@ public sealed class TaskbarOverlayService : IDisposable
                 menu.IsOpen = false;
         };
         // Bypasses the cache (e.g. a "not found" saved earlier) for the song playing now.
-        var refetch = new System.Windows.Controls.MenuItem { Header = "Buscar letra de novo" };
+        var refetch = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("ReloadLyrics") };
+        menu.Opened += (_, _) => refetch.Header = LocalizationService.Get("ReloadLyrics");
         refetch.Click += (_, _) => _ = _sync.ForceReloadAsync();
         menu.Items.Add(refetch);
         menu.Items.Add(showCaption);

@@ -36,7 +36,7 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
     private Brush _hover = Frozen(Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
     private double _progress;
     private string _volumeGlyph = "";
-    private string _volumeTip = "Volume do Spotify";
+    private string _volumeTip = LocalizationService.Get("SpotifyVolume");
 
     public TaskbarViewModel(ISpotifyMonitor monitor, LyricsSyncService sync, SettingsService settings, AppVolumeService volume)
     {
@@ -236,7 +236,7 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
         if (v is not { } state)
         {
             VolumeGlyph = "";
-            VolumeTip = "Volume do Spotify (toque algo para ajustar)";
+            VolumeTip = LocalizationService.Get("VolumeUnavailable");
             return;
         }
         VolumeGlyph = state.Muted || state.Volume <= 0.001f ? ""
@@ -244,8 +244,8 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
             : state.Volume < 0.67f ? ""
             : "";
         VolumeTip = state.Muted
-            ? "Spotify sem som — clique para reativar"
-            : $"Volume do Spotify: {Math.Round(state.Volume * 100)}% — roda do mouse ajusta, clique silencia";
+            ? LocalizationService.Get("SpotifyMuted")
+            : LocalizationService.Format("VolumeDetail", Math.Round(state.Volume * 100));
     }
 
     public void Dispose()
@@ -297,6 +297,7 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
     private void OnSettingsChanged(object? sender, EventArgs e)
     {
         _wasCompact = IsCompact;
+        RefreshVolume();
         OnPropertyChanged(string.Empty); // layout flags, fonts, colours
         ApplyForeground();
         UpdateProgressTimer();
@@ -338,8 +339,8 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
 
         if (track is null)
         {
-            MainText = IsCalibrating ? "Taskitify · calibração" : string.Empty;
-            Caption = IsCalibrating ? "Arraste para mover · roda do mouse: largura" : string.Empty;
+            MainText = IsCalibrating ? LocalizationService.Get("CalibrationTitle") : string.Empty;
+            Caption = IsCalibrating ? LocalizationService.Get("DragHint") : string.Empty;
             OnPropertyChanged(nameof(ShowCaption));
             return;
         }

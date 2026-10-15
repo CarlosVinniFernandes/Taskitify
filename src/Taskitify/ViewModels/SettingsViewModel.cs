@@ -8,9 +8,19 @@ using Taskitify.Services;
 
 namespace Taskitify.ViewModels;
 
-public sealed record MonitorOption(string? DeviceName, string Label);
+public sealed record MonitorOption(string? DeviceName, Func<string> GetLabel) : System.ComponentModel.INotifyPropertyChanged
+{
+    public string Label => GetLabel();
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    public void Refresh() => PropertyChanged?.Invoke(this, new(nameof(Label)));
+}
 
-public sealed record ChoiceOption<T>(T Value, string Label);
+public sealed record ChoiceOption<T>(T Value, string Key) : System.ComponentModel.INotifyPropertyChanged
+{
+    public string Label => LocalizationService.Get(Key);
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    public void Refresh() => PropertyChanged?.Invoke(this, new(nameof(Label)));
+}
 
 public sealed class SettingsViewModel : ObservableObject
 {
@@ -24,19 +34,15 @@ public sealed class SettingsViewModel : ObservableObject
     public SettingsViewModel(SettingsService settings, LyricsCache cache, LyricsSyncService sync, bool isCalibrating, Action<bool> setCalibrating)
     {
         _settings = settings;
+        Monitors = CreateMonitors();
         _cache = cache;
         _sync = sync;
         _isCalibrating = isCalibrating;
         _setCalibrating = setCalibrating;
         _startWithWindows = StartupService.IsEnabled;
 
-        Bar = new BarLayoutViewModel(settings, x => x.Bar, "Letra da música", "Música · Artista", 100, 900);
-        MinimizedBar = new BarLayoutViewModel(settings, x => x.MinimizedBar, "Nome da música", "Artista", 60, 600);
-
-        Monitors = [new MonitorOption(null, "Monitor principal"),
-            .. TaskbarPositionService.GetMonitors().Select((m, i) =>
-                new MonitorOption(m.DeviceName, $"Monitor {i + 1} — {m.Bounds.Width}×{m.Bounds.Height}{(m.IsPrimary ? " (principal)" : "")}"))];
-
+        Bar = new BarLayoutViewModel(settings, x => x.Bar, "SongLyrics", "SongArtist", 100, 900);
+        MinimizedBar = new BarLayoutViewModel(settings, x => x.MinimizedBar, "SongTitle", "Artist", 60, 600);
         ResetPlacementCommand = new RelayCommand(() => Update(s => s.ManualPlacement = false), () => S.ManualPlacement);
         ClearCacheCommand = new RelayCommand(() =>
         {
@@ -57,46 +63,66 @@ public sealed class SettingsViewModel : ObservableObject
         });
     }
 
-    /// <summary>"Monte a sua barra": the normal player.</summary>
+    /// <summary>The normal player layout.</summary>
     public BarLayoutViewModel Bar { get; }
 
-    /// <summary>"Estilo do player minimizado": shown while paused when minimizing is chosen.</summary>
+    /// <summary>The compact layout shown while paused when minimizing is chosen.</summary>
     public BarLayoutViewModel MinimizedBar { get; }
 
     public bool IsMinimizeOnPause => S.PausedBehavior == PausedBehavior.Minimize;
 
+    private IReadOnlyList<MonitorOption> CreateMonitors() => [new MonitorOption(null, () => LocalizationService.Get("PrimaryMonitor")),
+            .. TaskbarPositionService.GetMonitors().Select((m, i) =>
+                new MonitorOption(m.DeviceName, () => $"{LocalizationService.Get("Monitor")} {i + 1} — {m.Bounds.Width}×{m.Bounds.Height}{(m.IsPrimary ? LocalizationService.Get("PrimarySuffix") : "")}"))];
+
     public IReadOnlyList<MonitorOption> Monitors { get; }
+    public IReadOnlyList<LanguageOption> Languages => LocalizationService.Languages;
+    public string Language
+    {
+        get => LocalizationService.Language;
+        set
+        {
+            if (string.IsNullOrEmpty(value) || value == Language) return;
+            Update(s => s.Language = value);
+            foreach (var option in NoLyricsOptions) option.Refresh();
+            foreach (var option in BackgroundOptions) option.Refresh();
+            foreach (var option in PrimaryTextOptions) option.Refresh();
+            foreach (var option in ProgressPlacementOptions) option.Refresh();
+            foreach (var option in PausedOptions) option.Refresh();
+            foreach (var option in Monitors) option.Refresh();
+        }
+    }
 
     public IReadOnlyList<ChoiceOption<NoLyricsBehavior>> NoLyricsOptions { get; } =
     [
-        new(NoLyricsBehavior.ShowTitle, "Mostrar o nome da música"),
-        new(NoLyricsBehavior.HideOverlay, "Esconder (mostrar o clima)"),
+        new(NoLyricsBehavior.ShowTitle, "ShowTitle"),
+        new(NoLyricsBehavior.HideOverlay, "HideWeather"),
     ];
 
     public IReadOnlyList<ChoiceOption<OverlayBackground>> BackgroundOptions { get; } =
     [
-        new(OverlayBackground.AlbumGradient, "Degradê da capa do álbum"),
-        new(OverlayBackground.Taskbar, "Igual à barra de tarefas"),
+        new(OverlayBackground.AlbumGradient, "AlbumGradient"),
+        new(OverlayBackground.Taskbar, "MatchTaskbar"),
     ];
 
     public IReadOnlyList<ChoiceOption<PrimaryText>> PrimaryTextOptions { get; } =
     [
-        new(PrimaryText.Lyrics, "Letra"),
-        new(PrimaryText.Track, "Nome da música"),
+        new(PrimaryText.Lyrics, "Lyrics"),
+        new(PrimaryText.Track, "SongTitle"),
     ];
 
     public IReadOnlyList<ChoiceOption<ProgressPlacement>> ProgressPlacementOptions { get; } =
     [
-        new(ProgressPlacement.Below, "Abaixo de tudo (capa em cima da barra)"),
-        new(ProgressPlacement.BesideCover, "À direita da capa (capa maior)"),
+        new(ProgressPlacement.Below, "ProgressBelow"),
+        new(ProgressPlacement.BesideCover, "ProgressBeside"),
     ];
 
     public ProgressPlacement ProgressPlacement { get => S.ProgressPlacement; set => Update(s => s.ProgressPlacement = value); }
 
     public IReadOnlyList<ChoiceOption<PausedBehavior>> PausedOptions { get; } =
     [
-        new(PausedBehavior.Hide, "Esconder (mostrar o clima)"),
-        new(PausedBehavior.Minimize, "Minimizar o player"),
+        new(PausedBehavior.Hide, "HideWeather"),
+        new(PausedBehavior.Minimize, "MinimizePlayer"),
     ];
 
     public PausedBehavior PausedBehavior { get => S.PausedBehavior; set => Update(s => s.PausedBehavior = value); }

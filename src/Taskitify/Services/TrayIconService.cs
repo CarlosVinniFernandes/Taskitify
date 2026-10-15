@@ -12,12 +12,20 @@ public sealed class TrayIconService : IDisposable
     public TrayIconService(Action showSettings, Action showMiniPlayer, Action showDebug, Action exit)
     {
         var menu = new Forms.ContextMenuStrip();
-        menu.Items.Add("Mostrar mini player", null, (_, _) => showMiniPlayer());
-        menu.Items.Add("Configurações…", null, (_, _) => showSettings());
-        _debugItem = new Forms.ToolStripMenuItem("Diagnóstico…", null, (_, _) => showDebug());
+        menu.Items.Add(LocalizationService.Get("ShowPlayer"), null, (_, _) => showMiniPlayer());
+        menu.Items.Add(LocalizationService.Get("Settings"), null, (_, _) => showSettings());
+        _debugItem = new Forms.ToolStripMenuItem(LocalizationService.Get("Diagnostics"), null, (_, _) => showDebug());
         menu.Items.Add(_debugItem);
         menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add("Sair", null, (_, _) => exit());
+        menu.Items.Add(LocalizationService.Get("Exit"), null, (_, _) => exit());
+
+        menu.Opening += (_, _) =>
+        {
+            menu.Items[0].Text = LocalizationService.Get("ShowPlayer");
+            menu.Items[1].Text = LocalizationService.Get("Settings");
+            _debugItem.Text = LocalizationService.Get("Diagnostics");
+            menu.Items[4].Text = LocalizationService.Get("Exit");
+        };
 
         _icon = new Forms.NotifyIcon
         {
