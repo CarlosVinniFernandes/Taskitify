@@ -47,12 +47,13 @@ public sealed class LrclibClient : ILrclibClient
     /// <summary>Minimum time between two requests from this app.</summary>
     public TimeSpan MinSpacing { get; init; } = TimeSpan.FromSeconds(1);
 
-    /// <summary>Number of rate-limited (429/503) responses seen; for diagnostics.</summary>
+    /// <summary>Number of refused (429/50x), timed-out or failed requests that were retried; for diagnostics.</summary>
     public int RateLimitedCount { get; private set; }
 
     public static HttpClient CreateHttpClient(string userAgent)
     {
-        var http = new HttpClient { BaseAddress = BaseAddress, Timeout = TimeSpan.FromSeconds(10) };
+        // Generous: under load LRCLIB can take well over 10 s to answer (or even to refuse).
+        var http = new HttpClient { BaseAddress = BaseAddress, Timeout = TimeSpan.FromSeconds(30) };
         http.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
         return http;
     }
@@ -83,8 +84,9 @@ public sealed class LrclibClient : ILrclibClient
     }
 
     /// <summary>
-    /// One request at a time, spaced by <see cref="MinSpacing"/>. On 429/503 waits
-    /// (Retry-After, or 1, 2, 4, 6, 8, 8, 10, 10, 10 s) and retries; the last response is returned as is.
+    /// One request at a time, spaced by <see cref="MinSpacing"/>. On 429/502/503/504, a timeout
+    /// or a connection failure it waits (Retry-After, or 1, 2, 4, 6, 8, 8, 10, 10, 10 s) and
+    /// retries; after the last attempt the response is returned (or the exception rethrown).
     /// </summary>
     private async Task<HttpResponseMessage> SendAsync(string url, CancellationToken ct)
     {
@@ -101,6 +103,14 @@ public sealed class LrclibClient : ILrclibClient
                 {
                     response = await _http.GetAsync(url, ct).ConfigureAwait(false);
                 }
+                catch (Exception ex) when (!ct.IsCancellationRequested
+                    && ex is TaskCanceledException or HttpRequestException
+                    && attempt < RetryDelays.Length)
+                {
+                    // HttpClient.Timeout surfaces as TaskCanceledException; a slow or dropped
+                    // connection is as transient as a 429, so it gets the same treatment.
+                    response = null!;
+                }
                 finally
                 {
                     _nextRequestAt = DateTimeOffset.UtcNow + MinSpacing;
@@ -111,7 +121,15 @@ public sealed class LrclibClient : ILrclibClient
                 _gate.Release();
             }
 
-            if (response.StatusCode is not (HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable))
+            if (response is null)
+            {
+                RateLimitedCount++;
+                await _delay(RetryDelays[attempt], ct).ConfigureAwait(false);
+                continue;
+            }
+
+            if (response.StatusCode is not (HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable
+                or HttpStatusCode.BadGateway or HttpStatusCode.GatewayTimeout))
                 return response;
 
             RateLimitedCount++;

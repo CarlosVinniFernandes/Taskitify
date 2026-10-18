@@ -71,6 +71,47 @@ public class LrclibClientTests
         Assert.Equal([TimeSpan.FromSeconds(5)], delays);
     }
 
+    private sealed class FlakyHandler(int failures, Exception error) : HttpMessageHandler
+    {
+        public int Calls { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+            ++Calls <= failures ? Task.FromException<HttpResponseMessage>(error) : Task.FromResult(Ok());
+    }
+
+    [Theory]
+    [InlineData(true)]   // HttpClient.Timeout
+    [InlineData(false)]  // dropped connection
+    public async Task Retries_timeouts_and_connection_failures(bool timeout)
+    {
+        Exception error = timeout ? new TaskCanceledException("timeout") : new HttpRequestException("reset");
+        var handler = new FlakyHandler(2, error);
+        var delays = new List<TimeSpan>();
+        var client = new LrclibClient(new HttpClient(handler) { BaseAddress = LrclibClient.BaseAddress }, (d, _) =>
+        {
+            delays.Add(d);
+            return Task.CompletedTask;
+        })
+        { MinSpacing = TimeSpan.Zero };
+
+        var record = await client.GetAsync(Query, default);
+
+        Assert.Equal("Song", record?.TrackName);
+        Assert.Equal(3, handler.Calls);
+        Assert.Equal([TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2)], delays);
+    }
+
+    [Fact]
+    public async Task Gives_up_on_persistent_timeouts()
+    {
+        var handler = new FlakyHandler(int.MaxValue, new TaskCanceledException("timeout"));
+        var client = new LrclibClient(new HttpClient(handler) { BaseAddress = LrclibClient.BaseAddress }, (_, _) => Task.CompletedTask)
+        { MinSpacing = TimeSpan.Zero };
+
+        await Assert.ThrowsAsync<TaskCanceledException>(() => client.GetAsync(Query, default));
+        Assert.Equal(10, handler.Calls);
+    }
+
     [Fact]
     public async Task Not_found_is_not_retried()
     {
