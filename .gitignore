@@ -10,3 +10,7 @@ TestResults/
 # Distribution zips are built locally and uploaded to GitHub Releases.
 dist/*
 !dist/LEIA-ME.txt
+.agents/
+.aider-desk/
+.claude/
+.vscode/
