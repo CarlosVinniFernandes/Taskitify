@@ -69,6 +69,9 @@ internal static class AppPaths
 
     public static string LyricsCacheDirectory { get; } = Path.Combine(LocalDataDirectory, "lyrics-cache");
 
+    /// <summary>%AppData%\Taskitify\lyrics — the user's own .lrc files, checked before LRCLIB.</summary>
+    public static string UserLyricsDirectory { get; } = Path.Combine(RoamingDirectory, "lyrics");
+
     /// <summary>
     /// The app was called "Taskbar Lyrics" before 1.0. Move its settings and lyrics cache to
     /// the new folders once, so existing users keep their setup.

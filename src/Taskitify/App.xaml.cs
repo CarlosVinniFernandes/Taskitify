@@ -22,6 +22,8 @@ public partial class App : Application
     private SettingsService? _settings;
     private ThemeService? _theme;
     private HttpClient? _http;
+    private HttpClient? _spotifyHttp;
+    private SpotifyLyricsSession? _spotifyLyrics;
     private LyricsCache? _cache;
     private SpotifyMonitor? _monitor;
     private LyricsSyncService? _sync;
@@ -69,7 +71,9 @@ public partial class App : Application
             args.SetObserved();
         };
 
-        var background = e.Args.Contains(StartupService.BackgroundArgument, StringComparer.OrdinalIgnoreCase);
+        var background = e.Args.Contains(StartupService.BackgroundArgument, StringComparer.OrdinalIgnoreCase)
+            || StartupService.IsStartupActivation();
+        await StartupService.InitializeAsync();
 
         AppPaths.MigrateFromOldName();
         StartupService.MigrateFromOldName();
@@ -85,10 +89,29 @@ public partial class App : Application
         // LRCLIB asks clients to identify themselves with a name and a link.
         _http = LrclibClient.CreateHttpClient($"Taskitify/{typeof(App).Assembly.GetName().Version?.ToString(3)} (+https://github.com/CarlosVinniFernandes/Taskitify)");
         _cache = new LyricsCache(AppPaths.LyricsCacheDirectory);
-        var lyrics = new LyricsService(new LrclibClient(_http), _cache);
+        _spotifyHttp = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })
+        { Timeout = TimeSpan.FromSeconds(10) };
+        _spotifyLyrics = new SpotifyLyricsSession(_settings, Dispatcher);
+        var spotifyOnly = e.Args.Contains("--spotify-only", StringComparer.OrdinalIgnoreCase);
+        var spotifyProvider = new SpotifyLyricsProvider(_spotifyHttp, _spotifyLyrics);
+        // Spotify is the primary source; LRCLIB only fills in songs Spotify has no synced lyrics
+        // for. The diagnostic mode skips local files and the disk cache, which may hold LRCLIB lyrics.
+        var lyrics = spotifyOnly
+            ? new LyricsService([spotifyProvider], cache: null)
+            : new LyricsService(
+                [new LocalLyricsProvider(AppPaths.UserLyricsDirectory),
+                 new FallbackLyricsProvider(spotifyProvider, new LrclibProvider(new LrclibClient(_http)))], _cache);
+        if (spotifyOnly) Log.Info("Spotify-only test mode: LRCLIB, local files and disk cache disabled");
 
         _monitor = new SpotifyMonitor(Dispatcher);
         _sync = new LyricsSyncService(_monitor, lyrics, _settings);
+        _spotifyLyrics.StatusChanged += (_, _) =>
+        {
+            if (_spotifyLyrics.StatusKey == "SpotifyLyricsReady" && _sync.State != Models.LyricsState.Synced)
+                _ = _sync.ForceReloadAsync();
+        };
+        // Restore an enabled web session even when the current song is already cached.
+        _ = _spotifyLyrics.GetCredentialsAsync(CancellationToken.None);
 
         _taskbarVm = new TaskbarViewModel(_monitor, _sync, _settings, new AppVolumeService());
         _overlay = new TaskbarOverlayService(_monitor, _sync, _settings, new TaskbarPositionService(), _taskbarVm);
@@ -139,6 +162,8 @@ public partial class App : Application
         _monitor?.Dispose();
         _theme?.Dispose();
         _http?.Dispose();
+        _spotifyLyrics?.Dispose();
+        _spotifyHttp?.Dispose();
         _activateWait?.Unregister(null);
         _activateEvent?.Dispose();
         if (_mutex is not null)
@@ -160,7 +185,7 @@ public partial class App : Application
             return;
         }
         _settingsVm = new SettingsViewModel(_settings, _cache, _sync, _overlay.IsCalibrating, _overlay.SetCalibrating);
-        _settingsWindow = new SettingsWindow(_settingsVm);
+        _settingsWindow = new SettingsWindow(_settingsVm, _spotifyLyrics!);
         _settingsWindow.Closed += (_, _) =>
         {
             _settingsWindow = null;

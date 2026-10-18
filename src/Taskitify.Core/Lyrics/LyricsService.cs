@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Text.Json;
 
 namespace Taskitify.Core.Lyrics;
 
@@ -12,27 +11,47 @@ public interface ILyricsService
 }
 
 /// <summary>
-/// Looks up lyrics on LRCLIB: exact /api/get first, then /api/search filtered by
-/// <see cref="TrackMatcher"/>, preferring synced lyrics. Results go to memory and disk caches.
+/// Looks up lyrics through a chain of <see cref="ILyricsProvider"/>s: local providers first
+/// (instant, never cached), then the memory and disk caches, then remote providers in parallel.
+/// The first valid synced (or instrumental) result wins and cancels the remaining lookups.
+/// Plain lyrics are kept only when no provider has synced ones.
 /// </summary>
 public sealed class LyricsService : ILyricsService
 {
     private const int MemoryCacheLimit = 50;
 
-    private readonly ILrclibClient _client;
+    private readonly IReadOnlyList<ILyricsProvider> _local;
+    private readonly IReadOnlyList<ILyricsProvider> _remote;
     private readonly LyricsCache? _cache;
     private readonly ConcurrentDictionary<string, LyricsResult> _memory = new();
 
-    public LyricsService(ILrclibClient client, LyricsCache? cache)
+    public LyricsService(IEnumerable<ILyricsProvider> providers, LyricsCache? cache)
     {
-        _client = client;
+        var list = providers.ToList();
+        _local = list.Where(p => p.IsLocal).ToList();
+        _remote = list.Where(p => !p.IsLocal).ToList();
         _cache = cache;
     }
+
+    /// <summary>LRCLIB only, as before providers existed.</summary>
+    public LyricsService(ILrclibClient client, LyricsCache? cache)
+        : this([new LrclibProvider(client)], cache)
+    {
+    }
+
+    public TimeSpan ProviderTimeout { get; init; } = TimeSpan.FromSeconds(90);
 
     public async Task<LyricsResult> GetLyricsAsync(TrackQuery query, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(query.Title) || string.IsNullOrWhiteSpace(query.Artist))
             return LyricsResult.NotFound;
+
+        foreach (var provider in _local)
+        {
+            var record = await provider.FindAsync(query, ct).ConfigureAwait(false);
+            if (record is not null && FromRecord(record) is { Kind: not LyricsKind.NotFound } local)
+                return local;
+        }
 
         var key = LyricsCache.KeyFor(query);
         if (_memory.TryGetValue(key, out var cached))
@@ -44,19 +63,9 @@ public sealed class LyricsService : ILyricsService
             return fromDisk;
         }
 
-        LrclibRecord? best;
-        try
-        {
-            best = await FindBestAsync(query, ct).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException)
-        {
-            return LyricsResult.Error(ex.Message);
-        }
+        var (best, error) = await FindRemoteAsync(query, ct).ConfigureAwait(false);
+        if (best is null && error is not null)
+            return LyricsResult.Error(error);
 
         var result = FromRecord(best);
         Remember(key, result);
@@ -82,29 +91,60 @@ public sealed class LyricsService : ILyricsService
     }
 
     /// <summary>
-    /// Search first: one request returns every version of the song with its lyrics, and LRCLIB's
-    /// rate limit makes each request count. The exact /api/get (which can also make LRCLIB look
-    /// in external sources) is only used when the search has nothing usable.
+    /// The best record from the remote providers, and the first failure seen. A failure only
+    /// matters when nothing was found: it turns "not found" (cached) into an error (retried).
     /// </summary>
-    private async Task<LrclibRecord?> FindBestAsync(TrackQuery query, CancellationToken ct)
+    private async Task<(LrclibRecord? Best, string? Error)> FindRemoteAsync(TrackQuery query, CancellationToken ct)
     {
-        var candidates = (await _client.SearchAsync(query.Title, query.Artist, ct).ConfigureAwait(false))
-            .Where(r => TrackMatcher.IsMatch(query, r))
-            .OrderBy(r => TrackMatcher.DurationDistance(query, r))
-            .ToList();
+        using var race = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var pending = _remote.Select(provider => FindProviderAsync(provider, query, race.Token)).ToList();
+        LrclibRecord? fallback = null;
+        string? error = null;
+        try
+        {
+            while (pending.Count > 0)
+            {
+                var completed = await Task.WhenAny(pending).WaitAsync(ct).ConfigureAwait(false);
+                pending.Remove(completed);
+                var (record, failure) = await completed.ConfigureAwait(false);
+                ct.ThrowIfCancellationRequested();
+                var kind = FromRecord(record).Kind;
+                if (kind is LyricsKind.Synced or LyricsKind.Instrumental)
+                    return (record, null);
+                if (kind == LyricsKind.PlainOnly)
+                    fallback ??= record;
+                error ??= failure;
+            }
+            return (fallback, error);
+        }
+        finally
+        {
+            race.Cancel();
+        }
+    }
 
-        var synced = candidates.FirstOrDefault(HasSynced);
-        if (synced is not null)
-            return synced;
-        var instrumental = candidates.FirstOrDefault(r => r.Instrumental);
-        if (instrumental is not null)
-            return instrumental;
-
-        var exact = await _client.GetAsync(query, ct).ConfigureAwait(false);
-        if (exact is not null && TrackMatcher.IsMatch(query, exact) && (HasSynced(exact) || exact.Instrumental))
-            return exact;
-
-        return candidates.FirstOrDefault() ?? (exact is not null && TrackMatcher.IsMatch(query, exact) ? exact : null);
+    private async Task<(LrclibRecord? Record, string? Error)> FindProviderAsync(
+        ILyricsProvider provider, TrackQuery query, CancellationToken ct)
+    {
+        using var attempt = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        attempt.CancelAfter(ProviderTimeout);
+        try
+        {
+            var lookup = provider.FindAsync(query, attempt.Token);
+            // Observe late failures even if a provider ignores cancellation.
+            _ = lookup.ContinueWith(t => { _ = t.Exception; }, CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            return (await lookup.WaitAsync(attempt.Token).ConfigureAwait(false), null);
+        }
+        catch (OperationCanceledException)
+        {
+            return (null, ct.IsCancellationRequested ? null : $"{provider.Name} timed out");
+        }
+        catch (Exception ex)
+        {
+            // A broken source must not prevent another source from supplying lyrics.
+            return (null, $"{provider.Name}: {ex.Message}");
+        }
     }
 
     internal static LyricsResult FromRecord(LrclibRecord? r)
@@ -121,7 +161,7 @@ public sealed class LyricsService : ILyricsService
         return LyricsResult.NotFound;
     }
 
-    private static bool HasSynced(LrclibRecord r) => !string.IsNullOrWhiteSpace(r.SyncedLyrics);
+    internal static bool HasSynced(LrclibRecord r) => !string.IsNullOrWhiteSpace(r.SyncedLyrics);
 
     private void Remember(string key, LyricsResult result)
     {

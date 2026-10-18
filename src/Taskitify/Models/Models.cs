@@ -158,6 +158,8 @@ public sealed class AppSettings
 
     public bool DebugMode { get; set; }
 
+    public bool SpotifyLyricsEnabled { get; set; }
+
     /// <summary>When true, ManualX/Y/Width/Height (physical pixels) replace automatic detection.</summary>
     public bool ManualPlacement { get; set; }
 

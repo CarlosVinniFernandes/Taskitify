@@ -11,7 +11,8 @@ namespace Taskitify.Core.Lyrics;
 /// </summary>
 public sealed class LyricsCache
 {
-    private const int FormatVersion = 1;
+    // 2: Spotify became the primary source; version 1 entries hold LRCLIB's lyrics.
+    private const int FormatVersion = 2;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     private readonly string _directory;

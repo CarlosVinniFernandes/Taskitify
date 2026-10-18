@@ -32,7 +32,7 @@ O Taskitify mostra a linha da música que está tocando no Spotify **direto na b
 - **Pausou, parou ou fechou o Spotify:** o clima volta na hora. Se preferir, o Taskitify fica minimizado em vez de sumir.
 - **Clicou na letra:** abre um mini player com capa, controles, progresso e a letra rolando.
 
-Não precisa de Spicetify, de login no Spotify nem de Premium. O app lê a música pelas sessões de mídia do próprio Windows e busca as letras no [LRCLIB](https://lrclib.net), um banco aberto de letras sincronizadas.
+Não precisa de Spicetify, login no Spotify nem Premium para usar a fonte padrão, o LRCLIB. O app lê a música pelas sessões de mídia do Windows. Uma conexão opcional e experimental também permite buscar letras do próprio Spotify.
 
 ## Recursos
 
@@ -100,13 +100,26 @@ Também dá para escolher:
 
 ## Privacidade
 
-- Sem conta, sem login e sem telemetria.
-- A única requisição de rede é a busca da letra no [LRCLIB](https://lrclib.net), com o nome da música, o artista, o álbum e a duração.
+### Letras opcionais do Spotify
+
+Em **Configurações → Avançado → Letras do Spotify (experimental) → Conectar Spotify**, entre diretamente no Spotify pela janela do Taskitify. Use o login por e-mail se uma opção externa não abrir. Continue reproduzindo no Spotify Desktop; a janela web serve para a conexão e pode ser fechada após entrar. É necessário o Microsoft Edge WebView2 Runtime.
+
+Para músicas sem cache, o Spotify é consultado primeiro. O LRCLIB só é consultado quando o Spotify não tem a letra sincronizada da música ou não responde, o que também reduz as requisições ao LRCLIB. Arquivos `.lrc` locais continuam tendo prioridade, e letras em cache são reutilizadas. Use **Buscar letra de novo** para buscar de novo uma música já salva. Letras sem tempos só são usadas quando nenhuma fonte retorna letras sincronizadas, e a do Spotify vem primeiro.
+
+Para economizar memória, a janela escondida do Spotify é suspensa logo depois de cada busca e fechada após dois minutos sem uso. A próxima busca que precisar dela pode levar alguns segundos a mais.
+
+A integração usa o serviço não oficial do player web do Spotify. Fazer login não garante acesso: o Spotify pode recusar letras, pedir novo login ou mudar o serviço. O status diferencia uma sessão conectada de uma letra recebida com sucesso. O LRCLIB continua disponível quando o Spotify falha. Os testes automatizados usam respostas simuladas; o acesso da sua conta precisa ser verificado após entrar.
+
+### Dados
+
+- Sem conta do Taskitify e sem telemetria. Login do Spotify é opcional.
+- O LRCLIB recebe o nome da música, artista, álbum e duração. Quando conectado, o Spotify também recebe buscas e pedidos de letras; o player web faz suas próprias requisições.
+- O login do Spotify usa um perfil WebView2 separado em `%LocalAppData%\Taskitify\spotify-web-session`, sem ler os perfis do Spotify Desktop ou do navegador. Tokens ficam na memória, fora das configurações e logs. **Desconectar** desativa a fonte e limpa os dados desse navegador. Letras já salvas permanecem no cache normal, que pode ser limpo separadamente.
 - Configurações e cache de letras ficam só no seu computador: `%AppData%\Taskitify` e `%LocalAppData%\Taskitify`.
 
 ## Perguntas frequentes
 
-**A letra não apareceu.** Algumas músicas não estão no LRCLIB; nesse caso a barra mostra o nome da música. Quando o LRCLIB está sobrecarregado, a letra pode levar alguns segundos para chegar. Clique com o botão direito na letra → **Buscar letra de novo** para forçar uma nova busca.
+**A letra não apareceu.** Algumas músicas não estão no LRCLIB; nesse caso a barra mostra o nome da música. Quando o LRCLIB está sobrecarregado, a letra pode levar alguns segundos para chegar. Clique com o botão direito na letra → **Buscar letra de novo** para forçar uma nova busca. Você também pode colocar seus próprios arquivos `.lrc` na pasta de letras (Configurações → Avançado → **Abrir pasta de letras**), com o nome `Artista - Música.lrc` ou com as tags `[ar:]`/`[ti:]`; eles são usados antes do LRCLIB.
 
 **A letra está adiantada ou atrasada.** Configurações → Sincronização → **Ajuste de tempo**.
 
@@ -114,7 +127,7 @@ Também dá para escolher:
 
 **Funciona com o Spotify no navegador?** Não. Só com o Spotify Desktop (de propósito, para não confundir com vídeos e outras abas).
 
-**Dá para curtir a música pelo Taskitify?** Não. Salvar na biblioteca exige a API do Spotify com login, que o projeto evita.
+**Dá para curtir a música pelo Taskitify?** Não. A conexão opcional com o Spotify serve apenas para as letras.
 
 ## Compilar
 

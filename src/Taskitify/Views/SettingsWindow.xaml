@@ -191,6 +191,13 @@
             </Border>
 
             <TextBlock Style="{StaticResource SectionHeader}" Text="{DynamicResource Loc.Advanced}" />
+            <TextBlock Style="{StaticResource SectionHeader}" Text="{DynamicResource Loc.SpotifyLyricsTitle}" />
+            <TextBlock Text="{DynamicResource Loc.SpotifyLyricsHint}" TextWrapping="Wrap" Margin="0,0,0,8" />
+            <TextBlock x:Name="SpotifyLyricsStatus" TextWrapping="Wrap" Margin="0,0,0,8" />
+            <WrapPanel Margin="0,0,0,12">
+                <Button x:Name="ConnectSpotifyButton" Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.SpotifyLyricsConnect}" Click="OnConnectSpotify" Margin="0,0,6,0" />
+                <Button x:Name="DisconnectSpotifyButton" Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.SpotifyLyricsDisconnect}" Click="OnDisconnectSpotify" />
+            </WrapPanel>
             <Border Style="{StaticResource SettingCard}">
                 <DockPanel>
                     <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding DebugMode}" AutomationProperties.Name="{DynamicResource Loc.DebugMode}" />
@@ -202,7 +209,8 @@
             </Border>
             <WrapPanel Margin="0,8,0,0">
                 <Button Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.ClearCache}" Margin="0,0,6,6" Command="{Binding ClearCacheCommand}" />
-                <Button Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.OpenData}" Margin="0,0,0,6" Command="{Binding OpenDataFolderCommand}" />
+                <Button Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.OpenData}" Margin="0,0,6,6" Command="{Binding OpenDataFolderCommand}" />
+                <Button Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.OpenLyricsFolder}" Margin="0,0,0,6" Command="{Binding OpenLyricsFolderCommand}" ToolTip="{DynamicResource Loc.OpenLyricsFolderHint}" />
             </WrapPanel>
         </StackPanel>
     </ScrollViewer>

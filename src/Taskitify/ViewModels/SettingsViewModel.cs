@@ -30,6 +30,7 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly Action<bool> _setCalibrating;
     private bool _isCalibrating;
     private bool _startWithWindows;
+    private bool _updatingStartup;
 
     public SettingsViewModel(SettingsService settings, LyricsCache cache, LyricsSyncService sync, bool isCalibrating, Action<bool> setCalibrating)
     {
@@ -60,6 +61,11 @@ public sealed class SettingsViewModel : ObservableObject
         {
             Directory.CreateDirectory(AppPaths.LocalDataDirectory);
             Process.Start(new ProcessStartInfo("explorer.exe", $"\"{AppPaths.LocalDataDirectory}\"") { UseShellExecute = true });
+        });
+        OpenLyricsFolderCommand = new RelayCommand(() =>
+        {
+            Directory.CreateDirectory(AppPaths.UserLyricsDirectory);
+            Process.Start(new ProcessStartInfo("explorer.exe", $"\"{AppPaths.UserLyricsDirectory}\"") { UseShellExecute = true });
         });
     }
 
@@ -139,14 +145,30 @@ public sealed class SettingsViewModel : ObservableObject
 
     public ICommand OpenDataFolderCommand { get; }
 
+    /// <summary>Folder for the user's own .lrc files, which take precedence over LRCLIB.</summary>
+    public ICommand OpenLyricsFolderCommand { get; }
+
     public bool StartWithWindows
     {
         get => _startWithWindows;
         set
         {
-            if (Set(ref _startWithWindows, value))
-                StartupService.SetEnabled(value);
+            if (!_updatingStartup && Set(ref _startWithWindows, value))
+                UpdateStartupAsync(value);
         }
+    }
+
+    private async void UpdateStartupAsync(bool enabled)
+    {
+        _updatingStartup = true;
+        try
+        {
+            await StartupService.SetEnabledAsync(enabled);
+            // Windows may refuse when the user or an administrator disabled the task.
+            _startWithWindows = StartupService.IsEnabled;
+            OnPropertyChanged(nameof(StartWithWindows));
+        }
+        finally { _updatingStartup = false; }
     }
 
     public bool EnableAnimations { get => S.EnableAnimations; set => Update(s => s.EnableAnimations = value); }

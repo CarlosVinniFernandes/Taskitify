@@ -32,7 +32,7 @@ Taskitify shows the current line of the song playing on Spotify **right on the t
 - **Paused, stopped or Spotify closed:** the weather comes back instantly. If you prefer, Taskitify can shrink to a minimized player instead of disappearing.
 - **Click the lyric:** a mini player opens with the album art, controls, progress and the scrolling lyrics.
 
-No Spicetify, no Spotify login and no Premium needed. Taskitify reads what is playing through Windows' own media sessions and fetches lyrics from [LRCLIB](https://lrclib.net), an open database of synced lyrics.
+No Spicetify, Spotify login or Premium is needed for the default LRCLIB source. Taskitify reads what is playing through Windows' own media sessions. An optional, experimental Spotify connection can also fetch lyrics from Spotify itself.
 
 ## Features
 
@@ -100,13 +100,26 @@ You can also choose:
 
 ## Privacy
 
-- No account, no login and no telemetry.
-- The only network request is the lyrics lookup on [LRCLIB](https://lrclib.net), with the song title, artist, album and duration.
+### Optional Spotify lyrics
+
+In **Settings → Advanced → Spotify lyrics (experimental) → Connect Spotify**, sign in directly on Spotify in the Taskitify window. Use email login if an external sign-in option does not open. Keep playback in Spotify Desktop; the web window is only for this connection and can be closed after signing in. This requires Microsoft Edge WebView2 Runtime.
+
+For uncached songs, Spotify is asked first. LRCLIB is only asked when Spotify has no synced lyrics for the song or cannot be reached, which also keeps LRCLIB requests to a minimum. Local `.lrc` files still take precedence, and cached lyrics are reused. Use **Fetch lyrics again** to look a cached song up again. Plain lyrics are used only if neither source returns synced lyrics, Spotify's first.
+
+To save memory, the hidden Spotify web window is suspended shortly after each lookup and closed after two minutes without use. The next lookup that needs it may take a few seconds longer.
+
+This uses Spotify's unofficial web-player lyrics service. Login does not guarantee access: Spotify can refuse lyrics, require renewed login, or change its service. The connection status distinguishes a captured session from a successful lyrics response. LRCLIB remains available when Spotify fails. Automated tests use simulated Spotify responses; account-specific access must be checked after signing in.
+
+### Data
+
+- No Taskitify account or telemetry. Spotify login is optional.
+- LRCLIB receives the song title, artist, album and duration. When connected, Spotify also receives searches and lyrics requests; its web player makes its own network requests.
+- Spotify login uses a separate WebView2 profile in `%LocalAppData%\Taskitify\spotify-web-session`; it does not read the Spotify Desktop or browser profiles. Access tokens stay in memory and are not written to settings or logs. **Disconnect** disables this source and clears the WebView2 browsing data. Lyrics may remain in the normal lyrics cache, which can be cleared separately.
 - Settings and the lyrics cache stay on your computer: `%AppData%\Taskitify` and `%LocalAppData%\Taskitify`.
 
 ## FAQ
 
-**The lyrics did not show up.** Some songs are not on LRCLIB; in that case the taskbar shows the song title. When LRCLIB is under heavy load, lyrics may take a few seconds to arrive. Right-click the lyric → **Fetch lyrics again** to force a new lookup.
+**The lyrics did not show up.** Some songs are not on LRCLIB; in that case the taskbar shows the song title. When LRCLIB is under heavy load, lyrics may take a few seconds to arrive. Right-click the lyric → **Fetch lyrics again** to force a new lookup. You can also drop your own `.lrc` files in the lyrics folder (Settings → Advanced → **Open lyrics folder**), named `Artist - Title.lrc` or with `[ar:]`/`[ti:]` tags; they are used before LRCLIB.
 
 **The lyrics are early or late.** Settings → Synchronization → **Timing adjustment (offset)**.
 
@@ -114,7 +127,7 @@ You can also choose:
 
 **Does it work with Spotify in the browser?** No. Only Spotify Desktop (on purpose, so it is never confused with videos or other tabs).
 
-**Can I like a song from Taskitify?** No. Saving to your library requires the Spotify API with a login, which this project avoids.
+**Can I like a song from Taskitify?** No. The optional Spotify connection is used only for lyrics.
 
 ## Building
 
