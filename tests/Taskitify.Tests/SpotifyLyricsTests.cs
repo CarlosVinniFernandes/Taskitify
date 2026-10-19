@@ -24,9 +24,22 @@ public sealed class SpotifyLyricsTests
         public string? Status;
         public int Searches;
         public IReadOnlyList<SpotifyTrack> Tracks = [new(Id, Metadata)];
-        public Task<SpotifyCredentials?> GetCredentialsAsync(CancellationToken ct) => Task.FromResult(Credentials);
+        public SpotifySearchTemplate? SearchTemplate { get; set; }
+        public Task<SpotifyCredentials?> GetCredentialsAsync(TrackQuery? searchFor, CancellationToken ct) => Task.FromResult(Credentials);
+        public int Renewals;
+        public Task<SpotifyCredentials?> RenewCredentialsAsync(SpotifyCredentials rejected, CancellationToken ct)
+        {
+            Renewals++;
+            Credentials = new("renewed-token", "renewed-client");
+            return Task.FromResult<SpotifyCredentials?>(Credentials);
+        }
+        public SpotifySearchTemplate? CapturedBySearch;
         public Task<IReadOnlyList<SpotifyTrack>> SearchAsync(TrackQuery query, CancellationToken ct)
-        { Searches++; return Task.FromResult(Tracks); }
+        {
+            Searches++;
+            SearchTemplate = CapturedBySearch ?? SearchTemplate;
+            return Task.FromResult(Tracks);
+        }
         public void ReportStatus(string key) => Status = key;
     }
 
@@ -97,6 +110,291 @@ public sealed class SpotifyLyricsTests
         Assert.Equal(1, session.Searches);
     }
 
+    private const string GraphqlSearch = """
+        {"data":{"searchV2":{"tracksV2":{"items":[{"item":{"data":{
+        "uri":"spotify:track:1234567890123456789012","name":"Song",
+        "artists":{"items":[{"profile":{"name":"Artist"}}]},
+        "albumOfTrack":{"name":"Album"},"duration":{"totalMilliseconds":180000}}}}]}}}}
+        """;
+
+    private static SpotifySearchTemplate Template() => SpotifySearchTemplate.TryCapture("POST",
+        "https://api-partner.spotify.com/pathfinder/v2/query",
+        """{"variables":{"searchTerm":"older song","limit":20},"operationName":"searchTracks","extensions":{"persistedQuery":{"version":1,"sha256Hash":"abc"}}}""",
+        [new("app-platform", "WebPlayer")])!;
+
+    [Fact]
+    public async Task Replayed_web_player_search_needs_neither_the_browser_nor_the_public_endpoint()
+    {
+        var session = new Session { SearchTemplate = Template() };
+        var hosts = new List<string>();
+        string? searched = null;
+        using var http = new HttpClient(new Handler(r =>
+        {
+            hosts.Add(r.RequestUri!.Host);
+            if (r.RequestUri.Host != "api-partner.spotify.com") return Json(Lyrics);
+            searched = r.Content!.ReadAsStringAsync().Result;
+            return Json(GraphqlSearch);
+        }));
+
+        var result = LyricsService.FromRecord(await new SpotifyLyricsProvider(http, session).FindAsync(Query, default));
+
+        Assert.Equal(LyricsKind.Synced, result.Kind);
+        Assert.Equal(0, session.Searches);
+        Assert.Equal(["api-partner.spotify.com", "spclient.wg.spotify.com"], hosts);
+        Assert.Contains("\"searchTerm\":\"Song Artist\"", searched);
+    }
+
+    [Fact]
+    public async Task Query_captured_by_the_web_player_search_is_sent_at_once()
+    {
+        var session = new Session { Tracks = [], CapturedBySearch = Template() };
+        var replays = 0;
+        using var http = new HttpClient(new Handler(r =>
+        {
+            if (r.RequestUri!.Host == "api.spotify.com") return new(HttpStatusCode.TooManyRequests);
+            if (r.RequestUri.Host != "api-partner.spotify.com") return Json(Lyrics);
+            replays++;
+            return Json(GraphqlSearch);
+        }));
+
+        var result = LyricsService.FromRecord(await new SpotifyLyricsProvider(http, session).FindAsync(Query, default));
+
+        Assert.Equal(LyricsKind.Synced, result.Kind);
+        Assert.Equal(1, session.Searches);
+        Assert.Equal(1, replays);
+    }
+
+    [Fact]
+    public async Task Retired_replay_query_falls_back_to_the_web_player()
+    {
+        var session = new Session { SearchTemplate = Template() };
+        var replays = 0;
+        using var http = new HttpClient(new Handler(r =>
+        {
+            if (r.RequestUri!.Host == "api-partner.spotify.com") { replays++; return new(HttpStatusCode.BadRequest); }
+            return r.RequestUri.Host == "api.spotify.com" ? new(HttpStatusCode.TooManyRequests) : Json(Lyrics);
+        }));
+        var provider = new SpotifyLyricsProvider(http, session);
+
+        Assert.NotNull(await provider.FindAsync(Query, default));
+        Assert.NotNull(await provider.FindAsync(Query, default));
+
+        // Not sent again: the web player searches until it captures a query Spotify takes.
+        Assert.Equal(2, session.Searches);
+        Assert.Equal(1, replays);
+    }
+
+    [Theory]
+    [InlineData("503")]
+    [InlineData("429")]
+    [InlineData("network")]
+    [InlineData("timeout")]
+    public async Task Unreachable_or_busy_search_is_a_failure_not_missing_lyrics(string problem)
+    {
+        var session = new Session { SearchTemplate = Template() };
+        var replays = 0;
+        var others = 0;
+        using var http = new HttpClient(new Handler(r =>
+        {
+            if (r.RequestUri!.Host != "api-partner.spotify.com") { others++; return Json(Lyrics); }
+            replays++;
+            return problem switch
+            {
+                "503" => new(HttpStatusCode.ServiceUnavailable),
+                "429" => new(HttpStatusCode.TooManyRequests),
+                "network" => throw new HttpRequestException("Connection reset"),
+                _ => throw new TaskCanceledException(),
+            };
+        }));
+        var provider = new SpotifyLyricsProvider(http, session);
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => provider.FindAsync(Query, default));
+        await Assert.ThrowsAsync<HttpRequestException>(() => provider.FindAsync(Query, default));
+
+        // The query is kept and sent again; the web player, which would search the same
+        // servers, is not woken on every retry, and nothing reports the song as lyric-less.
+        Assert.Equal(2, replays);
+        Assert.Equal(0, others);
+        Assert.Equal(0, session.Searches);
+        Assert.Null(session.Status);
+    }
+
+    [Fact]
+    public async Task Failed_replay_of_the_query_the_web_player_just_captured_is_a_failure()
+    {
+        // No query captured yet: the web player searches once, its query is sent again and that
+        // fails. Reporting no lyrics here would get the song cached as "not found" for hours.
+        var session = new Session { Tracks = [], CapturedBySearch = Template() };
+        using var http = new HttpClient(new Handler(r => r.RequestUri!.Host switch
+        {
+            "api.spotify.com" => new(HttpStatusCode.TooManyRequests),
+            "api-partner.spotify.com" => throw new HttpRequestException("Connection reset"),
+            _ => Json(Lyrics),
+        }));
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => new SpotifyLyricsProvider(http, session).FindAsync(Query, default));
+
+        Assert.Equal(1, session.Searches);
+        Assert.Null(session.Status);
+    }
+
+    [Fact]
+    public async Task Search_token_rejected_again_after_the_web_player_loads_is_reported()
+    {
+        var session = new Session { Tracks = [], SearchTemplate = Template() };
+        using var http = new HttpClient(new Handler(r => r.RequestUri!.Host == "api.spotify.com"
+            ? new(HttpStatusCode.TooManyRequests) : new(HttpStatusCode.Unauthorized)));
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => new SpotifyLyricsProvider(http, session).FindAsync(Query, default));
+
+        // One page load (which can bring a new token), then the same answer as rejected lyrics.
+        Assert.Equal(1, session.Searches);
+        Assert.Equal("SpotifyLyricsDenied", session.Status);
+    }
+
+    [Fact]
+    public async Task Answered_search_without_the_song_still_means_no_lyrics()
+    {
+        var session = new Session { Tracks = [], SearchTemplate = Template() };
+        var replays = 0;
+        using var http = new HttpClient(new Handler(r =>
+        {
+            if (r.RequestUri!.Host != "api-partner.spotify.com") return new(HttpStatusCode.TooManyRequests);
+            // Answered once without the song, then failing: the answer stands.
+            return ++replays == 1 ? Json(GraphqlSearch.Replace("\"Song\"", "\"Other\"")) : new(HttpStatusCode.ServiceUnavailable);
+        }));
+
+        Assert.Null(await new SpotifyLyricsProvider(http, session).FindAsync(Query, default));
+        Assert.Equal("SpotifyLyricsUnavailable", session.Status);
+    }
+
+    private sealed class NoLyrics : ILyricsProvider
+    {
+        public string Name => "LRCLIB";
+        public bool IsLocal => false;
+        public Task<LrclibRecord?> FindAsync(TrackQuery query, CancellationToken ct) => Task.FromResult<LrclibRecord?>(null);
+    }
+
+    [Fact]
+    public async Task Web_player_that_captured_no_search_is_a_failure_not_missing_lyrics()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "TaskitifyTests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            // First lookup after starting: no query captured yet, and the web player's own search
+            // fails too. Nothing answered, so the song must not be cached as "not found".
+            var session = new Session { Tracks = [] };
+            using var http = new HttpClient(new Handler(r => r.RequestUri!.Host switch
+            {
+                "api.spotify.com" => new(HttpStatusCode.TooManyRequests),
+                "api-partner.spotify.com" => Json(GraphqlSearch),
+                _ => Json(Lyrics),
+            }));
+            var service = new LyricsService([new FallbackLyricsProvider(new SpotifyLyricsProvider(http, session), new NoLyrics())], new LyricsCache(dir));
+
+            Assert.Equal(LyricsKind.Error, (await service.GetLyricsAsync(Query, default)).Kind);
+            Assert.Null(session.Status);
+
+            // The retry: the web player captures its query this time.
+            session.CapturedBySearch = Template();
+            var retried = await service.GetLyricsAsync(Query, default);
+            Assert.Equal((LyricsKind.Synced, "Spotify"), (retried.Kind, retried.Source));
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Search_failure_is_retried_instead_of_cached_as_not_found()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "TaskitifyTests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var down = true;
+            using var http = new HttpClient(new Handler(r => r.RequestUri!.Host switch
+            {
+                "api-partner.spotify.com" when down => new(HttpStatusCode.ServiceUnavailable),
+                "api-partner.spotify.com" => Json(GraphqlSearch),
+                "api.spotify.com" => new(HttpStatusCode.TooManyRequests),
+                _ => Json(Lyrics),
+            }));
+            var spotify = new SpotifyLyricsProvider(http, new Session { SearchTemplate = Template(), Tracks = [] });
+            var service = new LyricsService([new FallbackLyricsProvider(spotify, new NoLyrics())], new LyricsCache(dir));
+
+            Assert.Equal(LyricsKind.Error, (await service.GetLyricsAsync(Query, default)).Kind);
+            down = false;
+            var retried = await service.GetLyricsAsync(Query, default);
+
+            // Neither the caches nor the fallback chain kept the failed attempt as Spotify's answer.
+            Assert.Equal((LyricsKind.Synced, "Spotify", false), (retried.Kind, retried.Source, retried.FromCache));
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Rate_limited_public_search_is_skipped_until_its_retry_after()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var publicSearches = 0;
+        using var http = new HttpClient(new Handler(r =>
+        {
+            if (r.RequestUri!.Host != "api.spotify.com") return Json(Lyrics);
+            publicSearches++;
+            var limited = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
+            limited.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromSeconds(30));
+            return limited;
+        }));
+        var provider = new SpotifyLyricsProvider(http, new Session(), () => now);
+
+        await provider.FindAsync(Query, default);
+        now += TimeSpan.FromSeconds(20);
+        await provider.FindAsync(Query, default);
+        Assert.Equal(1, publicSearches);
+
+        now += TimeSpan.FromSeconds(11);
+        await provider.FindAsync(Query, default);
+        Assert.Equal(2, publicSearches);
+    }
+
+    [Fact]
+    public async Task Diagnostics_report_status_codes_and_never_credentials()
+    {
+        var lines = new List<string>();
+        using var http = new HttpClient(new Handler(r => r.RequestUri!.Host == "api.spotify.com"
+            ? new(HttpStatusCode.TooManyRequests) : Json(Lyrics)));
+
+        await new SpotifyLyricsProvider(http, new Session(), lines.Add).FindAsync(Query, default);
+
+        var line = Assert.Single(lines);
+        Assert.Contains("api search 429", line);
+        Assert.Contains("web player search 1 found", line);
+        Assert.Contains("lyrics 200", line);
+        Assert.DoesNotContain("test-token", line);
+        Assert.DoesNotContain("test-client", line);
+        Assert.DoesNotContain("http", line, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Diagnostics_are_written_when_the_lookup_fails()
+    {
+        var lines = new List<string>();
+        using var http = new HttpClient(new Handler(r => r.RequestUri!.Host == "api.spotify.com" ? Json(Search) : new(HttpStatusCode.Unauthorized)));
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => new SpotifyLyricsProvider(http, new Session(), lines.Add).FindAsync(Query, default));
+
+        var line = Assert.Single(lines);
+        Assert.Contains("api search 200", line);
+        Assert.Contains("lyrics 401", line);
+        Assert.Contains("failed: HttpRequestException", line);
+    }
+
     [Fact]
     public async Task Search_transport_failure_still_uses_the_web_player()
     {
@@ -126,6 +424,32 @@ public sealed class SpotifyLyricsTests
         using var http = new HttpClient(new Handler(r => r.RequestUri!.Host == "api.spotify.com" ? Json(Search) : new(code)));
         await Assert.ThrowsAsync<HttpRequestException>(() => new SpotifyLyricsProvider(http, session).FindAsync(Query, default));
         Assert.Equal("SpotifyLyricsDenied", session.Status);
+    }
+
+    [Fact]
+    public async Task Expired_token_is_renewed_once_instead_of_falling_back_to_LRCLIB()
+    {
+        var session = new Session();
+        using var http = new HttpClient(new Handler(r => r.RequestUri!.Host == "api.spotify.com" ? Json(Search)
+            : r.Headers.Authorization?.Parameter == "renewed-token" ? Json(Lyrics) : new(HttpStatusCode.Unauthorized)));
+
+        var result = LyricsService.FromRecord(await new SpotifyLyricsProvider(http, session).FindAsync(Query, default));
+
+        Assert.Equal(LyricsKind.Synced, result.Kind);
+        Assert.Equal(1, session.Renewals);
+        Assert.Equal("SpotifyLyricsWorking", session.Status);
+    }
+
+    [Fact]
+    public void Reads_the_web_player_token_expiry()
+    {
+        using var json = JsonDocument.Parse("""{"clientId":"x","accessToken":"abc","accessTokenExpirationTimestampMs":1760750000000,"isAnonymous":false}""");
+        var token = SpotifyLyricsProvider.ReadToken(json.RootElement);
+        Assert.Equal("abc", token?.AccessToken);
+        Assert.Equal(DateTimeOffset.FromUnixTimeMilliseconds(1760750000000), token?.ExpiresAt);
+
+        using var anonymous = JsonDocument.Parse("""{"isAnonymous":true}""");
+        Assert.Null(SpotifyLyricsProvider.ReadToken(anonymous.RootElement));
     }
 
     [Fact]

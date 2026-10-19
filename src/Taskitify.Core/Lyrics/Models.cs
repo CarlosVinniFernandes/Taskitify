@@ -26,6 +26,15 @@ public sealed record LyricsResult(
     public static LyricsResult NotFound { get; } = new(LyricsKind.NotFound, [], null);
 
     public static LyricsResult Error(string message) => new(LyricsKind.Error, [], null, ErrorMessage: message);
+
+    /// <summary>Provider that supplied the lyrics ("Spotify", "LRCLIB", "Local files"); null when unknown.</summary>
+    public string? Source { get; init; }
+
+    /// <summary>Served from the memory or disk cache rather than looked up now.</summary>
+    public bool FromCache { get; init; }
+
+    /// <summary>A stand-in found while the primary source was failing: cached only for a while.</summary>
+    public bool Provisional { get; init; }
 }
 
 /// <summary>A record returned by the LRCLIB API (/api/get and /api/search).</summary>
@@ -37,4 +46,13 @@ public sealed record LrclibRecord(
     double? Duration,
     bool Instrumental,
     string? PlainLyrics,
-    string? SyncedLyrics);
+    string? SyncedLyrics)
+{
+    /// <summary>Name of the provider that found this record; set by the provider chain, never by the API.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? Source { get; init; }
+
+    /// <summary>Found while the primary source was failing; set by the provider chain, never by the API.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool Provisional { get; init; }
+}

@@ -18,6 +18,11 @@ public interface ILyricsProvider
     /// shape, which every source can fill. Network failures surface as exceptions.
     /// </summary>
     Task<LrclibRecord?> FindAsync(TrackQuery query, CancellationToken ct);
+
+    /// <summary>Drop anything remembered about the track: a reload asks this source again.</summary>
+    void Forget(TrackQuery query)
+    {
+    }
 }
 
 /// <summary>

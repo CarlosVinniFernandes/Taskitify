@@ -19,7 +19,7 @@
 
     <!-- Opaque window filled with the sampled taskbar colour, so the weather widget is fully
          hidden and the corners around the gradient "pill" blend with the taskbar.
-         Not a layered window (AllowsTransparency=False): WPF renders it on the GPU. -->
+         Not a layered window (AllowsTransparency=False): cheaper to redraw than a transparent one. -->
     <Window.Resources>
         <!-- Small borderless glyph button; colour comes from the overlay (not the app theme). -->
         <Style x:Key="BarButton" TargetType="Button">

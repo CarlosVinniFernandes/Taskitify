@@ -41,6 +41,11 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        // The overlay is a small strip that changes a few times a second: rendering it in
+        // software keeps the Direct3D device and the GPU driver's heaps (~13 MB, measured with the
+        // overlay alone) out of the process, at no extra CPU, scrolling text included. The mini
+        // player switches to the GPU while it is open (see there).
+        System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
 
         _mutex = new Mutex(initiallyOwned: true, MutexName, out var isFirstInstance);
         if (!isFirstInstance)
@@ -93,7 +98,7 @@ public partial class App : Application
         { Timeout = TimeSpan.FromSeconds(10) };
         _spotifyLyrics = new SpotifyLyricsSession(_settings, Dispatcher);
         var spotifyOnly = e.Args.Contains("--spotify-only", StringComparer.OrdinalIgnoreCase);
-        var spotifyProvider = new SpotifyLyricsProvider(_spotifyHttp, _spotifyLyrics);
+        var spotifyProvider = new SpotifyLyricsProvider(_spotifyHttp, _spotifyLyrics, Log.Debug);
         // Spotify is the primary source; LRCLIB only fills in songs Spotify has no synced lyrics
         // for. The diagnostic mode skips local files and the disk cache, which may hold LRCLIB lyrics.
         var lyrics = spotifyOnly
@@ -105,13 +110,27 @@ public partial class App : Application
 
         _monitor = new SpotifyMonitor(Dispatcher);
         _sync = new LyricsSyncService(_monitor, lyrics, _settings);
+        var spotifyStatus = _spotifyLyrics.StatusKey;
         _spotifyLyrics.StatusChanged += (_, _) =>
         {
-            if (_spotifyLyrics.StatusKey == "SpotifyLyricsReady" && _sync.State != Models.LyricsState.Synced)
+            var was = spotifyStatus;
+            spotifyStatus = _spotifyLyrics.StatusKey;
+            // After signing in (not after a routine token renewal, which also ends in "ready"), look
+            // the song up again; a lookup in progress gets the token anyway. "Disconnected" is also
+            // the state before the first token, and connecting goes through "login".
+            if (spotifyStatus == "SpotifyLyricsReady"
+                && was is "SpotifyLyricsLogin" or "SpotifyLyricsDenied" or "SpotifyLyricsBrowserError"
+                && _sync.State is not (Models.LyricsState.Synced or Models.LyricsState.Loading))
                 _ = _sync.ForceReloadAsync();
         };
-        // Restore an enabled web session even when the current song is already cached.
-        _ = _spotifyLyrics.GetCredentialsAsync(CancellationToken.None);
+        // The web player opens when a lookup first needs it, not at startup: a cached song
+        // needs no token, and the settings window checks the session when it opens.
+        _monitor.TimelineChanged += (_, _) =>
+        {
+            if (_monitor.Status == Models.PlaybackState.Playing && _monitor.Duration is { } duration
+                && duration - _monitor.Position < TimeSpan.FromSeconds(30))
+                _spotifyLyrics.PrepareForNextSong();
+        };
 
         _taskbarVm = new TaskbarViewModel(_monitor, _sync, _settings, new AppVolumeService());
         _overlay = new TaskbarOverlayService(_monitor, _sync, _settings, new TaskbarPositionService(), _taskbarVm);
@@ -184,6 +203,7 @@ public partial class App : Application
             _settingsWindow.Activate();
             return;
         }
+        _spotifyLyrics?.CheckSession();
         _settingsVm = new SettingsViewModel(_settings, _cache, _sync, _overlay.IsCalibrating, _overlay.SetCalibrating);
         _settingsWindow = new SettingsWindow(_settingsVm, _spotifyLyrics!);
         _settingsWindow.Closed += (_, _) =>

@@ -46,7 +46,7 @@ No Spicetify, Spotify login or Premium is needed for the default LRCLIB source. 
 | 🧩 **Customize your bar** | A replica of the player in the settings: click each element to turn it on (green) or off (white). |
 | 🖥️ **Made for Windows 11** | Hides with the taskbar in fullscreen, never steals focus, stays out of Alt+Tab and handles DPI scaling and dark mode. |
 | 🌍 **6 languages** | English, Português, Español, Français, Deutsch and Italiano. Switch in Settings → General → Language. |
-| 🪶 **Lightweight** | About 60 MB of RAM and ~1% of one CPU core while playing; idle when paused. Never runs as administrator. |
+| 🪶 **Lightweight** | About 60 MB of RAM and under 1% of one CPU core while playing; idle when paused. Never runs as administrator. |
 
 <p align="center">
   <img src="docs/images/miniplayer.png" alt="Mini player with scrolling lyrics" width="360" />
@@ -106,7 +106,7 @@ In **Settings → Advanced → Spotify lyrics (experimental) → Connect Spotify
 
 For uncached songs, Spotify is asked first. LRCLIB is only asked when Spotify has no synced lyrics for the song or cannot be reached, which also keeps LRCLIB requests to a minimum. Local `.lrc` files still take precedence, and cached lyrics are reused. Use **Fetch lyrics again** to look a cached song up again. Plain lyrics are used only if neither source returns synced lyrics, Spotify's first.
 
-To save memory, the hidden Spotify web window is suspended shortly after each lookup and closed after two minutes without use. The next lookup that needs it may take a few seconds longer.
+The hidden Spotify web window only opens to get an access token (about once an hour) and for the first search after Taskitify starts; it closes 30 seconds later. Song changes look lyrics up directly with Spotify, in about a second.
 
 This uses Spotify's unofficial web-player lyrics service. Login does not guarantee access: Spotify can refuse lyrics, require renewed login, or change its service. The connection status distinguishes a captured session from a successful lyrics response. LRCLIB remains available when Spotify fails. Automated tests use simulated Spotify responses; account-specific access must be checked after signing in.
 
@@ -135,10 +135,10 @@ Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
 
 ```powershell
 dotnet build                                   # build
-dotnet test                                    # 81 tests (lyrics, sync, colors, layout)
+dotnet test                                    # 154 tests (lyrics, sync, colors, layout)
 dotnet run --project src/Taskitify             # run
 
-# Single executable that needs no .NET installed (~179 MB; ~69 MB zipped)
+# Single executable that needs no .NET installed (~179 MB; ~72 MB zipped)
 dotnet publish src/Taskitify -c Release -r win-x64 --self-contained true `
   -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -o publish
 ```

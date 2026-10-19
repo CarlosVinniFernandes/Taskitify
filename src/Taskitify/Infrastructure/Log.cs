@@ -23,6 +23,13 @@ internal static class Log
     public static void Error(string message, Exception? ex = null) =>
         Write("ERROR", ex is null ? message : $"{message}: {ex.GetType().Name}: {ex.Message}");
 
+    /// <summary>Diagnostics (lookup sources, timings, web player lifecycle): debug mode only.</summary>
+    public static void Debug(string message)
+    {
+        if (WriteToFile)
+            Write("DEBUG", message);
+    }
+
     public static IReadOnlyList<string> Snapshot()
     {
         lock (Gate)
@@ -59,13 +66,18 @@ internal static class Log
 
 internal static class AppPaths
 {
+    // Measurements and tests run against a copy of the user's data (tools/perf), never the real one.
+    private static readonly string? DataOverride = Environment.GetEnvironmentVariable("TASKITIFY_DATA_DIR");
+
     /// <summary>%AppData%\Taskitify — settings.</summary>
-    public static string RoamingDirectory { get; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Taskitify");
+    public static string RoamingDirectory { get; } = string.IsNullOrWhiteSpace(DataOverride)
+        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Taskitify")
+        : Path.Combine(DataOverride, "Roaming");
 
     /// <summary>%LocalAppData%\Taskitify — cache and logs.</summary>
-    public static string LocalDataDirectory { get; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Taskitify");
+    public static string LocalDataDirectory { get; } = string.IsNullOrWhiteSpace(DataOverride)
+        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Taskitify")
+        : Path.Combine(DataOverride, "Local");
 
     public static string LyricsCacheDirectory { get; } = Path.Combine(LocalDataDirectory, "lyrics-cache");
 

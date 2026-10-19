@@ -48,24 +48,31 @@ public sealed class LyricsService : ILyricsService
 
         foreach (var provider in _local)
         {
-            var record = await provider.FindAsync(query, ct).ConfigureAwait(false);
+            var record = WithSource(await provider.FindAsync(query, ct).ConfigureAwait(false), provider);
             if (record is not null && FromRecord(record) is { Kind: not LyricsKind.NotFound } local)
                 return local;
         }
 
         var key = LyricsCache.KeyFor(query);
         if (_memory.TryGetValue(key, out var cached))
-            return cached;
+            return cached with { FromCache = true };
 
         if (_cache is not null && await _cache.TryGetAsync(query, ct).ConfigureAwait(false) is { } fromDisk)
         {
+            fromDisk = fromDisk with { FromCache = true };
             Remember(key, fromDisk);
             return fromDisk;
         }
 
         var (best, error) = await FindRemoteAsync(query, ct).ConfigureAwait(false);
         if (best is null && error is not null)
+        {
+            // Offline, say: a stand-in the cache let expire still beats no lyrics. Not remembered,
+            // so the next lookup asks the sources again.
+            if (_cache is not null && await _cache.TryGetExpiredAsync(query, ct).ConfigureAwait(false) is { } expired)
+                return expired with { FromCache = true };
             return LyricsResult.Error(error);
+        }
 
         var result = FromRecord(best);
         Remember(key, result);
@@ -87,6 +94,8 @@ public sealed class LyricsService : ILyricsService
     {
         _memory.TryRemove(LyricsCache.KeyFor(query), out _);
         _cache?.Remove(query);
+        foreach (var provider in _local.Concat(_remote))
+            provider.Forget(query);
         return Task.CompletedTask;
     }
 
@@ -134,7 +143,7 @@ public sealed class LyricsService : ILyricsService
             // Observe late failures even if a provider ignores cancellation.
             _ = lookup.ContinueWith(t => { _ = t.Exception; }, CancellationToken.None,
                 TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
-            return (await lookup.WaitAsync(attempt.Token).ConfigureAwait(false), null);
+            return (WithSource(await lookup.WaitAsync(attempt.Token).ConfigureAwait(false), provider), null);
         }
         catch (OperationCanceledException)
         {
@@ -152,16 +161,20 @@ public sealed class LyricsService : ILyricsService
         if (r is null)
             return LyricsResult.NotFound;
         if (r.Instrumental)
-            return new LyricsResult(LyricsKind.Instrumental, [], null, r.TrackName, r.ArtistName);
+            return new LyricsResult(LyricsKind.Instrumental, [], null, r.TrackName, r.ArtistName) { Source = r.Source, Provisional = r.Provisional };
         var lines = LrcParser.Parse(r.SyncedLyrics);
         if (lines.Count > 0)
-            return new LyricsResult(LyricsKind.Synced, lines, r.PlainLyrics, r.TrackName, r.ArtistName);
+            return new LyricsResult(LyricsKind.Synced, lines, r.PlainLyrics, r.TrackName, r.ArtistName) { Source = r.Source, Provisional = r.Provisional };
         if (!string.IsNullOrWhiteSpace(r.PlainLyrics))
-            return new LyricsResult(LyricsKind.PlainOnly, [], r.PlainLyrics, r.TrackName, r.ArtistName);
+            return new LyricsResult(LyricsKind.PlainOnly, [], r.PlainLyrics, r.TrackName, r.ArtistName) { Source = r.Source, Provisional = r.Provisional };
         return LyricsResult.NotFound;
     }
 
     internal static bool HasSynced(LrclibRecord r) => !string.IsNullOrWhiteSpace(r.SyncedLyrics);
+
+    /// <summary>Tag a record with the provider that found it, unless an inner provider already did.</summary>
+    internal static LrclibRecord? WithSource(LrclibRecord? record, ILyricsProvider provider) =>
+        record is { Source: null } ? record with { Source = provider.Name } : record;
 
     private void Remember(string key, LyricsResult result)
     {

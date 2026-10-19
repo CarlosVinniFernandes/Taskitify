@@ -24,6 +24,8 @@
     <Platforms>AnyCPU;x64</Platforms>
     <!-- WinForms analyzer wants Application.SetHighDpiMode; this is a WPF app, so the manifest is right. -->
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
+    <!-- Framework messages only in the app's own languages: the other 8 cost ~10 MB of the exe. -->
+    <SatelliteResourceLanguages>en;pt-BR;es;fr;de;it</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <ItemGroup>

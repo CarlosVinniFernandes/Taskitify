@@ -80,7 +80,7 @@ public interface ISpotifyMonitor : IDisposable
 /// <summary>
 /// Watches the Windows media session (GSMTC) that belongs to Spotify Desktop. Event driven;
 /// the only polling is a 1.5 s timeline/state check while playing, to correct drift in case
-/// Spotify does not raise an event.
+/// Spotify does not raise an event, which also notices a new song whose event is late.
 /// </summary>
 public sealed class SpotifyMonitor : ISpotifyMonitor
 {
@@ -323,12 +323,16 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
         }
     }
 
-    private void OnMediaPropertiesChanged(GlobalSystemMediaTransportControlsSession sender, MediaPropertiesChangedEventArgs args) =>
+    private void OnMediaPropertiesChanged(GlobalSystemMediaTransportControlsSession sender, MediaPropertiesChangedEventArgs args)
+    {
+        // Arrival time vs. the "Track:" line tells delivery delays from processing delays.
+        Log.Debug("Media properties changed (event received)");
         _dispatcher.InvokeAsync(async () =>
         {
             if (IsCurrent(sender))
                 await LoadMediaPropertiesAsync();
         });
+    }
 
     private void OnPlaybackInfoChanged(GlobalSystemMediaTransportControlsSession sender, PlaybackInfoChangedEventArgs args) =>
         _dispatcher.InvokeAsync(() =>
@@ -349,7 +353,9 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
     private bool IsCurrent(GlobalSystemMediaTransportControlsSession sender) =>
         _session is not null && sender.SourceAppUserModelId == _session.SourceAppUserModelId;
 
-    private async Task LoadMediaPropertiesAsync()
+    /// <param name="changedBy">When a timeline report revealed the new song: that report's
+    /// time, so the report counts as the new song's (its event may come much later).</param>
+    private async Task LoadMediaPropertiesAsync(DateTimeOffset? changedBy = null)
     {
         var session = _session;
         if (session is null)
@@ -380,10 +386,15 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
         {
             Log.Info($"Track: {track.Artist} - {track.Title} [{track.Album}]");
             // Only a change *from* another song can leave a stale timeline behind.
-            _trackChangedAt = Track is null ? DateTimeOffset.MinValue : DateTimeOffset.UtcNow;
+            _trackChangedAt = Track is null ? DateTimeOffset.MinValue
+                : changedBy is { } at && at < DateTimeOffset.UtcNow ? at - TimeSpan.FromSeconds(1) : DateTimeOffset.UtcNow;
             Track = track;
             _clock.Reset();
             _clock.Duration = null;
+            // The report that revealed the song is its own, but it went to the previous song's
+            // clock and only new reports are applied: read it again after the reset.
+            if (changedBy is not null)
+                _lastTimelineStamp = default;
             _thumbnailLoaded = false;
             Thumbnail = null;
             TrackChanged?.Invoke(this, EventArgs.Empty);
@@ -395,6 +406,34 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
         {
             _thumbnailLoaded = true;
             await LoadThumbnailAsync(props.Thumbnail, track);
+            // Each media-properties call leaves ~0.2 MB of native memory (the cover) behind
+            // WinRT wrappers that only a collection frees, and this app allocates too little for
+            // one to come on its own (measured: +16 MB over 80 calls; flat with a young-generation
+            // collection). One per song costs about a millisecond.
+            GC.Collect(1);
+        }
+    }
+
+    /// <summary>The song GSMTC reports now, when its MediaPropertiesChanged has not arrived yet.</summary>
+    private async Task CheckTrackAsync(DateTimeOffset reportedAt)
+    {
+        if (_session is not { } session)
+            return;
+        try
+        {
+            var props = await session.TryGetMediaPropertiesAsync();
+            if (props is null || string.IsNullOrWhiteSpace(props.Title) || !ReferenceEquals(session, _session))
+                return;
+            var track = new TrackInfo(props.Title.Trim(), (props.Artist ?? string.Empty).Trim(), (props.AlbumTitle ?? string.Empty).Trim());
+            if (track != Track)
+            {
+                Log.Debug("Song changed before its media event arrived");
+                await LoadMediaPropertiesAsync(reportedAt);
+            }
+        }
+        catch (Exception)
+        {
+            // The next tick, or the event itself, tries again.
         }
     }
 
@@ -571,6 +610,15 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
 
         var changed = false;
         var duration = t.EndTime - t.StartTime;
+        // MediaPropertiesChanged can reach us late (measured: 10 s after a skip whose title GSMTC
+        // already returned on request). A timeline with another length, or one that went back
+        // to the start, is checked against the song at once; polling the song itself would
+        // pile up the native memory described in LoadMediaPropertiesAsync.
+        var position = t.Position - t.StartTime;
+        if (t.LastUpdatedTime != _lastTimelineStamp && Track is not null
+            && ((_clock.Duration is { } current && duration > TimeSpan.Zero && Math.Abs((current - duration).TotalSeconds) > 1)
+                || position < _lastTimelinePosition - TimeSpan.FromSeconds(5)))
+            _ = CheckTrackAsync(t.LastUpdatedTime);
         if (duration > TimeSpan.Zero
             && IsTimelineForCurrentTrack(t)
             && (_clock.Duration is not { } known || Math.Abs((known - duration).TotalMilliseconds) > 500))
@@ -581,7 +629,6 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
 
         // Only apply reports we have not seen yet: re-applying an old (stale) report while
         // playing would project from the wrong origin after a pause.
-        var position = t.Position - t.StartTime;
         if (t.LastUpdatedTime != _lastTimelineStamp || position != _lastTimelinePosition)
         {
             _lastTimelineStamp = t.LastUpdatedTime;

@@ -148,10 +148,12 @@ public sealed class LyricsSyncService : IDisposable
 
             // Spotify only refreshes the timeline every few seconds; wait briefly for the new
             // song's duration, which makes matching much more precise.
+            var clock = System.Diagnostics.Stopwatch.StartNew();
             for (var waited = TimeSpan.Zero; _monitor.Duration is null && waited < DurationWait; waited += DurationPoll)
                 await Task.Delay(DurationPoll, cts.Token);
             if (_monitor.Track != track)
                 return;
+            var durationWait = clock.Elapsed;
 
             var query = new TrackQuery(track.Title, track.Artist, track.Album, _monitor.Duration);
             _query = query;
@@ -161,7 +163,10 @@ public sealed class LyricsSyncService : IDisposable
 
             Result = result;
             Timeline = result.Kind == LyricsKind.Synced ? new LyricsTimeline(result.Lines) : null;
-            Log.Info($"Lyrics for '{track.Title}': {result.Kind}{(result.ErrorMessage is null ? "" : $" ({result.ErrorMessage})")}");
+            // The source and timings let the debug log measure Spotify/LRCLIB/cache hit rates.
+            var source = result.Source is null ? "" : $" from {result.Source}{(result.FromCache ? " (cache)" : "")}";
+            Log.Info($"Lyrics for '{track.Title}': {result.Kind}{source} in {(clock.Elapsed - durationWait).TotalSeconds:0.00} s"
+                + $" (+{durationWait.TotalSeconds:0.00} s waiting for the duration){(result.ErrorMessage is null ? "" : $" ({result.ErrorMessage})")}");
             SetState(result.Kind switch
             {
                 LyricsKind.Synced => LyricsState.Synced,

@@ -46,7 +46,7 @@ Não precisa de Spicetify, login no Spotify nem Premium para usar a fonte padrã
 | 🧩 **Monte a sua barra** | Uma réplica do player nas configurações: clique em cada elemento para ligar (verde) ou desligar (branco). |
 | 🖥️ **Feito para o Windows 11** | Some junto com a barra em tela cheia, não rouba o foco, não aparece no Alt+Tab e respeita DPI e tema escuro. |
 | 🌍 **6 idiomas** | Português, English, Español, Français, Deutsch e Italiano. Troque em Configurações → Geral → Idioma (o padrão é inglês). |
-| 🪶 **Leve** | Cerca de 60 MB de memória e ~1% de um núcleo enquanto toca; pausado, fica parado. Nada roda como administrador. |
+| 🪶 **Leve** | Cerca de 60 MB de memória e menos de 1% de um núcleo enquanto toca; pausado, fica parado. Nada roda como administrador. |
 
 <p align="center">
   <img src="docs/images/miniplayer.png" alt="Mini player com a letra rolando" width="360" />
@@ -106,7 +106,7 @@ Em **Configurações → Avançado → Letras do Spotify (experimental) → Cone
 
 Para músicas sem cache, o Spotify é consultado primeiro. O LRCLIB só é consultado quando o Spotify não tem a letra sincronizada da música ou não responde, o que também reduz as requisições ao LRCLIB. Arquivos `.lrc` locais continuam tendo prioridade, e letras em cache são reutilizadas. Use **Buscar letra de novo** para buscar de novo uma música já salva. Letras sem tempos só são usadas quando nenhuma fonte retorna letras sincronizadas, e a do Spotify vem primeiro.
 
-Para economizar memória, a janela escondida do Spotify é suspensa logo depois de cada busca e fechada após dois minutos sem uso. A próxima busca que precisar dela pode levar alguns segundos a mais.
+A janela escondida do Spotify só abre para obter o token de acesso (cerca de uma vez por hora) e na primeira busca depois de iniciar o Taskitify; ela fecha 30 segundos depois. Nas trocas de música, a letra é buscada direto no Spotify, em cerca de um segundo.
 
 A integração usa o serviço não oficial do player web do Spotify. Fazer login não garante acesso: o Spotify pode recusar letras, pedir novo login ou mudar o serviço. O status diferencia uma sessão conectada de uma letra recebida com sucesso. O LRCLIB continua disponível quando o Spotify falha. Os testes automatizados usam respostas simuladas; o acesso da sua conta precisa ser verificado após entrar.
 
@@ -135,10 +135,10 @@ Requer o [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
 
 ```powershell
 dotnet build                                   # compila
-dotnet test                                    # 81 testes (letras, sincronização, cores, layout)
+dotnet test                                    # 154 testes (letras, sincronização, cores, layout)
 dotnet run --project src/Taskitify             # roda
 
-# Executável único, sem precisar de .NET instalado (~179 MB; ~69 MB zipado)
+# Executável único, sem precisar de .NET instalado (~179 MB; ~72 MB zipado)
 dotnet publish src/Taskitify -c Release -r win-x64 --self-contained true `
   -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=None -o publish
 ```
