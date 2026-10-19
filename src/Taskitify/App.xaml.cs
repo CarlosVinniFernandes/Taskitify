@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Threading;
@@ -85,6 +86,13 @@ public partial class App : Application
 
         _settings = new SettingsService();
         _settings.Load();
+        if (_settings.IsFirstRun)
+        {
+            // The welcome comes in Windows' display language when the app has it. Saving the
+            // settings now also means it is shown only once.
+            var windows = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+            _settings.Update(s => s.Language = LocalizationService.Languages.Any(l => l.Code == windows) ? windows : s.Language);
+        }
         LocalizationService.SetLanguage(_settings.Current.Language);
         Log.WriteToFile = _settings.Current.DebugMode;
         Log.Info($"Taskitify starting (Windows {Environment.OSVersion.Version}, background={background})");
@@ -164,7 +172,7 @@ public partial class App : Application
         }
 
         if (_settings.IsFirstRun)
-            ShowSettings();
+            ShowWelcome();
         else if (!background && _tray.Visible)
             _tray.ShowBalloon("Taskitify", LocalizationService.Get("BackgroundNotice"));
     }
@@ -215,6 +223,15 @@ public partial class App : Application
         WindowInterop.SetDarkTitleBar(_settingsWindow, !_theme!.AppsUseLightTheme);
         _settingsWindow.Show();
         _settingsWindow.Activate();
+    }
+
+    /// <summary>First run: LRCLIB alone or Spotify + LRCLIB, and what the Spotify connection does.</summary>
+    private void ShowWelcome()
+    {
+        var welcome = new WelcomeWindow(_spotifyLyrics!);
+        WindowInterop.SetDarkTitleBar(welcome, !_theme!.AppsUseLightTheme);
+        welcome.Show();
+        welcome.Activate();
     }
 
     private void ShowDebug()

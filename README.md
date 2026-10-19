@@ -69,6 +69,7 @@ No Spicetify, Spotify login or Premium is needed for the default LRCLIB source. 
 
 | Action | What happens |
 |---|---|
+| Open the app for the first time | A screen explains the two ways to get lyrics (LRCLIB only, or Spotify + LRCLIB) and makes clear that the Spotify connection changes nothing in your account |
 | Play a song on Spotify | The lyric replaces the weather widget |
 | Click the lyric | Opens or closes the mini player |
 | `Esc` or click outside | Closes the mini player |

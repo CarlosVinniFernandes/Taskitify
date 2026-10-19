@@ -69,6 +69,7 @@ Não precisa de Spicetify, login no Spotify nem Premium para usar a fonte padrã
 
 | Ação | O que acontece |
 |---|---|
+| Abrir o app pela primeira vez | Uma tela explica as duas formas de buscar letras (só LRCLIB, ou Spotify + LRCLIB) e deixa claro que a conexão com o Spotify não altera nada na sua conta |
 | Tocar uma música no Spotify | A letra aparece no lugar do clima |
 | Clicar na letra | Abre ou fecha o mini player |
 | `Esc` ou clicar fora | Fecha o mini player |

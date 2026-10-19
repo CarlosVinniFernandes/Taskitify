@@ -110,6 +110,7 @@ Verificado na máquina de desenvolvimento (Windows 11 build 26200, 1920×1200 a 
 - Detecção do `WidgetsButton` (1415,1152 152×48) e overlay de 300 px crescendo para a esquerda sem cobrir a bandeja
 - Clima coberto enquanto toca; pausar mostra o clima de novo e retomar volta à linha certa
 - Letra sincronizada vinda do LRCLIB; erro 429 tratado com mensagem no popup, título na barra e nova tentativa com backoff
+- Primeira execução (sem `settings.json`): no idioma do Windows, quando o app o tem, uma tela explica as duas formas de buscar letras (só LRCLIB, ou Spotify + LRCLIB) e o que a conexão com o Spotify faz: nada na conta, só busca letras. "Conectar o Spotify" abre a janela de login; as configurações são salvas na hora, então a tela aparece uma vez só
 - Troca de música: nova capa e nova letra
 - Menu da letra: **Buscar letra de novo** abre um submenu com uma busca por fonte (Spotify, LRCLIB). A fonte escolhida é consultada sozinha, sem cache; o que ela achar passa a ser a letra salva, e se ela não tiver a letra (ou falhar) a salva continua. O submenu é outro popup: o fechamento por clique fora do menu também o considera
 - Mini player: abre ao clicar, recebe foco mesmo com outro app em primeiro plano, fecha com Esc (devolvendo o foco), com clique fora e com novo clique no widget; linha atual destacada e centralizada
