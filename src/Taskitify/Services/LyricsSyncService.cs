@@ -96,6 +96,16 @@ public sealed class LyricsSyncService : IDisposable
         Reload();
     }
 
+    /// <summary>The sources the current song can be looked up in one by one (the overlay's menu).</summary>
+    public IReadOnlyList<string> Sources => _lyrics.Sources;
+
+    /// <summary>Look the current song up in one source only; what it finds replaces the cached lyrics.</summary>
+    public Task ReloadFromAsync(string source)
+    {
+        _retryCount = 0;
+        return LoadAsync(debounce: false, source);
+    }
+
     private void OnTrackChanged(object? sender, EventArgs e)
     {
         _retryCount = 0;
@@ -117,7 +127,8 @@ public sealed class LyricsSyncService : IDisposable
         Reschedule();
     }
 
-    private async Task LoadAsync(bool debounce)
+    /// <param name="onlySource">Only this source, skipping the caches (null: the usual lookup).</param>
+    private async Task LoadAsync(bool debounce, string? onlySource = null)
     {
         _loadCts?.Cancel();
         _retryTimer.Stop();
@@ -157,7 +168,9 @@ public sealed class LyricsSyncService : IDisposable
 
             var query = new TrackQuery(track.Title, track.Artist, track.Album, _monitor.Duration);
             _query = query;
-            var result = await _lyrics.GetLyricsAsync(query, cts.Token);
+            var result = onlySource is null
+                ? await _lyrics.GetLyricsAsync(query, cts.Token)
+                : await _lyrics.GetLyricsFromAsync(query, onlySource, cts.Token);
             if (cts.IsCancellationRequested || _monitor.Track != track)
                 return;
 

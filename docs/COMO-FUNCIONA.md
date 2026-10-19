@@ -111,13 +111,14 @@ Verificado na máquina de desenvolvimento (Windows 11 build 26200, 1920×1200 a 
 - Clima coberto enquanto toca; pausar mostra o clima de novo e retomar volta à linha certa
 - Letra sincronizada vinda do LRCLIB; erro 429 tratado com mensagem no popup, título na barra e nova tentativa com backoff
 - Troca de música: nova capa e nova letra
+- Menu da letra: **Buscar letra de novo** abre um submenu com uma busca por fonte (Spotify, LRCLIB). A fonte escolhida é consultada sozinha, sem cache; o que ela achar passa a ser a letra salva, e se ela não tiver a letra (ou falhar) a salva continua. O submenu é outro popup: o fechamento por clique fora do menu também o considera
 - Mini player: abre ao clicar, recebe foco mesmo com outro app em primeiro plano, fecha com Esc (devolvendo o foco), com clique fora e com novo clique no widget; linha atual destacada e centralizada
 - Consumo medido com `tools/perf/Measure-Taskitify.ps1` (publish Release, executável único): cerca de 55–70 MB de memória privada (35–45 MB no conjunto de trabalho) e menos de 1% de um núcleo enquanto toca com o overlay visível. O overlay é desenhado por software, o que deixa o dispositivo Direct3D e o driver da GPU (~13 MB, medido com o overlay sozinho) fora do processo, sem gastar mais CPU, nem com o letreiro rolando. O mini player usa a GPU enquanto está aberto; depois da primeira abertura, ~12 MB do driver ficam no processo até o app reiniciar. Com as letras do Spotify, o navegador escondido (até ~310 MB) fica aberto cerca de 35 s depois de iniciar e quando o token vence; nas trocas de música ele não abre, exceto quando a busca não acha a música. Pausado, nenhum timer roda.
 - Estilos testados na barra: só letra, capa + letra, player e completo, com fundo em degradê e igual à barra
 - Aleatório (dois cliques rápidos voltam ao estado inicial), volume (roda do mouse 100% → 95% → 100%, silenciar e reativar) e cliques nos botões sem abrir o popup
 - Mini player com o degradê da capa
 - Player minimizado ao pausar, montador com letra ocultável e migração das configurações do nome antigo (Taskbar Lyrics)
-- 154 testes unitários passando
+- 158 testes unitários passando
 
 **Não** verificado (sem o hardware ou a configuração aqui):
 

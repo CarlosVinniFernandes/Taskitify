@@ -8,6 +8,16 @@ public interface ILyricsService
 
     /// <summary>Drop cached results (memory and disk) for this query.</summary>
     Task ForgetAsync(TrackQuery query);
+
+    /// <summary>The remote sources a song can be looked up in one by one ("Spotify", "LRCLIB").</summary>
+    IReadOnlyList<string> Sources => [];
+
+    /// <summary>
+    /// Ask only <paramref name="source"/>, skipping the caches and the other sources: the user
+    /// picks the version. What it finds replaces the cached result; when it finds nothing, or
+    /// fails, the cache keeps what it had.
+    /// </summary>
+    Task<LyricsResult> GetLyricsFromAsync(TrackQuery query, string source, CancellationToken ct) => GetLyricsAsync(query, ct);
 }
 
 /// <summary>
@@ -31,6 +41,7 @@ public sealed class LyricsService : ILyricsService
         _local = list.Where(p => p.IsLocal).ToList();
         _remote = list.Where(p => !p.IsLocal).ToList();
         _cache = cache;
+        Sources = _remote.SelectMany(p => p.Sources).Select(p => p.Name).ToList();
     }
 
     /// <summary>LRCLIB only, as before providers existed.</summary>
@@ -40,6 +51,8 @@ public sealed class LyricsService : ILyricsService
     }
 
     public TimeSpan ProviderTimeout { get; init; } = TimeSpan.FromSeconds(90);
+
+    public IReadOnlyList<string> Sources { get; }
 
     public async Task<LyricsResult> GetLyricsAsync(TrackQuery query, CancellationToken ct)
     {
@@ -75,19 +88,37 @@ public sealed class LyricsService : ILyricsService
         }
 
         var result = FromRecord(best);
-        Remember(key, result);
-        if (_cache is not null)
-        {
-            try
-            {
-                await _cache.SaveAsync(query, result, best?.SyncedLyrics, ct).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                // Cache write failures must not hide lyrics we already have.
-            }
-        }
+        await KeepAsync(query, result, best?.SyncedLyrics, ct).ConfigureAwait(false);
         return result;
+    }
+
+    public async Task<LyricsResult> GetLyricsFromAsync(TrackQuery query, string source, CancellationToken ct)
+    {
+        var provider = _remote.SelectMany(p => p.Sources).FirstOrDefault(p => p.Name == source);
+        if (provider is null || string.IsNullOrWhiteSpace(query.Title) || string.IsNullOrWhiteSpace(query.Artist))
+            return LyricsResult.NotFound;
+        var (record, error) = await FindProviderAsync(provider, query, ct).ConfigureAwait(false);
+        var result = FromRecord(record);
+        if (result.Kind == LyricsKind.NotFound)
+            return error is null ? result : LyricsResult.Error(error);
+        await KeepAsync(query, result, record?.SyncedLyrics, ct).ConfigureAwait(false);
+        return result;
+    }
+
+    /// <summary>The result for the song from now on, in memory and on disk.</summary>
+    private async Task KeepAsync(TrackQuery query, LyricsResult result, string? rawSynced, CancellationToken ct)
+    {
+        Remember(LyricsCache.KeyFor(query), result);
+        if (_cache is null)
+            return;
+        try
+        {
+            await _cache.SaveAsync(query, result, rawSynced, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Cache write failures must not hide lyrics we already have.
+        }
     }
 
     public Task ForgetAsync(TrackQuery query)

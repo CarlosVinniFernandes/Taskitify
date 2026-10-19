@@ -25,6 +25,8 @@ public sealed class FallbackLyricsProvider(ILyricsProvider primary, ILyricsProvi
 
     public bool IsLocal => false;
 
+    public IEnumerable<ILyricsProvider> Sources => primary.Sources.Concat(fallback.Sources);
+
     public async Task<LrclibRecord?> FindAsync(TrackQuery query, CancellationToken ct)
     {
         var key = LyricsCache.KeyFor(query);

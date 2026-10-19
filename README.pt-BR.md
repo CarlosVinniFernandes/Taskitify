@@ -74,7 +74,7 @@ Não precisa de Spicetify, login no Spotify nem Premium para usar a fonte padrã
 | `Esc` ou clicar fora | Fecha o mini player |
 | Clicar numa linha do mini player | Pula a música para aquela linha |
 | Roda do mouse no botão de volume | Ajusta o volume do Spotify (clique silencia) |
-| Clique direito na letra | Buscar letra de novo, mostrar música e artista, calibrar posição, configurações, sair |
+| Clique direito na letra | Buscar letra de novo (no Spotify ou no LRCLIB), mostrar música e artista, calibrar posição, configurações, sair |
 | Ícone na bandeja | Configurações, mini player e sair |
 
 Para abrir junto com o Windows: **Configurações → Geral → Iniciar com o Windows**.
@@ -104,7 +104,7 @@ Também dá para escolher:
 
 Em **Configurações → Avançado → Letras do Spotify (experimental) → Conectar Spotify**, entre diretamente no Spotify pela janela do Taskitify. Use o login por e-mail se uma opção externa não abrir. Continue reproduzindo no Spotify Desktop; a janela web serve para a conexão e pode ser fechada após entrar. É necessário o Microsoft Edge WebView2 Runtime.
 
-Para músicas sem cache, o Spotify é consultado primeiro. O LRCLIB só é consultado quando o Spotify não tem a letra sincronizada da música ou não responde, o que também reduz as requisições ao LRCLIB. Arquivos `.lrc` locais continuam tendo prioridade, e letras em cache são reutilizadas. Use **Buscar letra de novo** para buscar de novo uma música já salva. Letras sem tempos só são usadas quando nenhuma fonte retorna letras sincronizadas, e a do Spotify vem primeiro.
+Para músicas sem cache, o Spotify é consultado primeiro. O LRCLIB só é consultado quando o Spotify não tem a letra sincronizada da música ou não responde, o que também reduz as requisições ao LRCLIB. Arquivos `.lrc` locais continuam tendo prioridade, e letras em cache são reutilizadas. Use **Buscar letra de novo** → **Buscar letra no Spotify** ou **no LRCLIB** para buscar de novo uma música já salva, na fonte que você escolher (por exemplo, quando a outra versão está com o tempo melhor). O que essa fonte achar passa a ser a letra salva; se ela não tiver a letra, a salva continua. Letras sem tempos só são usadas quando nenhuma fonte retorna letras sincronizadas, e a do Spotify vem primeiro.
 
 A janela escondida do Spotify só abre para obter o token de acesso (cerca de uma vez por hora) e na primeira busca depois de iniciar o Taskitify; ela fecha 30 segundos depois. Nas trocas de música, a letra é buscada direto no Spotify, em cerca de um segundo.
 
@@ -119,7 +119,7 @@ A integração usa o serviço não oficial do player web do Spotify. Fazer login
 
 ## Perguntas frequentes
 
-**A letra não apareceu.** Algumas músicas não estão no LRCLIB; nesse caso a barra mostra o nome da música. Quando o LRCLIB está sobrecarregado, a letra pode levar alguns segundos para chegar. Clique com o botão direito na letra → **Buscar letra de novo** para forçar uma nova busca. Você também pode colocar seus próprios arquivos `.lrc` na pasta de letras (Configurações → Avançado → **Abrir pasta de letras**), com o nome `Artista - Música.lrc` ou com as tags `[ar:]`/`[ti:]`; eles são usados antes do LRCLIB.
+**A letra não apareceu.** Algumas músicas não estão no LRCLIB; nesse caso a barra mostra o nome da música. Quando o LRCLIB está sobrecarregado, a letra pode levar alguns segundos para chegar. Clique com o botão direito na letra → **Buscar letra de novo** e escolha a fonte para forçar uma nova busca. Você também pode colocar seus próprios arquivos `.lrc` na pasta de letras (Configurações → Avançado → **Abrir pasta de letras**), com o nome `Artista - Música.lrc` ou com as tags `[ar:]`/`[ti:]`; eles são usados antes do LRCLIB.
 
 **A letra está adiantada ou atrasada.** Configurações → Sincronização → **Ajuste de tempo**.
 
@@ -135,7 +135,7 @@ Requer o [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
 
 ```powershell
 dotnet build                                   # compila
-dotnet test                                    # 154 testes (letras, sincronização, cores, layout)
+dotnet test                                    # 158 testes (letras, sincronização, cores, layout)
 dotnet run --project src/Taskitify             # roda
 
 # Executável único, sem precisar de .NET instalado (~179 MB; ~72 MB zipado)

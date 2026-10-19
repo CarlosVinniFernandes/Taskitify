@@ -74,7 +74,7 @@ No Spicetify, Spotify login or Premium is needed for the default LRCLIB source. 
 | `Esc` or click outside | Closes the mini player |
 | Click a line in the mini player | Jumps the song to that line |
 | Mouse wheel on the volume button | Changes Spotify's volume (click to mute) |
-| Right-click the lyric | Fetch lyrics again, show song and artist, calibrate position, settings, exit |
+| Right-click the lyric | Fetch lyrics again (from Spotify or LRCLIB), show song and artist, calibrate position, settings, exit |
 | Tray icon | Settings, mini player and exit |
 
 To start with Windows: **Settings → General → Start with Windows**.
@@ -104,7 +104,7 @@ You can also choose:
 
 In **Settings → Advanced → Spotify lyrics (experimental) → Connect Spotify**, sign in directly on Spotify in the Taskitify window. Use email login if an external sign-in option does not open. Keep playback in Spotify Desktop; the web window is only for this connection and can be closed after signing in. This requires Microsoft Edge WebView2 Runtime.
 
-For uncached songs, Spotify is asked first. LRCLIB is only asked when Spotify has no synced lyrics for the song or cannot be reached, which also keeps LRCLIB requests to a minimum. Local `.lrc` files still take precedence, and cached lyrics are reused. Use **Fetch lyrics again** to look a cached song up again. Plain lyrics are used only if neither source returns synced lyrics, Spotify's first.
+For uncached songs, Spotify is asked first. LRCLIB is only asked when Spotify has no synced lyrics for the song or cannot be reached, which also keeps LRCLIB requests to a minimum. Local `.lrc` files still take precedence, and cached lyrics are reused. Use **Fetch lyrics again** → **Fetch lyrics from Spotify** or **from LRCLIB** to look a cached song up again in the source you pick (when the other version is better timed, for example). What that source finds becomes the saved lyrics; if it has none, the saved ones stay. Plain lyrics are used only if neither source returns synced lyrics, Spotify's first.
 
 The hidden Spotify web window only opens to get an access token (about once an hour) and for the first search after Taskitify starts; it closes 30 seconds later. Song changes look lyrics up directly with Spotify, in about a second.
 
@@ -119,7 +119,7 @@ This uses Spotify's unofficial web-player lyrics service. Login does not guarant
 
 ## FAQ
 
-**The lyrics did not show up.** Some songs are not on LRCLIB; in that case the taskbar shows the song title. When LRCLIB is under heavy load, lyrics may take a few seconds to arrive. Right-click the lyric → **Fetch lyrics again** to force a new lookup. You can also drop your own `.lrc` files in the lyrics folder (Settings → Advanced → **Open lyrics folder**), named `Artist - Title.lrc` or with `[ar:]`/`[ti:]` tags; they are used before LRCLIB.
+**The lyrics did not show up.** Some songs are not on LRCLIB; in that case the taskbar shows the song title. When LRCLIB is under heavy load, lyrics may take a few seconds to arrive. Right-click the lyric → **Fetch lyrics again** and pick a source to force a new lookup. You can also drop your own `.lrc` files in the lyrics folder (Settings → Advanced → **Open lyrics folder**), named `Artist - Title.lrc` or with `[ar:]`/`[ti:]` tags; they are used before LRCLIB.
 
 **The lyrics are early or late.** Settings → Synchronization → **Timing adjustment (offset)**.
 
@@ -135,7 +135,7 @@ Requires the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
 
 ```powershell
 dotnet build                                   # build
-dotnet test                                    # 154 tests (lyrics, sync, colors, layout)
+dotnet test                                    # 158 tests (lyrics, sync, colors, layout)
 dotnet run --project src/Taskitify             # run
 
 # Single executable that needs no .NET installed (~179 MB; ~72 MB zipped)

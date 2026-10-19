@@ -23,6 +23,9 @@ public interface ILyricsProvider
     void Forget(TrackQuery query)
     {
     }
+
+    /// <summary>The sources this provider asks (a chain lists its parts), for asking one directly.</summary>
+    IEnumerable<ILyricsProvider> Sources => [this];
 }
 
 /// <summary>

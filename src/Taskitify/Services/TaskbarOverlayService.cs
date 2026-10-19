@@ -178,15 +178,30 @@ public sealed class TaskbarOverlayService : IDisposable
         // Off: the caption row disappears and the lyric may use both lines.
         var showCaption = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("ShowCaption"), IsCheckable = true };
         showCaption.Click += (_, _) => _settings.Update(s => s.Bar.ShowCaption = showCaption.IsChecked);
+        // Bypasses the cache for the song playing now, asking one source of the user's choice (the
+        // other one's version may be better timed). Without separate sources, the usual lookup.
+        var refetch = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("ReloadLyrics") };
+        foreach (var source in _sync.Sources)
+        {
+            var item = new System.Windows.Controls.MenuItem { Tag = source };
+            item.Click += (_, _) => _ = _sync.ReloadFromAsync(source);
+            refetch.Items.Add(item);
+        }
+        if (refetch.Items.Count == 0)
+            refetch.Click += (_, _) => _ = _sync.ForceReloadAsync();
         // The overlay never takes focus, so WPF cannot tell when the user clicks elsewhere;
         // a low-level mouse hook (only while the menu is open) closes it on an outside click.
+        // The menu and its open submenu are separate popups.
         var outside = new OutsideClickWatcher((x, y) =>
         {
-            if (PresentationSource.FromVisual(menu) is HwndSource popup)
+            foreach (var part in refetch.Items.OfType<System.Windows.Media.Visual>().Take(1).Prepend(menu))
             {
-                var r = WindowInterop.GetBounds(popup.Handle);
-                if (x >= r.Left && x < r.Right && y >= r.Top && y < r.Bottom)
-                    return;
+                if (PresentationSource.FromVisual(part) is HwndSource popup)
+                {
+                    var r = WindowInterop.GetBounds(popup.Handle);
+                    if (x >= r.Left && x < r.Right && y >= r.Top && y < r.Bottom)
+                        return;
+                }
             }
             menu.Dispatcher.BeginInvoke(() => menu.IsOpen = false);
         });
@@ -197,6 +212,14 @@ public sealed class TaskbarOverlayService : IDisposable
             exit.Header = LocalizationService.Get("Exit");
             showCaption.Header = LocalizationService.Get("ShowCaption");
             showCaption.IsChecked = _settings.Current.Bar.ShowCaption;
+            refetch.Header = LocalizationService.Get("ReloadLyrics");
+            foreach (var item in refetch.Items.OfType<System.Windows.Controls.MenuItem>())
+            {
+                var source = (string)item.Tag;
+                item.Header = LocalizationService.Format("ReloadLyricsFrom", source);
+                // Spotify only answers once it is connected in the settings.
+                item.IsEnabled = _monitor.Track is not null && (source != "Spotify" || _settings.Current.SpotifyLyricsEnabled);
+            }
             outside.Start();
             NativeMethods.GetAsyncKeyState(NativeMethods.VK_ESCAPE); // clear a stale "pressed since" bit
             _menuEsc.Start();
@@ -213,10 +236,6 @@ public sealed class TaskbarOverlayService : IDisposable
             if ((NativeMethods.GetAsyncKeyState(NativeMethods.VK_ESCAPE) & 0x8001) != 0)
                 menu.IsOpen = false;
         };
-        // Bypasses the cache (e.g. a "not found" saved earlier) for the song playing now.
-        var refetch = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("ReloadLyrics") };
-        menu.Opened += (_, _) => refetch.Header = LocalizationService.Get("ReloadLyrics");
-        refetch.Click += (_, _) => _ = _sync.ForceReloadAsync();
         menu.Items.Add(refetch);
         menu.Items.Add(showCaption);
         menu.Items.Add(calibrate);

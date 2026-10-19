@@ -496,6 +496,69 @@ public class ProviderChainTests
     }
 
     [Fact]
+    public void Sources_are_the_parts_of_the_chain()
+    {
+        var service = new LyricsService([Returns("Local files", null, isLocal: true),
+            new FallbackLyricsProvider(Returns("Spotify", null), Returns("LRCLIB", null))], null);
+
+        Assert.Equal(["Spotify", "LRCLIB"], service.Sources);
+    }
+
+    [Fact]
+    public async Task Asking_one_source_replaces_the_cached_lyrics()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "TaskitifyTests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var spotify = Returns("Spotify", Synced("Primary"));
+            var cache = new LyricsCache(dir);
+            var service = new LyricsService([new FallbackLyricsProvider(spotify, Returns("LRCLIB", Synced("Fallback")))], cache);
+            Assert.Equal("Primary", Assert.Single((await service.GetLyricsAsync(Query, default)).Lines).Text);
+
+            var picked = await service.GetLyricsFromAsync(Query, "LRCLIB", default);
+
+            // The user's pick, from now on: in memory and on disk, never asking Spotify first.
+            Assert.Equal(("Fallback", "LRCLIB", false), (Assert.Single(picked.Lines).Text, picked.Source, picked.FromCache));
+            Assert.Equal("Fallback", Assert.Single((await service.GetLyricsAsync(Query, default)).Lines).Text);
+            Assert.Equal("LRCLIB", (await cache.TryGetAsync(Query, default))?.Source);
+            Assert.Equal(1, spotify.Calls);
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_source_that_finds_nothing_leaves_the_cached_lyrics(bool fails)
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "TaskitifyTests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var lrclib = new FakeProvider("LRCLIB", false, _ => fails
+                ? Task.FromException<LrclibRecord?>(new HttpRequestException("429"))
+                : Task.FromResult<LrclibRecord?>(null));
+            var cache = new LyricsCache(dir);
+            var service = new LyricsService([new FallbackLyricsProvider(Returns("Spotify", Synced("Primary")), lrclib)], cache);
+            await service.GetLyricsAsync(Query, default);
+
+            var picked = await service.GetLyricsFromAsync(Query, "LRCLIB", default);
+
+            Assert.Equal(fails ? LyricsKind.Error : LyricsKind.NotFound, picked.Kind);
+            Assert.Equal("Primary", Assert.Single((await service.GetLyricsAsync(Query, default)).Lines).Text);
+            Assert.Equal("Spotify", (await cache.TryGetAsync(Query, default))?.Source);
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task Local_files_come_before_the_cache_and_are_not_cached()
     {
         var dir = Path.Combine(Path.GetTempPath(), "TaskitifyTests", Guid.NewGuid().ToString("N"));
