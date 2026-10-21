@@ -117,6 +117,13 @@ public sealed class BarLayout
 
     /// <summary>Cover, track name and a play button: about the size of the weather widget.</summary>
     public static BarLayout DefaultMinimized() => new() { ShowCover = true, ShowText = true, ShowPlayPause = true, Width = 110 };
+
+    /// <summary>The mini player as it always looked; Width is its card's (the lyrics are always there).</summary>
+    public static BarLayout DefaultMiniPlayer() => new()
+    {
+        ShowCover = true, ShowText = true, ShowCaption = true, ShowPrevious = true, ShowPlayPause = true, ShowNext = true,
+        ShowProgress = true, Width = 360,
+    };
 }
 
 /// <summary>Persisted to %AppData%\Taskitify\settings.json.</summary>
@@ -135,6 +142,9 @@ public sealed class AppSettings
     public BarLayout MinimizedBar { get; set; } = BarLayout.DefaultMinimized();
 
     public BarLayout Layout(bool minimized) => minimized ? MinimizedBar : Bar;
+
+    /// <summary>The popup with the lyrics, opened by clicking the taskbar player.</summary>
+    public BarLayout MiniPlayer { get; set; } = BarLayout.DefaultMiniPlayer();
 
     public ProgressPlacement ProgressPlacement { get; set; } = ProgressPlacement.Below;
 

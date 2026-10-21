@@ -53,6 +53,12 @@ public partial class MiniPlayerWindow : Window
             ScrollToCurrent(animate: false);
         }, DispatcherPriority.Loaded);
         LyricsViewport.PreviewMouseWheel += OnLyricsWheel;
+        VolumeButton.PreviewMouseWheel += (_, e) =>
+        {
+            _vm.NudgeVolume(e.Delta > 0 ? 1 : -1);
+            e.Handled = true;
+        };
+        VolumeButton.MouseEnter += (_, _) => _vm.RefreshVolume();
 
         Progress.PreviewMouseLeftButtonDown += (_, _) => _dragging = true;
         Progress.PreviewMouseLeftButtonUp += (_, _) =>
@@ -190,6 +196,10 @@ public partial class MiniPlayerWindow : Window
                 break;
             case nameof(MiniPlayerViewModel.Palette):
                 ApplyBackground();
+                break;
+            case nameof(MiniPlayerViewModel.WindowWidth):
+                // Not a XAML binding: the window writes its HWND's size to Width, which drops one.
+                Width = _vm.WindowWidth;
                 break;
             case nameof(MiniPlayerViewModel.StatusMessage):
                 StatusText.Visibility = string.IsNullOrEmpty(_vm.StatusMessage) ? Visibility.Collapsed : Visibility.Visible;

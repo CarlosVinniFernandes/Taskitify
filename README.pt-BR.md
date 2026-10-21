@@ -41,7 +41,7 @@ Não precisa de Spicetify, login no Spotify nem Premium para usar a fonte padrã
 | 🎤 **Letra sincronizada** | A linha atual na barra, em uma ou duas linhas, com transição suave. Acompanha pausas, avanços e retrocessos. |
 | 🎨 **Cores da capa** | O fundo é um degradê tirado da capa do álbum, como no Spotify, e muda suavemente a cada música. |
 | 🎛️ **Player na barra** | Anterior, tocar/pausar, próxima, aleatório, repetir, volume e barra de progresso. Você escolhe quais aparecem. |
-| 🪟 **Mini player** | Um clique na letra abre a capa, os controles e a letra completa rolando, com a linha atual em destaque. Clique numa linha para pular até ela. |
+| 🪟 **Mini player** | Um clique na letra abre a capa, os controles e a letra completa rolando, com a linha atual em destaque. Clique numa linha para pular até ela. Os elementos e a largura se escolhem nas configurações, como os da barra. |
 | ⏸️ **Player minimizado** | Ao pausar, o Taskitify pode encolher para o tamanho do clima (capa, nome e botão de tocar) em vez de sumir. |
 | 🧩 **Monte a sua barra** | Uma réplica do player nas configurações: clique em cada elemento para ligar (verde) ou desligar (branco). |
 | 🖥️ **Feito para o Windows 11** | Some junto com a barra em tela cheia, não rouba o foco, não aparece no Alt+Tab e respeita DPI e tema escuro. |

@@ -30,13 +30,13 @@
         <Border x:Name="ContentCard" CornerRadius="10" Background="{DynamicResource PopupBackgroundBrush}"
                 BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="1" Padding="16,16,16,12">
             <StackPanel>
-                <!-- Header: cover, title, artist -->
-                <Grid>
+                <!-- Header: cover, title, artist. Every element below is optional (Settings), like on the taskbar. -->
+                <Grid Visibility="{Binding ShowHeader, Converter={StaticResource BoolToVisibility}}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Grid Width="64" Height="64">
+                    <Grid Width="64" Height="64" Margin="0,0,14,0" Visibility="{Binding ShowCover, Converter={StaticResource BoolToVisibility}}">
                         <Border CornerRadius="6" Background="{DynamicResource SubtleFillHoverBrush}">
                             <TextBlock Text="&#xE8D6;" FontFamily="{StaticResource IconFont}" FontSize="24"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
@@ -48,24 +48,44 @@
                             </Border.Background>
                         </Border>
                     </Grid>
-                    <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Title}" FontFamily="{StaticResource UiDisplayFont}" FontSize="16" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"
-                                   ToolTip="{Binding Title}" />
+                                   ToolTip="{Binding Title}" Visibility="{Binding ShowTitle, Converter={StaticResource BoolToVisibility}}" />
                         <TextBlock Text="{Binding Artist}" FontSize="13" Margin="0,2,0,0"
-                                   Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" />
+                                   Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"
+                                   Visibility="{Binding ShowArtist, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
                 </Grid>
 
                 <!-- Controls -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,4">
-                    <Button Style="{StaticResource IconButton}" Command="{Binding PreviousCommand}" Content="&#xE892;" ToolTip="{DynamicResource Loc.Previous}" />
-                    <Button Style="{StaticResource PlayButton}" Command="{Binding PlayPauseCommand}" Margin="16,0" x:Name="PlayPauseButton"
-                            ToolTip="{DynamicResource Loc.PlayPause}">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,4"
+                            Visibility="{Binding ShowControls, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel.Resources>
+                        <!-- Shuffle and repeat turn Spotify green while on, as on the taskbar. -->
+                        <Style x:Key="ModeButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                                    <Setter Property="Foreground" Value="#FF1ED760" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Resources>
+                    <Button Style="{StaticResource ModeButton}" Command="{Binding ShuffleCommand}" Content="&#xE8B1;" Tag="{Binding IsShuffleActive}"
+                            ToolTip="{DynamicResource Loc.Shuffle}" Visibility="{Binding ShowShuffle, Converter={StaticResource BoolToVisibility}}" />
+                    <Button Style="{StaticResource IconButton}" Command="{Binding PreviousCommand}" Content="&#xE892;" ToolTip="{DynamicResource Loc.Previous}"
+                            Visibility="{Binding ShowPrevious, Converter={StaticResource BoolToVisibility}}" />
+                    <Button Style="{StaticResource PlayButton}" Command="{Binding PlayPauseCommand}" Margin="12,0" x:Name="PlayPauseButton"
+                            ToolTip="{DynamicResource Loc.PlayPause}" Visibility="{Binding ShowPlayPause, Converter={StaticResource BoolToVisibility}}">
                         <TextBlock x:Name="PlayPauseGlyph" Text="&#xE768;" FontFamily="{StaticResource IconFont}"
                                    Foreground="{DynamicResource WindowBackgroundBrush}" />
                     </Button>
-                    <Button Style="{StaticResource IconButton}" Command="{Binding NextCommand}" Content="&#xE893;" ToolTip="{DynamicResource Loc.Next}" />
+                    <Button Style="{StaticResource IconButton}" Command="{Binding NextCommand}" Content="&#xE893;" ToolTip="{DynamicResource Loc.Next}"
+                            Visibility="{Binding ShowNext, Converter={StaticResource BoolToVisibility}}" />
+                    <Button Style="{StaticResource ModeButton}" Command="{Binding RepeatCommand}" Content="{Binding RepeatGlyph}" Tag="{Binding IsRepeatActive}"
+                            ToolTip="{DynamicResource Loc.Repeat}" Visibility="{Binding ShowRepeat, Converter={StaticResource BoolToVisibility}}" />
+                    <Button x:Name="VolumeButton" Style="{StaticResource IconButton}" Command="{Binding MuteCommand}" Content="{Binding VolumeGlyph}"
+                            ToolTip="{Binding VolumeTip}" Visibility="{Binding ShowVolume, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
 
                 <Grid Margin="0,8,0,8">
@@ -126,13 +146,15 @@
                 </Grid>
 
                 <!-- Progress -->
-                <Slider x:Name="Progress" Style="{StaticResource ProgressSlider}" Minimum="0"
-                        Maximum="{Binding DurationSeconds, Mode=OneWay}" IsEnabled="{Binding CanSeek}" />
-                <Grid Margin="0,2,0,0">
-                    <TextBlock Text="{Binding PositionText}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <TextBlock Text="{Binding DurationText}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
-                               HorizontalAlignment="Right" />
-                </Grid>
+                <StackPanel Visibility="{Binding ShowProgress, Converter={StaticResource BoolToVisibility}}">
+                    <Slider x:Name="Progress" Style="{StaticResource ProgressSlider}" Minimum="0"
+                            Maximum="{Binding DurationSeconds, Mode=OneWay}" IsEnabled="{Binding CanSeek}" />
+                    <Grid Margin="0,2,0,0">
+                        <TextBlock Text="{Binding PositionText}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBlock Text="{Binding DurationText}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   HorizontalAlignment="Right" />
+                    </Grid>
+                </StackPanel>
             </StackPanel>
         </Border>
     </Grid>

@@ -52,6 +52,7 @@ public sealed class SettingsViewModel : ObservableObject
 
         Bar = new BarLayoutViewModel(settings, x => x.Bar, "SongLyrics", "SongArtist", 100, 900);
         MinimizedBar = new BarLayoutViewModel(settings, x => x.MinimizedBar, "SongTitle", "Artist", 60, 600);
+        MiniPlayer = new BarLayoutViewModel(settings, x => x.MiniPlayer, "SongTitle", "Artist", 310, 640, taskbar: false);
         ResetPlacementCommand = new RelayCommand(() => Update(s => s.ManualPlacement = false), () => S.ManualPlacement);
         ClearCacheCommand = new RelayCommand(() =>
         {
@@ -82,6 +83,9 @@ public sealed class SettingsViewModel : ObservableObject
 
     /// <summary>The compact layout shown while paused when minimizing is chosen.</summary>
     public BarLayoutViewModel MinimizedBar { get; }
+
+    /// <summary>The popup with the lyrics.</summary>
+    public BarLayoutViewModel MiniPlayer { get; }
 
     public bool IsMinimizeOnPause => S.PausedBehavior == PausedBehavior.Minimize;
 

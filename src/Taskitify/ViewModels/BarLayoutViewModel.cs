@@ -13,10 +13,13 @@ public sealed class BarLayoutViewModel : ObservableObject
     private readonly SettingsService _settings;
     private readonly Func<AppSettings, BarLayout> _select;
 
-    public BarLayoutViewModel(SettingsService settings, Func<AppSettings, BarLayout> select, string textLabel, string captionLabel, int minWidth, int maxWidth)
+    /// <param name="taskbar">A taskbar player, whose picker mirrors the progress placement (the mini player's is always below).</param>
+    public BarLayoutViewModel(SettingsService settings, Func<AppSettings, BarLayout> select, string textLabel, string captionLabel, int minWidth, int maxWidth,
+        bool taskbar = true)
     {
         _settings = settings;
         _select = select;
+        _taskbar = taskbar;
         _textKey = textLabel;
         _captionKey = captionLabel;
         MinWidth = minWidth;
@@ -26,6 +29,7 @@ public sealed class BarLayoutViewModel : ObservableObject
 
     private readonly string _textKey;
     private readonly string _captionKey;
+    private readonly bool _taskbar;
     public string TextLabel => LocalizationService.Get(_textKey);
     public string CaptionLabel => LocalizationService.Get(_captionKey);
 
@@ -56,7 +60,7 @@ public sealed class BarLayoutViewModel : ObservableObject
     public int Width { get => L.Width; set => Update(l => l.Width = Math.Clamp(value, MinWidth, MaxWidth)); }
 
     /// <summary>The picker mirrors the progress placement: larger cover, line starting after it.</summary>
-    private bool Beside => _settings.Current.ProgressPlacement == ProgressPlacement.BesideCover && L.ShowCover && L.ShowProgress;
+    private bool Beside => _taskbar && _settings.Current.ProgressPlacement == ProgressPlacement.BesideCover && L.ShowCover && L.ShowProgress;
 
     public double PickerCoverSize => Beside ? 36 : 30;
 

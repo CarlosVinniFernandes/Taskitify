@@ -38,7 +38,11 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 {
     private readonly ISpotifyMonitor _monitor;
     private readonly LyricsSyncService _sync;
+    private readonly SettingsService _settings;
+    private readonly AppVolumeService _volume;
     private readonly DispatcherTimer _progressTimer;
+    private string _volumeGlyph = "";
+    private string _volumeTip = string.Empty;
 
     private bool _isActive;
     private string _title = string.Empty;
@@ -52,16 +56,25 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     private string? _statusMessage;
     private int _currentIndex = -1;
 
-    public MiniPlayerViewModel(ISpotifyMonitor monitor, LyricsSyncService sync)
+    public MiniPlayerViewModel(ISpotifyMonitor monitor, LyricsSyncService sync, SettingsService settings, AppVolumeService volume)
     {
         _monitor = monitor;
         _sync = sync;
+        _settings = settings;
+        _volume = volume;
         _progressTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _progressTimer.Tick += (_, _) => UpdateProgress();
 
         PlayPauseCommand = new RelayCommand(() => _ = _monitor.PlayPauseAsync(), () => _monitor.HasSession);
         NextCommand = new RelayCommand(() => _ = _monitor.NextAsync(), () => _monitor.CanGoNext);
         PreviousCommand = new RelayCommand(() => _ = _monitor.PreviousAsync(), () => _monitor.CanGoPrevious);
+        ShuffleCommand = new RelayCommand(() => _ = _monitor.ToggleShuffleAsync());
+        RepeatCommand = new RelayCommand(() => _ = _monitor.CycleRepeatAsync());
+        MuteCommand = new RelayCommand(() =>
+        {
+            _volume.ToggleMute();
+            RefreshVolume();
+        });
         SeekToLineCommand = new RelayCommand(p =>
         {
             if (p is LyricLineViewModel line && _monitor.CanSeek)
@@ -78,6 +91,77 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     public ICommand PreviousCommand { get; }
 
     public ICommand SeekToLineCommand { get; }
+
+    public ICommand ShuffleCommand { get; }
+
+    public ICommand RepeatCommand { get; }
+
+    public ICommand MuteCommand { get; }
+
+    // What the popup shows, chosen in Settings like the taskbar players (the lyrics always).
+    private BarLayout L => _settings.Current.MiniPlayer;
+
+    public bool ShowCover => L.ShowCover;
+
+    public bool ShowTitle => L.ShowText;
+
+    public bool ShowArtist => L.ShowCaption;
+
+    public bool ShowHeader => L.ShowCover || L.ShowText || L.ShowCaption;
+
+    public bool ShowShuffle => L.ShowShuffle && _monitor.CanShuffle;
+
+    public bool ShowPrevious => L.ShowPrevious;
+
+    public bool ShowPlayPause => L.ShowPlayPause;
+
+    public bool ShowNext => L.ShowNext;
+
+    public bool ShowRepeat => L.ShowRepeat && _monitor.CanRepeat;
+
+    public bool ShowVolume => L.ShowVolume;
+
+    public bool ShowControls => ShowShuffle || L.ShowPrevious || L.ShowPlayPause || L.ShowNext || ShowRepeat || L.ShowVolume;
+
+    public bool ShowProgress => L.ShowProgress;
+
+    /// <summary>The window: the card (wide enough for every button) plus the 12 px each side its shadow needs.</summary>
+    public double WindowWidth => Math.Clamp(L.Width, 310, 640) + 24;
+
+    public bool IsShuffleActive => _monitor.IsShuffleActive;
+
+    public bool IsRepeatActive => _monitor.RepeatMode != RepeatMode.None;
+
+    public string RepeatGlyph => _monitor.RepeatMode == RepeatMode.Track ? "" : "";
+
+    public string VolumeGlyph { get => _volumeGlyph; private set => Set(ref _volumeGlyph, value); }
+
+    public string VolumeTip { get => _volumeTip; private set => Set(ref _volumeTip, value); }
+
+    /// <summary>Mouse wheel over the volume button: ±5 %.</summary>
+    public void NudgeVolume(int direction)
+    {
+        if (_volume.Get() is { } v)
+        {
+            _volume.SetVolume(v.Volume + (0.05f * direction));
+            RefreshVolume();
+        }
+    }
+
+    public void RefreshVolume()
+    {
+        if (_volume.Get() is not { } state)
+        {
+            VolumeGlyph = "";
+            VolumeTip = LocalizationService.Get("VolumeUnavailable");
+            return;
+        }
+        VolumeGlyph = state.Muted || state.Volume <= 0.001f ? ""
+            : state.Volume < 0.34f ? ""
+            : state.Volume < 0.67f ? ""
+            : "";
+        VolumeTip = state.Muted ? LocalizationService.Get("SpotifyMuted") : LocalizationService.Format("VolumeDetail", Math.Round(state.Volume * 100));
+    }
 
     public string Title { get => _title; private set => Set(ref _title, value); }
 
@@ -124,7 +208,9 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
                 _monitor.ThumbnailChanged += OnThumbnailChanged;
                 _sync.LyricsChanged += OnLyricsChanged;
                 _sync.CurrentLineChanged += OnCurrentLineChanged;
+                _settings.Changed += OnSettingsChanged;
                 RefreshAll();
+                OnSettingsChanged(this, EventArgs.Empty);
                 _progressTimer.Start();
             }
             else
@@ -157,13 +243,34 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         _monitor.ThumbnailChanged -= OnThumbnailChanged;
         _sync.LyricsChanged -= OnLyricsChanged;
         _sync.CurrentLineChanged -= OnCurrentLineChanged;
+        _settings.Changed -= OnSettingsChanged;
     }
 
     private void OnTrackChanged(object? sender, EventArgs e) => RefreshAll();
 
+    /// <summary>The layout (and the shuffle/repeat state it shows) may differ.</summary>
+    private void OnSettingsChanged(object? sender, EventArgs e)
+    {
+        foreach (var name in new[]
+        {
+            nameof(ShowCover), nameof(ShowTitle), nameof(ShowArtist), nameof(ShowHeader), nameof(ShowShuffle), nameof(ShowPrevious),
+            nameof(ShowPlayPause), nameof(ShowNext), nameof(ShowRepeat), nameof(ShowVolume), nameof(ShowControls), nameof(ShowProgress),
+            nameof(WindowWidth), nameof(IsShuffleActive), nameof(IsRepeatActive), nameof(RepeatGlyph),
+        })
+            OnPropertyChanged(name);
+        if (ShowVolume)
+            RefreshVolume();
+    }
+
     private void OnPlaybackChanged(object? sender, EventArgs e)
     {
         IsPlaying = _monitor.IsPlaying;
+        OnPropertyChanged(nameof(IsShuffleActive));
+        OnPropertyChanged(nameof(IsRepeatActive));
+        OnPropertyChanged(nameof(RepeatGlyph));
+        OnPropertyChanged(nameof(ShowShuffle));
+        OnPropertyChanged(nameof(ShowRepeat));
+        OnPropertyChanged(nameof(ShowControls));
         OnPropertyChanged(nameof(CanSeek));
         CommandManager.InvalidateRequerySuggested();
         UpdateProgress();

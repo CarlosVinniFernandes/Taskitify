@@ -155,7 +155,7 @@ public partial class App : Application
         _overlay.Clicked += (_, _) => ToggleMiniPlayer();
         _overlay.CalibrationChanged += (_, on) => _settingsVm?.SyncCalibrating(on);
 
-        _miniPlayerVm = new MiniPlayerViewModel(_monitor, _sync);
+        _miniPlayerVm = new MiniPlayerViewModel(_monitor, _sync, _settings, new AppVolumeService());
         _miniPlayer = new MiniPlayerWindow(_miniPlayerVm, () => _settings.Current.EnableAnimations,
             () => _settings.Current.Background == Models.OverlayBackground.AlbumGradient);
 

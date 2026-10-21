@@ -41,7 +41,7 @@ No Spicetify, Spotify login or Premium is needed for the default LRCLIB source. 
 | 🎤 **Synced lyrics** | The current line on the taskbar, in one or two lines, with a smooth transition. Keeps up with pauses, skips and seeks. |
 | 🎨 **Album colors** | The background is a gradient taken from the album art, like Spotify's, and it fades to the new colors on every song. |
 | 🎛️ **Taskbar player** | Previous, play/pause, next, shuffle, repeat, volume and a progress bar. You choose which ones appear. |
-| 🪟 **Mini player** | One click on the lyric shows the album art, controls and the full scrolling lyrics with the current line highlighted. Click a line to jump to it. |
+| 🪟 **Mini player** | One click on the lyric shows the album art, controls and the full scrolling lyrics with the current line highlighted. Click a line to jump to it. Its elements and width are set in Settings, like the bar's. |
 | ⏸️ **Minimized player** | When paused, Taskitify can shrink to the size of the weather widget (art, title and a play button) instead of hiding. |
 | 🧩 **Customize your bar** | A replica of the player in the settings: click each element to turn it on (green) or off (white). |
 | 🖥️ **Made for Windows 11** | Hides with the taskbar in fullscreen, never steals focus, stays out of Alt+Tab and handles DPI scaling and dark mode. |

@@ -89,6 +89,19 @@
             </Border>
             <Border Style="{StaticResource SettingCard}">
                 <StackPanel>
+                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LyricsPlayerStyle}" />
+                    <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.LyricsPlayerHint}" />
+                    <local:PlayerPicker DataContext="{Binding MiniPlayer}" Margin="0,12,0,8" />
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding MiniPlayer.Width, StringFormat={}{0} px}" Foreground="{DynamicResource TextSecondaryBrush}" />
+                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.Width}" />
+                    </DockPanel>
+                    <Slider Minimum="310" Maximum="640" TickFrequency="10" IsSnapToTickEnabled="True" Margin="0,6,0,0"
+                            Value="{Binding MiniPlayer.Width}" AutomationProperties.Name="{DynamicResource Loc.LyricsPlayerWidth}" />
+                </StackPanel>
+            </Border>
+            <Border Style="{StaticResource SettingCard}">
+                <StackPanel>
                     <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.Progress}" />
                     <ComboBox ItemsSource="{Binding ProgressPlacementOptions}" DisplayMemberPath="Label"
                               SelectedValuePath="Value" SelectedValue="{Binding ProgressPlacement}" AutomationProperties.Name="{DynamicResource Loc.ProgressPosition}" />
