@@ -27,8 +27,6 @@ public sealed class TaskbarOverlayService : IDisposable
     // the widget rarely moves, so re-detect every 5th tick (15 s) plus on explicit events.
     private const int TicksPerDetection = 5;
 
-    private const int MinCalibratedWidth = 40; // physical pixels
-
     private readonly ISpotifyMonitor _monitor;
     private readonly LyricsSyncService _sync;
     private readonly SettingsService _settings;
@@ -120,8 +118,11 @@ public sealed class TaskbarOverlayService : IDisposable
         _window.Clicked += (_, _) => Clicked?.Invoke(this, EventArgs.Empty);
         _window.CalibrationBoundsChanged += (_, _) =>
         {
+            // After a side drag the new width becomes the width setting; a move keeps it.
+            var resized = _sideDragFrom is not null;
             _sideDragFrom = null;
-            SaveCalibratedBounds(WindowInterop.GetBounds(_hwnd));
+            var r = WindowInterop.GetBounds(_hwnd);
+            SaveCalibratedBounds(r, resized ? CalibratedLayoutWidth(r) : null);
         };
         _window.CalibrationResize += (_, step) => ResizeCalibrated(step);
         _window.CalibrationEdgeDrag += (_, drag) => DragCalibratedSide(drag.Edge, drag.Offset);
@@ -529,11 +530,17 @@ public sealed class TaskbarOverlayService : IDisposable
             _vm.ApplyTaskbarColors(bg, topLine);
     }
 
-    private void SaveCalibratedBounds(PixelRect r)
+    /// <summary>
+    /// The calibrated position. Its width is not kept apart: a calibration resize goes to the
+    /// shown layout's width setting (<paramref name="layoutWidth"/>), so the slider and the
+    /// calibration always agree. The overlay is then recomputed from the settings.
+    /// </summary>
+    private void SaveCalibratedBounds(PixelRect r, int? layoutWidth = null)
     {
         if (r.IsEmpty)
             return;
         _bounds = r;
+        var compact = _vm.IsCompact;
         _settings.Update(s =>
         {
             s.ManualPlacement = true;
@@ -541,28 +548,41 @@ public sealed class TaskbarOverlayService : IDisposable
             s.ManualY = r.Y;
             s.ManualWidth = r.Width;
             s.ManualHeight = r.Height;
+            if (layoutWidth is { } width)
+                s.Layout(compact).Width = width;
         });
-        Log.Info($"Calibrated bounds saved: {r}");
+        Log.Info($"Calibrated bounds saved: {r}{(layoutWidth is { } w ? $", width {w}" : string.Empty)}");
     }
 
+    /// <summary>Wheel while calibrating: ±10 DIP on the width setting, growing away from the screen edge.</summary>
     private void ResizeCalibrated(int step)
     {
-        var r = _bounds;
-        var delta = (int)Math.Round(10 * (_placement?.Scale ?? 1)) * step;
-        var width = Math.Max(MinCalibratedWidth, r.Width + delta);
-        // Grow towards the side away from the screen edge, like the automatic layout.
-        var growLeft = _placement is { } p && r.CenterX > p.Taskbar.CenterX;
-        var x = growLeft ? r.Right - width : r.X;
-        SaveCalibratedBounds(new PixelRect(x, r.Y, width, r.Height));
-        ApplyBounds();
+        var layout = _settings.Current.Layout(_vm.IsCompact);
+        if (!layout.AnyText)
+            return; // cover and buttons only: their width is fixed
+        var (min, max) = BarLayout.WidthRange(_vm.IsCompact);
+        SaveCalibratedBounds(_bounds, Math.Clamp(layout.Width + (10 * step), min, max));
     }
 
     /// <summary>Follows the cursor live; the result is saved once the side is released (CalibrationBoundsChanged).</summary>
     private void DragCalibratedSide(int edge, int offset)
     {
+        var layout = _settings.Current.Layout(_vm.IsCompact);
+        if (!layout.AnyText)
+            return;
         // From what is on screen, as the window move does.
         _sideDragFrom ??= WindowInterop.GetBounds(_hwnd);
-        _bounds = OverlayLayout.DragSide(_sideDragFrom.Value, edge, offset, MinCalibratedWidth);
+        // No narrower than the width setting allows, so nothing jumps on release.
+        var min = (int)Math.Round((BarLayout.WidthRange(_vm.IsCompact).Min + TaskbarPositionService.ControlsWidth(layout)) * (_placement?.Scale ?? 1));
+        _bounds = OverlayLayout.DragSide(_sideDragFrom.Value, edge, offset, min);
         ApplyBounds();
+    }
+
+    /// <summary>The width setting for an overlay dragged to <paramref name="r"/>.</summary>
+    private int CalibratedLayoutWidth(PixelRect r)
+    {
+        var (min, max) = BarLayout.WidthRange(_vm.IsCompact);
+        var width = TaskbarPositionService.LayoutWidthFor(r.Width, _settings.Current.Layout(_vm.IsCompact), _placement?.Scale ?? 1);
+        return Math.Clamp(width, min, max);
     }
 }

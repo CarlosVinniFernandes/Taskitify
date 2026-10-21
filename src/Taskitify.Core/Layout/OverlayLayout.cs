@@ -61,6 +61,16 @@ public static class OverlayLayout
     }
 
     /// <summary>
+    /// A calibrated (manually placed) overlay: the saved rectangle gives the position and the
+    /// width is the chosen one, growing away from the screen edge it is closest to, as in
+    /// <see cref="Compute"/>. So the width setting still applies after calibrating.
+    /// </summary>
+    public static PixelRect FromCalibrated(PixelRect calibrated, PixelRect taskbar, int width) =>
+        calibrated.CenterX > taskbar.CenterX
+            ? PixelRect.FromLTRB(calibrated.Right - width, calibrated.Top, calibrated.Right, calibrated.Bottom)
+            : calibrated with { Width = width };
+
+    /// <summary>
     /// Calibration: <paramref name="from"/> with one side (-1 left, 1 right) moved by
     /// <paramref name="offset"/> pixels. The other side stays put, and the side stops at
     /// <paramref name="minWidth"/> instead of crossing it.

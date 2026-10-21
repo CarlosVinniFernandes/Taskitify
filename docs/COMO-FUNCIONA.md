@@ -120,7 +120,8 @@ Verificado na máquina de desenvolvimento (Windows 11 build 26200, 1920×1200 a 
 - Aleatório (dois cliques rápidos voltam ao estado inicial), volume (roda do mouse 100% → 95% → 100%, silenciar e reativar) e cliques nos botões sem abrir o popup
 - Mini player com o degradê da capa
 - Player minimizado ao pausar, montador com letra ocultável e migração das configurações do nome antigo (Taskbar Lyrics)
-- 172 testes unitários passando
+- Posição calibrada: a largura continua vindo de "Largura do widget", ancorada no lado calibrado (medido com uma cópia das configurações: 300 → 426 px e 500 → 626 px, borda direita fixa em 1599)
+- 174 testes unitários passando
 
 **Não** verificado (sem o hardware ou a configuração aqui):
 

@@ -50,8 +50,10 @@ public sealed class SettingsViewModel : ObservableObject
         _setCalibrating = setCalibrating;
         _startWithWindows = StartupService.IsEnabled;
 
-        Bar = new BarLayoutViewModel(settings, x => x.Bar, "SongLyrics", "SongArtist", 100, 900);
-        MinimizedBar = new BarLayoutViewModel(settings, x => x.MinimizedBar, "SongTitle", "Artist", 60, 600);
+        var (barMin, barMax) = BarLayout.WidthRange(minimized: false);
+        var (minimizedMin, minimizedMax) = BarLayout.WidthRange(minimized: true);
+        Bar = new BarLayoutViewModel(settings, x => x.Bar, "SongLyrics", "SongArtist", barMin, barMax);
+        MinimizedBar = new BarLayoutViewModel(settings, x => x.MinimizedBar, "SongTitle", "Artist", minimizedMin, minimizedMax);
         MiniPlayer = new BarLayoutViewModel(settings, x => x.MiniPlayer, "SongTitle", "Artist", 310, 640, taskbar: false);
         ResetPlacementCommand = new RelayCommand(() => Update(s => s.ManualPlacement = false), () => S.ManualPlacement);
         ClearCacheCommand = new RelayCommand(() =>

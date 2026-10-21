@@ -52,6 +52,23 @@ public class OverlayLayoutTests
     }
 
     [Fact]
+    public void Calibrated_on_the_right_half_keeps_its_right_side()
+    {
+        var calibrated = new PixelRect(988, 1152, 611, 48); // right edge 1599
+
+        Assert.Equal(PixelRect.FromLTRB(1599 - 380, 1152, 1599, 1200), OverlayLayout.FromCalibrated(calibrated, Taskbar, width: 380));
+        Assert.Equal(PixelRect.FromLTRB(1599 - 700, 1152, 1599, 1200), OverlayLayout.FromCalibrated(calibrated, Taskbar, width: 700));
+    }
+
+    [Fact]
+    public void Calibrated_on_the_left_half_keeps_its_left_side()
+    {
+        var calibrated = new PixelRect(12, 1152, 160, 48);
+
+        Assert.Equal(new PixelRect(12, 1152, 420, 48), OverlayLayout.FromCalibrated(calibrated, Taskbar, width: 420));
+    }
+
+    [Fact]
     public void Dragging_the_right_side_keeps_the_left_one()
     {
         var calibrated = new PixelRect(1000, 1152, 300, 48);

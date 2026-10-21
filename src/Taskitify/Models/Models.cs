@@ -107,6 +107,9 @@ public sealed class BarLayout
     /// <summary>DIP width for cover + text; selected buttons add their own room.</summary>
     public int Width { get; set; } = 300;
 
+    /// <summary>The range of <see cref="Width"/> (its slider's) for the normal and the minimized taskbar player.</summary>
+    public static (int Min, int Max) WidthRange(bool minimized) => minimized ? (60, 600) : (100, 900);
+
     [JsonIgnore]
     public bool AnyControl => ShowShuffle || ShowPrevious || ShowPlayPause || ShowNext || ShowRepeat || ShowVolume;
 

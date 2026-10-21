@@ -98,16 +98,21 @@ public sealed class TaskbarPositionService
     /// <param name="compact">Minimized (paused) player: just covers the weather widget.</param>
     public static PixelRect ComputeOverlayRect(TaskbarPlacement p, AppSettings s, bool compact = false)
     {
-        if (s.ManualPlacement && s.ManualWidth > 0 && s.ManualHeight > 0)
-            return new PixelRect(s.ManualX, s.ManualY, s.ManualWidth, s.ManualHeight);
-
         // Each layout's width is for cover + text; chosen controls add their own room. Without
         // any text the strip is just cover + buttons. Never narrower than the weather widget.
         var layout = s.Layout(compact);
         var content = layout.AnyText ? layout.Width : (layout.ShowCover ? 46 : 8);
         var desired = (int)Math.Round((content + ControlsWidth(layout)) * p.Scale);
+
+        // Calibrated: the saved position, at the layout's width (calibration resizes through it).
+        if (s.ManualPlacement && s.ManualWidth > 0 && s.ManualHeight > 0)
+            return OverlayLayout.FromCalibrated(new PixelRect(s.ManualX, s.ManualY, s.ManualWidth, s.ManualHeight), p.Taskbar, desired);
         return OverlayLayout.Compute(p.Widget, p.Taskbar, p.Obstacles, desired, (int)Math.Round(6 * p.Scale));
     }
+
+    /// <summary>The layout width (cover + text, DIP) that gives an overlay this many physical pixels wide; the inverse of the above.</summary>
+    public static int LayoutWidthFor(int overlayWidth, BarLayout layout, double scale) =>
+        (int)Math.Round(overlayWidth / scale) - ControlsWidth(layout);
 
     /// <summary>DIP width taken by the selected taskbar buttons (see TaskbarOverlay.xaml).</summary>
     public static int ControlsWidth(BarLayout s)
