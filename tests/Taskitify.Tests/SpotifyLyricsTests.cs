@@ -25,6 +25,7 @@ public sealed class SpotifyLyricsTests
         public int Searches;
         public IReadOnlyList<SpotifyTrack> Tracks = [new(Id, Metadata)];
         public SpotifySearchTemplate? SearchTemplate { get; set; }
+        public SpotifyCredentials? ValidCredentials => Credentials;
         public Task<SpotifyCredentials?> GetCredentialsAsync(TrackQuery? searchFor, CancellationToken ct) => Task.FromResult(Credentials);
         public int Renewals;
         public Task<SpotifyCredentials?> RenewCredentialsAsync(SpotifyCredentials rejected, CancellationToken ct)
@@ -266,6 +267,80 @@ public sealed class SpotifyLyricsTests
 
         Assert.Null(await new SpotifyLyricsProvider(http, session).FindAsync(Query, default));
         Assert.Equal("SpotifyLyricsUnavailable", session.Status);
+    }
+
+    private const string GraphqlSearchWithCover = """
+        {"data":{"searchV2":{"tracksV2":{"items":[{"item":{"data":{
+        "uri":"spotify:track:1234567890123456789012","name":"Song",
+        "artists":{"items":[{"profile":{"name":"Artist"}}]},
+        "albumOfTrack":{"name":"Album","coverArt":{"sources":[
+        {"url":"https://i.scdn.co/image/small","width":64,"height":64},
+        {"url":"https://i.scdn.co/image/medium","width":300,"height":300},
+        {"url":"https://i.scdn.co/image/large","width":640,"height":640}]}},
+        "duration":{"totalMilliseconds":180000}}}}]}}}}
+        """;
+
+    [Theory]
+    [InlineData(GraphqlSearchWithCover, "https://i.scdn.co/image/medium")]
+    [InlineData("""{"tracks":{"items":[{"uri":"spotify:track:1234567890123456789012","name":"Song","artists":[{"name":"Artist"}],"album":{"name":"Album","images":[{"url":"https://i.scdn.co/image/large","width":640},{"url":"https://i.scdn.co/image/medium","width":300},{"url":"https://i.scdn.co/image/small","width":64}]},"duration_ms":180000}]}}""", "https://i.scdn.co/image/medium")]
+    [InlineData("""{"tracks":{"items":[{"uri":"spotify:track:1234567890123456789012","name":"Song","artists":[{"name":"Artist"}],"album":{"name":"Album","images":[{"url":"https://example.com/cover.jpg","width":300},{"url":"http://i.scdn.co/image/plain","width":300}]},"duration_ms":180000}]}}""", null)]
+    public void Search_results_carry_the_cover_nearest_the_overlay_size(string json, string? cover)
+    {
+        // Only Spotify's image CDN over HTTPS: the address comes from a response.
+        using var document = JsonDocument.Parse(json);
+        Assert.Equal(cover, Assert.Single(SpotifyLyricsProvider.ReadSearch(document.RootElement)).CoverUrl);
+    }
+
+    private static readonly byte[] CoverBytes = [0xFF, 0xD8, 0xFF, 0xE0];
+
+    [Fact]
+    public async Task Cover_comes_from_the_search_the_lyrics_lookup_already_ran()
+    {
+        var session = new Session { SearchTemplate = Template() };
+        var hosts = new List<string>();
+        using var http = new HttpClient(new Handler(r =>
+        {
+            hosts.Add(r.RequestUri!.Host);
+            return r.RequestUri.Host switch
+            {
+                "api-partner.spotify.com" => Json(GraphqlSearchWithCover),
+                "i.scdn.co" => new(HttpStatusCode.OK) { Content = new ByteArrayContent(CoverBytes) },
+                _ => Json(Lyrics),
+            };
+        }));
+        var provider = new SpotifyLyricsProvider(http, session);
+        await provider.FindAsync(Query, default);
+        hosts.Clear();
+
+        Assert.Equal(CoverBytes, await provider.FindCoverAsync(Query, default));
+        Assert.Equal(["i.scdn.co"], hosts);
+    }
+
+    [Fact]
+    public async Task Cover_of_a_song_not_looked_up_replays_the_search_but_never_opens_the_web_player()
+    {
+        var session = new Session { SearchTemplate = Template() };
+        var hosts = new List<string>();
+        using var http = new HttpClient(new Handler(r =>
+        {
+            hosts.Add(r.RequestUri!.Host);
+            return r.RequestUri.Host == "api-partner.spotify.com" ? Json(GraphqlSearchWithCover)
+                : new(HttpStatusCode.OK) { Content = new ByteArrayContent(CoverBytes) };
+        }));
+
+        Assert.Equal(CoverBytes, await new SpotifyLyricsProvider(http, session).FindCoverAsync(Query, default));
+        Assert.Equal(["api-partner.spotify.com", "i.scdn.co"], hosts);
+        Assert.Equal(0, session.Searches);
+    }
+
+    [Fact]
+    public async Task No_cover_without_a_valid_token()
+    {
+        using var handler = new Handler(_ => throw new Exception("Must not request"));
+        using var http = new HttpClient(handler);
+
+        Assert.Null(await new SpotifyLyricsProvider(http, new Session { Credentials = null, SearchTemplate = Template() }).FindCoverAsync(Query, default));
+        Assert.Equal(0, handler.Calls);
     }
 
     private sealed class NoLyrics : ILyricsProvider

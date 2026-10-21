@@ -77,6 +77,9 @@ public sealed class SpotifyLyricsSession(SettingsService settings, Dispatcher di
 
     /// <summary>The web player's last successful track search, replayable without the browser.</summary>
     public SpotifySearchTemplate? SearchTemplate { get; private set; }
+
+    public SpotifyCredentials? ValidCredentials =>
+        IsActive && _credentials is { } credentials && DateTimeOffset.UtcNow < ValidUntil ? credentials : null;
     public event EventHandler? StatusChanged;
 
     private bool IsActive => !_disposed && !_disconnecting && settings.Current.SpotifyLyricsEnabled;

@@ -136,7 +136,7 @@ Requer o [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
 
 ```powershell
 dotnet build                                   # compila
-dotnet test                                    # 158 testes (letras, sincronização, cores, layout)
+dotnet test                                    # 169 testes (letras, sincronização, cores, layout)
 dotnet run --project src/Taskitify             # roda
 
 # Executável único, sem precisar de .NET instalado (~179 MB; ~72 MB zipado)

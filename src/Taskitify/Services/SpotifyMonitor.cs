@@ -84,9 +84,15 @@ public interface ISpotifyMonitor : IDisposable
 /// </summary>
 public sealed class SpotifyMonitor : ISpotifyMonitor
 {
+    // Spotify sometimes publishes a song without its cover, or adds the cover later without
+    // another event: look again this long after the song change, then ask CoverFallback.
+    private static readonly TimeSpan[] CoverRetryDelays = [TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10)];
+
     private readonly Dispatcher _dispatcher;
     private readonly PlaybackClock _clock = new();
     private readonly DispatcherTimer _correctionTimer;
+    private readonly DispatcherTimer _coverRetry;
+    private int _coverRetries;
 
     private GlobalSystemMediaTransportControlsSessionManager? _manager;
     private GlobalSystemMediaTransportControlsSession? _session;
@@ -110,7 +116,19 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
             ReadPlaybackInfo();
             ReadTimeline();
         };
+        _coverRetry = new DispatcherTimer(DispatcherPriority.Background, dispatcher);
+        _coverRetry.Tick += async (_, _) =>
+        {
+            _coverRetry.Stop();
+            await RetryCoverAsync();
+        };
     }
+
+    /// <summary>
+    /// A cover for a song Spotify published without one (the encoded image, or null), asked once
+    /// the retries found none. Runs on the UI thread.
+    /// </summary>
+    public Func<TrackInfo, TimeSpan?, Task<byte[]?>>? CoverFallback { get; set; }
 
     public event EventHandler? TrackChanged;
     public event EventHandler? PlaybackChanged;
@@ -222,6 +240,7 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
     public void Dispose()
     {
         _correctionTimer.Stop();
+        _coverRetry.Stop();
         if (_manager is not null)
             _manager.SessionsChanged -= OnSessionsChanged;
         Detach();
@@ -303,6 +322,7 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
     private void SetNoSession()
     {
         _correctionTimer.Stop();
+        _coverRetry.Stop();
         _clock.SetPlaying(false);
         _clock.Reset();
         _clock.Duration = null;
@@ -396,6 +416,8 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
             if (changedBy is not null)
                 _lastTimelineStamp = default;
             _thumbnailLoaded = false;
+            _coverRetries = 0;
+            _coverRetry.Stop();
             Thumbnail = null;
             TrackChanged?.Invoke(this, EventArgs.Empty);
             ThumbnailChanged?.Invoke(this, EventArgs.Empty);
@@ -411,6 +433,36 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
             // one to come on its own (measured: +16 MB over 80 calls; flat with a young-generation
             // collection). One per song costs about a millisecond.
             GC.Collect(1);
+        }
+        if (!_thumbnailLoaded && !_coverRetry.IsEnabled && _coverRetries < CoverRetryDelays.Length)
+        {
+            _coverRetry.Interval = CoverRetryDelays[_coverRetries++];
+            _coverRetry.Start();
+        }
+    }
+
+    /// <summary>The song still has no cover: read it again, and when the retries are used up, ask CoverFallback.</summary>
+    private async Task RetryCoverAsync()
+    {
+        if (_thumbnailLoaded || Track is not { } track)
+            return;
+        await LoadMediaPropertiesAsync();
+        if (_thumbnailLoaded || Track != track || _coverRetry.IsEnabled || CoverFallback is not { } fallback)
+            return;
+        // The retries' media-properties calls each hold native memory until a collection.
+        GC.Collect(1);
+        try
+        {
+            if (await fallback(track, Duration) is { } encoded && Track == track && !_thumbnailLoaded)
+            {
+                // Not marked as loaded: a cover Spotify publishes later still replaces it.
+                ShowCover(encoded, track);
+                Log.Debug("Album art from Spotify's search (none in the media session)");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Could not get album art from Spotify's search", ex);
         }
     }
 
@@ -445,30 +497,32 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
             await using var source = ras.AsStreamForRead();
             var buffer = new MemoryStream();
             await source.CopyToAsync(buffer);
-            buffer.Position = 0;
-
-            var image = new BitmapImage();
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.DecodePixelWidth = 256;
-            image.StreamSource = buffer;
-            image.EndInit();
-            image.Freeze();
-
-            buffer.Position = 0;
-            var palette = ExtractPalette(buffer);
-
-            if (forTrack == Track)
-            {
-                Thumbnail = image;
-                Palette = palette;
-                ThumbnailChanged?.Invoke(this, EventArgs.Empty);
-            }
+            ShowCover(buffer.ToArray(), forTrack);
         }
         catch (Exception ex)
         {
             _thumbnailLoaded = false;
             Log.Error("Could not load album art", ex);
+        }
+    }
+
+    /// <summary>Decode an encoded cover (and its gradient colours) for the song still playing.</summary>
+    private void ShowCover(byte[] encoded, TrackInfo forTrack)
+    {
+        var image = new BitmapImage();
+        image.BeginInit();
+        image.CacheOption = BitmapCacheOption.OnLoad;
+        image.DecodePixelWidth = 256;
+        image.StreamSource = new MemoryStream(encoded);
+        image.EndInit();
+        image.Freeze();
+        var palette = ExtractPalette(new MemoryStream(encoded));
+
+        if (forTrack == Track)
+        {
+            Thumbnail = image;
+            Palette = palette;
+            ThumbnailChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 

@@ -112,6 +112,7 @@ Verificado na máquina de desenvolvimento (Windows 11 build 26200, 1920×1200 a 
 - Letra sincronizada vinda do LRCLIB; erro 429 tratado com mensagem no popup, título na barra e nova tentativa com backoff
 - Primeira execução (sem `settings.json`): no idioma do Windows, quando o app o tem, uma tela explica as duas formas de buscar letras (só LRCLIB, ou Spotify + LRCLIB) e o que a conexão com o Spotify faz: nada na conta, só busca letras. "Conectar o Spotify" abre a janela de login; as configurações são salvas na hora, então a tela aparece uma vez só
 - Troca de música: nova capa e nova letra
+- Capa: vem da sessão de mídia do Windows, mas o Spotify às vezes publica a música sem ela (medido: uma música ainda sem capa minutos depois de começar). O app olha de novo 2, 5 e 10 s depois da troca; se continuar sem, e o Spotify estiver conectado, usa a capa que a busca do Spotify mostra (a da busca da letra, ou a busca repetida com um token ainda válido; o navegador nunca abre por uma capa), baixada do CDN de imagens do Spotify. As conexões do Spotify tentam os endereços como um navegador (IPv6 e IPv4 alternados, o próximo 250 ms depois): na rede medida, o IPv6 até esse CDN nunca respondia e o .NET esperava por ele até o tempo esgotar
 - Menu da letra: **Buscar letra de novo** abre um submenu com uma busca por fonte (Spotify, LRCLIB). A fonte escolhida é consultada sozinha, sem cache; o que ela achar passa a ser a letra salva, e se ela não tiver a letra (ou falhar) a salva continua. O submenu é outro popup: o fechamento por clique fora do menu também o considera
 - Mini player: abre ao clicar, recebe foco mesmo com outro app em primeiro plano, fecha com Esc (devolvendo o foco), com clique fora e com novo clique no widget; linha atual destacada e centralizada
 - Consumo medido com `tools/perf/Measure-Taskitify.ps1` (publish Release, executável único): cerca de 55–70 MB de memória privada (35–45 MB no conjunto de trabalho) e menos de 1% de um núcleo enquanto toca com o overlay visível. O overlay é desenhado por software, o que deixa o dispositivo Direct3D e o driver da GPU (~13 MB, medido com o overlay sozinho) fora do processo, sem gastar mais CPU, nem com o letreiro rolando. O mini player usa a GPU enquanto está aberto; depois da primeira abertura, ~12 MB do driver ficam no processo até o app reiniciar. Com as letras do Spotify, o navegador escondido (até ~310 MB) fica aberto cerca de 35 s depois de iniciar e quando o token vence; nas trocas de música ele não abre, exceto quando a busca não acha a música. Pausado, nenhum timer roda.
@@ -119,7 +120,7 @@ Verificado na máquina de desenvolvimento (Windows 11 build 26200, 1920×1200 a 
 - Aleatório (dois cliques rápidos voltam ao estado inicial), volume (roda do mouse 100% → 95% → 100%, silenciar e reativar) e cliques nos botões sem abrir o popup
 - Mini player com o degradê da capa
 - Player minimizado ao pausar, montador com letra ocultável e migração das configurações do nome antigo (Taskbar Lyrics)
-- 158 testes unitários passando
+- 169 testes unitários passando
 
 **Não** verificado (sem o hardware ou a configuração aqui):
 

@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Windows;
 using System.Windows.Threading;
 using Taskitify.Core.Lyrics;
+using Taskitify.Core.Net;
 using Taskitify.Infrastructure;
 using Taskitify.Services;
 using Taskitify.ViewModels;
@@ -102,7 +103,8 @@ public partial class App : Application
         // LRCLIB asks clients to identify themselves with a name and a link.
         _http = LrclibClient.CreateHttpClient($"Taskitify/{typeof(App).Assembly.GetName().Version?.ToString(3)} (+https://github.com/CarlosVinniFernandes/Taskitify)");
         _cache = new LyricsCache(AppPaths.LyricsCacheDirectory);
-        _spotifyHttp = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false })
+        // Addresses tried like a browser does: some networks drop IPv6 to Spotify's image CDN.
+        _spotifyHttp = new HttpClient(new SocketsHttpHandler { AllowAutoRedirect = false, UseCookies = false, ConnectCallback = StaggeredConnect.ConnectAsync })
         { Timeout = TimeSpan.FromSeconds(10) };
         _spotifyLyrics = new SpotifyLyricsSession(_settings, Dispatcher);
         var spotifyOnly = e.Args.Contains("--spotify-only", StringComparer.OrdinalIgnoreCase);
@@ -116,7 +118,14 @@ public partial class App : Application
                  new FallbackLyricsProvider(spotifyProvider, new LrclibProvider(new LrclibClient(_http)))], _cache);
         if (spotifyOnly) Log.Info("Spotify-only test mode: LRCLIB, local files and disk cache disabled");
 
-        _monitor = new SpotifyMonitor(Dispatcher);
+        _monitor = new SpotifyMonitor(Dispatcher)
+        {
+            // Spotify's desktop app sometimes publishes a song to Windows without its cover: with
+            // Spotify lyrics connected, the one Spotify's search shows.
+            CoverFallback = (track, duration) => _settings.Current.SpotifyLyricsEnabled
+                ? spotifyProvider.FindCoverAsync(new TrackQuery(track.Title, track.Artist, track.Album, duration), CancellationToken.None)
+                : Task.FromResult<byte[]?>(null),
+        };
         _sync = new LyricsSyncService(_monitor, lyrics, _settings);
         var spotifyStatus = _spotifyLyrics.StatusKey;
         _spotifyLyrics.StatusChanged += (_, _) =>
