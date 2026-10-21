@@ -8,18 +8,26 @@ using Taskitify.Services;
 
 namespace Taskitify.ViewModels;
 
-public sealed record MonitorOption(string? DeviceName, Func<string> GetLabel) : System.ComponentModel.INotifyPropertyChanged
+// Classes, not records: a record's hash code includes the PropertyChanged delegate, so it changes
+// as soon as WPF listens to the item, and a ComboBox can then no longer select it.
+public sealed class MonitorOption(string? deviceName, Func<string> getLabel) : System.ComponentModel.INotifyPropertyChanged
 {
-    public string Label => GetLabel();
+    public string? DeviceName { get; } = deviceName;
+    public string Label => getLabel();
     public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     public void Refresh() => PropertyChanged?.Invoke(this, new(nameof(Label)));
+    // What screen readers announce for the item.
+    public override string ToString() => Label;
 }
 
-public sealed record ChoiceOption<T>(T Value, string Key) : System.ComponentModel.INotifyPropertyChanged
+public sealed class ChoiceOption<T>(T value, string key) : System.ComponentModel.INotifyPropertyChanged
 {
+    public T Value { get; } = value;
+    public string Key { get; } = key;
     public string Label => LocalizationService.Get(Key);
     public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     public void Refresh() => PropertyChanged?.Invoke(this, new(nameof(Label)));
+    public override string ToString() => Label;
 }
 
 public sealed class SettingsViewModel : ObservableObject
