@@ -27,6 +27,8 @@ public sealed class TaskbarOverlayService : IDisposable
     // the widget rarely moves, so re-detect every 5th tick (15 s) plus on explicit events.
     private const int TicksPerDetection = 5;
 
+    private const int MinCalibratedWidth = 40; // physical pixels
+
     private readonly ISpotifyMonitor _monitor;
     private readonly LyricsSyncService _sync;
     private readonly SettingsService _settings;
@@ -43,6 +45,8 @@ public sealed class TaskbarOverlayService : IDisposable
     private ForegroundWatcher? _foreground;
     private TaskbarPlacement? _placement;
     private PixelRect _bounds;
+    // The bounds when a calibration side drag began; while set, the drag owns the bounds.
+    private PixelRect? _sideDragFrom;
     private bool _refreshing;
     private bool _refreshAgain;
     private bool _fullscreen;
@@ -114,8 +118,13 @@ public sealed class TaskbarOverlayService : IDisposable
         RegisterAppBar();
 
         _window.Clicked += (_, _) => Clicked?.Invoke(this, EventArgs.Empty);
-        _window.CalibrationBoundsChanged += (_, _) => SaveCalibratedBounds(WindowInterop.GetBounds(_hwnd));
+        _window.CalibrationBoundsChanged += (_, _) =>
+        {
+            _sideDragFrom = null;
+            SaveCalibratedBounds(WindowInterop.GetBounds(_hwnd));
+        };
         _window.CalibrationResize += (_, step) => ResizeCalibrated(step);
+        _window.CalibrationEdgeDrag += (_, drag) => DragCalibratedSide(drag.Edge, drag.Offset);
         _window.ContextMenu = BuildContextMenu();
 
         _monitor.TrackChanged += OnStateChanged;
@@ -408,7 +417,8 @@ public sealed class TaskbarOverlayService : IDisposable
 
     private void ComputeBounds()
     {
-        if (_placement is null)
+        // A background re-detection must not snap a side being dragged back to the saved bounds.
+        if (_placement is null || _sideDragFrom is not null)
             return;
         _bounds = TaskbarPositionService.ComputeOverlayRect(_placement, _settings.Current, _vm.IsCompact);
     }
@@ -539,11 +549,20 @@ public sealed class TaskbarOverlayService : IDisposable
     {
         var r = _bounds;
         var delta = (int)Math.Round(10 * (_placement?.Scale ?? 1)) * step;
-        var width = Math.Max(40, r.Width + delta);
+        var width = Math.Max(MinCalibratedWidth, r.Width + delta);
         // Grow towards the side away from the screen edge, like the automatic layout.
         var growLeft = _placement is { } p && r.CenterX > p.Taskbar.CenterX;
         var x = growLeft ? r.Right - width : r.X;
         SaveCalibratedBounds(new PixelRect(x, r.Y, width, r.Height));
+        ApplyBounds();
+    }
+
+    /// <summary>Follows the cursor live; the result is saved once the side is released (CalibrationBoundsChanged).</summary>
+    private void DragCalibratedSide(int edge, int offset)
+    {
+        // From what is on screen, as the window move does.
+        _sideDragFrom ??= WindowInterop.GetBounds(_hwnd);
+        _bounds = OverlayLayout.DragSide(_sideDragFrom.Value, edge, offset, MinCalibratedWidth);
         ApplyBounds();
     }
 }

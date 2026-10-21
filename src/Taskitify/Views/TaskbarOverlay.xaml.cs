@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
+using Taskitify.Infrastructure;
 using Taskitify.ViewModels;
 
 namespace Taskitify.Views;
@@ -17,11 +18,14 @@ public partial class TaskbarOverlay : Window
 {
     private const double MarqueeSpeed = 40; // DIP per second
     private static readonly TimeSpan MarqueePause = TimeSpan.FromSeconds(1.2);
+    private const double ResizeGrip = 8; // DIP at each side that resize while calibrating
 
     private readonly TaskbarViewModel _vm;
     private TextBlock _front;
     private TextBlock _back;
     private double _textLift;
+    private int _resizeEdge; // -1 left, 1 right, 0 no side drag
+    private int _resizeStartX; // physical pixels
 
     public TaskbarOverlay(TaskbarViewModel vm)
     {
@@ -53,6 +57,9 @@ public partial class TaskbarOverlay : Window
 
     /// <summary>Wheel delta while calibrating: positive = wider.</summary>
     public event EventHandler<int>? CalibrationResize;
+
+    /// <summary>A side dragged while calibrating (-1 left, 1 right) and how far the cursor is from where it began, in physical pixels.</summary>
+    public event EventHandler<(int Edge, int Offset)>? CalibrationEdgeDrag;
 
     protected override void OnMouseEnter(MouseEventArgs e)
     {
@@ -98,6 +105,65 @@ public partial class TaskbarOverlay : Window
             CalibrationResize?.Invoke(this, e.Delta > 0 ? 1 : -1);
     }
 
+    // Calibration: the sides resize like a window's borders, the middle moves (OnMouseLeftButtonDown).
+    // Preview events, so a button at a side does not take the press.
+    protected override void OnPreviewMouseMove(MouseEventArgs e)
+    {
+        base.OnPreviewMouseMove(e);
+        if (_resizeEdge != 0)
+        {
+            // The real cursor, not the event's point: the window moves under it when the left side is dragged.
+            if (NativeMethods.GetCursorPos(out var p))
+                CalibrationEdgeDrag?.Invoke(this, (_resizeEdge, p.X - _resizeStartX));
+        }
+        else if (_vm.IsCalibrating)
+        {
+            var side = EdgeAt(e.GetPosition(this).X) != 0;
+            Cursor = side ? Cursors.SizeWE : Cursors.SizeAll;
+            ForceCursor = side; // over the buttons' hand cursor too
+        }
+    }
+
+    protected override void OnPreviewMouseLeftButtonDown(MouseButtonEventArgs e)
+    {
+        base.OnPreviewMouseLeftButtonDown(e);
+        if (!_vm.IsCalibrating)
+            return;
+        var edge = EdgeAt(e.GetPosition(this).X);
+        // Without the capture the release could be missed outside the window, leaving the side stuck to the cursor.
+        if (edge == 0 || !NativeMethods.GetCursorPos(out var p) || !CaptureMouse())
+            return;
+        _resizeEdge = edge;
+        _resizeStartX = p.X;
+        e.Handled = true;
+    }
+
+    protected override void OnPreviewMouseLeftButtonUp(MouseButtonEventArgs e)
+    {
+        base.OnPreviewMouseLeftButtonUp(e);
+        if (_resizeEdge != 0)
+        {
+            ReleaseMouseCapture(); // finishes in OnLostMouseCapture
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnLostMouseCapture(MouseEventArgs e)
+    {
+        base.OnLostMouseCapture(e);
+        if (_resizeEdge == 0)
+            return;
+        _resizeEdge = 0;
+        CalibrationBoundsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>-1 over the left side, 1 over the right one, 0 elsewhere. A narrow strip keeps a middle to drag.</summary>
+    private int EdgeAt(double x)
+    {
+        var grip = Math.Min(ResizeGrip, ActualWidth / 4);
+        return x <= grip ? -1 : x >= ActualWidth - grip ? 1 : 0;
+    }
+
     private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
     {
         switch (e.PropertyName)
@@ -117,6 +183,11 @@ public partial class TaskbarOverlay : Window
             case nameof(TaskbarViewModel.IsCalibrating):
                 CalibrationFrame.Visibility = _vm.IsCalibrating ? Visibility.Visible : Visibility.Collapsed;
                 Cursor = _vm.IsCalibrating ? Cursors.SizeAll : null;
+                if (!_vm.IsCalibrating)
+                {
+                    ForceCursor = false;
+                    ReleaseMouseCapture(); // a side drag in progress ends here
+                }
                 break;
             case "": // settings changed: everything may differ
                 ApplyBackground(animate: false);

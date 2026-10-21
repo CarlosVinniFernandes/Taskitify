@@ -59,4 +59,20 @@ public static class OverlayLayout
             return PixelRect.FromLTRB(left, top, right, top + height);
         }
     }
+
+    /// <summary>
+    /// Calibration: <paramref name="from"/> with one side (-1 left, 1 right) moved by
+    /// <paramref name="offset"/> pixels. The other side stays put, and the side stops at
+    /// <paramref name="minWidth"/> instead of crossing it.
+    /// </summary>
+    public static PixelRect DragSide(PixelRect from, int edge, int offset, int minWidth)
+    {
+        if (edge < 0)
+        {
+            var left = Math.Min(from.Left + offset, from.Right - minWidth);
+            return PixelRect.FromLTRB(left, from.Top, from.Right, from.Bottom);
+        }
+        var right = Math.Max(from.Right + offset, from.Left + minWidth);
+        return PixelRect.FromLTRB(from.Left, from.Top, right, from.Bottom);
+    }
 }

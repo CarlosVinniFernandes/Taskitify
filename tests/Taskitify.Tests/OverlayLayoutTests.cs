@@ -50,4 +50,32 @@ public class OverlayLayoutTests
 
         Assert.True(r.Contains(RightWidget));
     }
+
+    [Fact]
+    public void Dragging_the_right_side_keeps_the_left_one()
+    {
+        var calibrated = new PixelRect(1000, 1152, 300, 48);
+
+        Assert.Equal(new PixelRect(1000, 1152, 350, 48), OverlayLayout.DragSide(calibrated, edge: 1, offset: 50, minWidth: 40));
+        Assert.Equal(new PixelRect(1000, 1152, 200, 48), OverlayLayout.DragSide(calibrated, edge: 1, offset: -100, minWidth: 40));
+    }
+
+    [Fact]
+    public void Dragging_the_left_side_keeps_the_right_one()
+    {
+        var calibrated = new PixelRect(1000, 1152, 300, 48);
+
+        Assert.Equal(PixelRect.FromLTRB(940, 1152, 1300, 1200), OverlayLayout.DragSide(calibrated, edge: -1, offset: -60, minWidth: 40));
+        Assert.Equal(PixelRect.FromLTRB(1100, 1152, 1300, 1200), OverlayLayout.DragSide(calibrated, edge: -1, offset: 100, minWidth: 40));
+    }
+
+    [Fact]
+    public void A_dragged_side_stops_at_the_minimum_width()
+    {
+        var calibrated = new PixelRect(1000, 1152, 300, 48);
+
+        // Far past the other side: the strip keeps its minimum width and does not flip over.
+        Assert.Equal(PixelRect.FromLTRB(1260, 1152, 1300, 1200), OverlayLayout.DragSide(calibrated, edge: -1, offset: 1000, minWidth: 40));
+        Assert.Equal(new PixelRect(1000, 1152, 40, 48), OverlayLayout.DragSide(calibrated, edge: 1, offset: -1000, minWidth: 40));
+    }
 }

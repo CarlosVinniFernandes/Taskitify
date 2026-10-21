@@ -125,7 +125,7 @@ A integração usa o serviço não oficial do player web do Spotify. Fazer login
 
 **A letra está adiantada ou atrasada.** Configurações → Sincronização → **Ajuste de tempo**.
 
-**O widget apareceu no lugar errado.** Clique com o botão direito → **Calibrar posição**, arraste e ajuste a largura com a roda do mouse.
+**O widget apareceu no lugar errado.** Clique com o botão direito → **Calibrar posição**, arraste para mover e ajuste a largura arrastando as laterais ou com a roda do mouse.
 
 **Funciona com o Spotify no navegador?** Não. Só com o Spotify Desktop (de propósito, para não confundir com vídeos e outras abas).
 

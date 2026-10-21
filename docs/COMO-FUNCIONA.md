@@ -120,7 +120,7 @@ Verificado na máquina de desenvolvimento (Windows 11 build 26200, 1920×1200 a 
 - Aleatório (dois cliques rápidos voltam ao estado inicial), volume (roda do mouse 100% → 95% → 100%, silenciar e reativar) e cliques nos botões sem abrir o popup
 - Mini player com o degradê da capa
 - Player minimizado ao pausar, montador com letra ocultável e migração das configurações do nome antigo (Taskbar Lyrics)
-- 169 testes unitários passando
+- 172 testes unitários passando
 
 **Não** verificado (sem o hardware ou a configuração aqui):
 

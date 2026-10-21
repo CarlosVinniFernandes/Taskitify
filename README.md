@@ -125,7 +125,7 @@ This uses Spotify's unofficial web-player lyrics service. Login does not guarant
 
 **The lyrics are early or late.** Settings → Synchronization → **Timing adjustment (offset)**.
 
-**The widget showed up in the wrong place.** Right-click → **Calibrate position**, drag it and adjust the width with the mouse wheel.
+**The widget showed up in the wrong place.** Right-click → **Calibrate position**, drag it to move it, and drag its sides or use the mouse wheel to adjust the width.
 
 **Does it work with Spotify in the browser?** No. Only Spotify Desktop (on purpose, so it is never confused with videos or other tabs).
 
