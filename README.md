@@ -74,6 +74,7 @@ No Spicetify, Spotify login or Premium is needed for the default LRCLIB source. 
 | Click the lyric | Opens or closes the mini player |
 | `Esc` or click outside | Closes the mini player |
 | Click a line in the mini player | Jumps the song to that line |
+| Mouse wheel over the mini player's lyrics | Scrolls the lyrics freely; **Sync with the song** goes back to the current line |
 | Mouse wheel on the volume button | Changes Spotify's volume (click to mute) |
 | Right-click the lyric | Fetch lyrics again (from Spotify or LRCLIB), show song and artist, calibrate position, settings, exit |
 | Tray icon | Settings, mini player and exit |

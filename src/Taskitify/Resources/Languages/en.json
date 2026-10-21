@@ -87,6 +87,7 @@
   "FinishCalibration": "Finish calibration",
   "ReloadLyrics": "Fetch lyrics again",
   "ReloadLyricsFrom": "Fetch lyrics from {0}",
+  "LyricsResync": "Sync with the song",
   "WelcomeHeading": "Welcome to Taskitify",
   "WelcomeIntro": "Taskitify shows the synced lyrics of the song playing in Spotify on your taskbar. Choose where the lyrics come from:",
   "WelcomeLrclibTitle": "LRCLIB only",

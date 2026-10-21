@@ -87,6 +87,7 @@
   "FinishCalibration": "Kalibrierung abschließen",
   "ReloadLyrics": "Songtext erneut abrufen",
   "ReloadLyricsFrom": "Songtext von {0} abrufen",
+  "LyricsResync": "Mit dem Song synchronisieren",
   "WelcomeHeading": "Willkommen bei Taskitify",
   "WelcomeIntro": "Taskitify zeigt in der Taskleiste den synchronisierten Songtext des Titels, der gerade in Spotify läuft. Wähle, woher die Songtexte kommen:",
   "WelcomeLrclibTitle": "Nur LRCLIB",

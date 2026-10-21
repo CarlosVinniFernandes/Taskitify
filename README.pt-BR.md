@@ -74,6 +74,7 @@ Não precisa de Spicetify, login no Spotify nem Premium para usar a fonte padrã
 | Clicar na letra | Abre ou fecha o mini player |
 | `Esc` ou clicar fora | Fecha o mini player |
 | Clicar numa linha do mini player | Pula a música para aquela linha |
+| Roda do mouse na letra do mini player | Rola a letra livremente; **Sincronizar com a música** volta para a linha atual |
 | Roda do mouse no botão de volume | Ajusta o volume do Spotify (clique silencia) |
 | Clique direito na letra | Buscar letra de novo (no Spotify ou no LRCLIB), mostrar música e artista, calibrar posição, configurações, sair |
 | Ícone na bandeja | Configurações, mini player e sair |

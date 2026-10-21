@@ -87,6 +87,7 @@
   "FinishCalibration": "Terminer le calibrage",
   "ReloadLyrics": "Rechercher les paroles",
   "ReloadLyricsFrom": "Rechercher les paroles sur {0}",
+  "LyricsResync": "Resynchroniser avec le morceau",
   "WelcomeHeading": "Bienvenue dans Taskitify",
   "WelcomeIntro": "Taskitify affiche dans la barre des tâches les paroles synchronisées du morceau en cours dans Spotify. Choisissez d’où viennent les paroles :",
   "WelcomeLrclibTitle": "LRCLIB seulement",

@@ -25,6 +25,8 @@ public partial class MiniPlayerWindow : Window
     private IntPtr _previousForeground;
     private PixelRect _anchor;
     private bool _dragging;
+    // The user scrolled the lyrics: they stay put until "sync", a line click, a new song or reopening.
+    private bool _browsing;
 
     public MiniPlayerWindow(MiniPlayerViewModel vm, Func<bool> animationsEnabled, Func<bool> useGradient)
     {
@@ -45,7 +47,12 @@ public partial class MiniPlayerWindow : Window
 
         vm.PropertyChanged += OnViewModelChanged;
         vm.CurrentLineChanged += (_, _) => Dispatcher.InvokeAsync(() => ScrollToCurrent(animate: true), DispatcherPriority.Loaded);
-        vm.Lines.CollectionChanged += (_, _) => Dispatcher.InvokeAsync(() => ScrollToCurrent(animate: false), DispatcherPriority.Loaded);
+        vm.Lines.CollectionChanged += (_, _) => Dispatcher.InvokeAsync(() =>
+        {
+            SetBrowsing(false);
+            ScrollToCurrent(animate: false);
+        }, DispatcherPriority.Loaded);
+        LyricsViewport.PreviewMouseWheel += OnLyricsWheel;
 
         Progress.PreviewMouseLeftButtonDown += (_, _) => _dragging = true;
         Progress.PreviewMouseLeftButtonUp += (_, _) =>
@@ -109,6 +116,7 @@ public partial class MiniPlayerWindow : Window
         _outsideClicks.Start();
         FocusHelper.ForceForeground(_hwnd);
         Activate();
+        SetBrowsing(false);
         ScrollToCurrent(animate: false);
 
         if (_animationsEnabled())
@@ -238,13 +246,44 @@ public partial class MiniPlayerWindow : Window
     private void OnLyricLineClicked(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement { DataContext: LyricLineViewModel line })
+        {
+            // Jumping to a line follows the song again from there.
+            SetBrowsing(false);
             _vm.SeekToLineCommand.Execute(line);
+        }
+    }
+
+    /// <summary>The wheel scrolls the lyrics freely, like Spotify's lyrics view; they stop following the song.</summary>
+    private void OnLyricsWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (_vm.Lines.Count == 0 || LyricsList.Visibility != Visibility.Visible)
+            return;
+        e.Handled = true;
+        // The animated value, kept when the animation is removed.
+        var y = LyricsOffset.Y;
+        LyricsOffset.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty, null);
+        // Between the first line's top and the last line's bottom at the middle of the viewport.
+        var middle = LyricsViewport.ActualHeight / 2;
+        LyricsOffset.Y = Math.Clamp(y + (e.Delta / 2.0), middle - LyricsList.ActualHeight, middle);
+        SetBrowsing(true);
+    }
+
+    private void OnResync(object sender, RoutedEventArgs e)
+    {
+        SetBrowsing(false);
+        ScrollToCurrent(animate: true);
+    }
+
+    private void SetBrowsing(bool browsing)
+    {
+        _browsing = browsing;
+        ResyncButton.Visibility = browsing ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>Translate the list so the current line is vertically centred in the viewport.</summary>
     private void ScrollToCurrent(bool animate)
     {
-        if (!IsVisible || _vm.Lines.Count == 0)
+        if (!IsVisible || _vm.Lines.Count == 0 || _browsing)
             return;
 
         var viewport = LyricsViewport.ActualHeight;
