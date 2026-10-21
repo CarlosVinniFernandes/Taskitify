@@ -156,7 +156,7 @@ public sealed class AppSettings
 
     public bool EnableAnimations { get; set; } = true;
 
-    public double FontSize { get; set; } = 12;
+    public double FontSize { get; set; } = 15;
 
     public int SyncOffsetMs { get; set; }
 
