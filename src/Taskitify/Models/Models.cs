@@ -113,7 +113,7 @@ public sealed class BarLayout
     [JsonIgnore]
     public bool AnyText => ShowText || ShowCaption;
 
-    public static BarLayout DefaultNormal() => new() { ShowCover = true, ShowText = true, ShowCaption = true, Width = 300 };
+    public static BarLayout DefaultNormal() => new() { ShowCover = true, ShowText = true, ShowCaption = true, ShowProgress = true, Width = 300 };
 
     /// <summary>Cover, track name and a play button: about the size of the weather widget.</summary>
     public static BarLayout DefaultMinimized() => new() { ShowCover = true, ShowText = true, ShowPlayPause = true, Width = 110 };
@@ -149,7 +149,7 @@ public sealed class AppSettings
 
     public NoLyricsBehavior NoLyricsBehavior { get; set; } = NoLyricsBehavior.ShowTitle;
 
-    public PausedBehavior PausedBehavior { get; set; } = PausedBehavior.Hide;
+    public PausedBehavior PausedBehavior { get; set; } = PausedBehavior.Minimize;
 
     /// <summary>Device name (e.g. \\.\DISPLAY1) of the monitor whose taskbar is used; null = primary.</summary>
     public string? MonitorDeviceName { get; set; }
