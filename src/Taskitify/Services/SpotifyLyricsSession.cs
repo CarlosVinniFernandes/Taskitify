@@ -520,11 +520,11 @@ public sealed class SpotifyLyricsSession(SettingsService settings, Dispatcher di
         core.NewWindowRequested += (_, e) =>
         {
             e.Handled = true;
-            if (IsSpotifyPage(e.Uri)) core.Navigate(e.Uri);
+            if (IsAllowedPage(e.Uri)) core.Navigate(e.Uri);
         };
         core.NavigationStarting += (_, e) =>
         {
-            if (e.Uri != "about:blank" && !IsSpotifyPage(e.Uri)) e.Cancel = true;
+            if (e.Uri != "about:blank" && !IsAllowedPage(e.Uri)) e.Cancel = true;
         };
         core.WebResourceResponseReceived += OnResponse;
         core.NavigationStarting += (_, e) =>
@@ -560,6 +560,11 @@ public sealed class SpotifyLyricsSession(SettingsService settings, Dispatcher di
 
     private static bool IsSpotifyPage(string url) => Uri.TryCreate(url, UriKind.Absolute, out var uri)
         && uri.Scheme == "https" && (uri.Host == "spotify.com" || uri.Host.EndsWith(".spotify.com", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>Spotify only, except in the login window: its Google, Facebook and Apple sign-ins
+    /// leave Spotify and hop across those providers' own domains before coming back.</summary>
+    private bool IsAllowedPage(string url) => IsSpotifyPage(url)
+        || ForUser && Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == "https";
 
     private async void OnResponse(object? sender, CoreWebView2WebResourceResponseReceivedEventArgs e)
     {
