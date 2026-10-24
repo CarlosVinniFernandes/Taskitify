@@ -38,6 +38,5 @@
   </Applications>
   <Capabilities>
     <rescap:Capability Name="runFullTrust" />
-    <rescap:Capability Name="globalMediaControl" />
   </Capabilities>
 </Package>
