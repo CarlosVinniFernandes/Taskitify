@@ -57,8 +57,16 @@ $manifest.Save((Join-Path $payload 'AppxManifest.xml'))
 Add-Type -AssemblyName System.Drawing
 $assets = Join-Path $payload 'Assets'
 New-Item -ItemType Directory -Path $assets | Out-Null
-$icon = New-Object System.Drawing.Icon((Join-Path $repoRoot 'src\Taskitify\Resources\Taskitify.ico'), 256, 256)
-$source = $icon.ToBitmap()
+# The icon's frames are PNG, which System.Drawing.Icon decodes as noise: read the largest frame's PNG directly.
+$iconBytes = [IO.File]::ReadAllBytes((Join-Path $repoRoot 'src\Taskitify\Resources\Taskitify.ico'))
+$largest = 0
+for ($i = 0; $i -lt [BitConverter]::ToUInt16($iconBytes, 4); $i++) {
+    $entry = 6 + 16 * $i
+    $length = [BitConverter]::ToUInt32($iconBytes, $entry + 8)
+    if ($length -gt $largest) { $largest = $length; $offset = [BitConverter]::ToUInt32($iconBytes, $entry + 12) }
+}
+$icon = New-Object IO.MemoryStream($iconBytes, $offset, $largest)
+$source = [System.Drawing.Image]::FromStream($icon)
 try {
     foreach ($asset in @(@('StoreLogo',50), @('Square44x44Logo',44), @('Square150x150Logo',150))) {
         $size = [int]$asset[1]
