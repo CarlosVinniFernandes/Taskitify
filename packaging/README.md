@@ -50,7 +50,7 @@ O script valida o manifesto com MakeAppx e guarda o log e os arquivos intermedi�
 ## Integração com o Windows
 
 - `runFullTrust` é necessário porque o aplicativo é WPF/Win32 e acompanha a sessão de mídia, o mixer de áudio e a barra de tarefas. Explique essa finalidade ao preencher a submissão.
-- `globalMediaControl` permite consultar a faixa e controlar a reprodução do Spotify pela API de sessões de mídia do Windows.
+- Não declare `globalMediaControl`: a Store recusa essa capacidade, e o app full trust já acessa a API de sessões de mídia do Windows sem ela.
 - Na versão MSIX, “Start with Windows” usa `Windows.ApplicationModel.StartupTask`, desativado por padrão. O app respeita bloqueios feitos pelo usuário ou por políticas do Windows. Na versão portátil, continua usando o registro do usuário.
 - O pacote não escreve em sua pasta de instalação. Configurações e cache continuam usando as pastas de dados do usuário, sujeitas ao redirecionamento de dados do MSIX.
 - Antes de testar o pacote instalado, encerre a versão portátil: ambas usam a mesma proteção contra duas instâncias simultâneas.
