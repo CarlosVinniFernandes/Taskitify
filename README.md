@@ -65,6 +65,12 @@ No Spicetify, Spotify login or Premium is needed for the default LRCLIB source. 
 
 **Requirements:** 64-bit Windows 11 (or Windows 10 version 1809 or later) and **Spotify Desktop** installed. No .NET installation needed.
 
+## Linux
+
+On Ubuntu and other GNOME desktops Taskitify shows the lyric line in the **top bar, next to the clock**
+(or in a floating bar), following Spotify Desktop through MPRIS. Install the `.deb` and see
+[**docs/LINUX.md**](docs/LINUX.md).
+
 ## How to use
 
 | Action | What happens |

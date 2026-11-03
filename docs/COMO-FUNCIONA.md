@@ -21,6 +21,14 @@ src/Taskitify.Core        (net8.0, sem WPF, 100% testável)
   Layout/OverlayLayout        retângulo do overlay sem cobrir botões vizinhos
   Imaging/AlbumPalette        cores do degradê a partir da capa (dominante escura → mais vibrante), sempre legível com texto branco
 
+src/Taskitify.Core também tem o que as duas plataformas dividem:
+  Media/IMediaSource          o player sem tipos de SO ou UI (Windows: GSMTC; Linux: MPRIS)
+  Lyrics/LyricsSession        acompanha um IMediaSource, busca a letra e arma o timer da próxima linha
+
+src/Taskitify.Platform.Linux (net8.0)  cliente MPRIS, caminhos XDG, autostart, arquivo da linha atual
+src/Taskitify.Linux          (Avalonia) barra, mini player, configurações, bandeja. Veja docs/LINUX.pt-BR.md
+gnome-extension/             extensão que mostra a linha na barra superior do GNOME
+
 src/Taskitify            (WPF, net8.0-windows10.0.19041.0)
   Services/SpotifyMonitor          GSMTC: sessão do Spotify, faixa, estado, timeline, capa, controles
   Services/SpotifyLyricsSession    WebView2 escondido com o login do Spotify: token e captura da busca
