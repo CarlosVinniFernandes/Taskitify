@@ -1,0 +1,8 @@
+{
+  "uuid": "taskitify-lyrics@carlosvinnifernandes.github.io",
+  "name": "Taskitify Lyrics",
+  "description": "Shows the synced Spotify lyric line published by Taskitify in the top bar, to the left of the clock.",
+  "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "url": "https://github.com/CarlosVinniFernandes/Taskitify",
+  "version": 1
+}
