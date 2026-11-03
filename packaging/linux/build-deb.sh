@@ -34,6 +34,7 @@ Architecture: amd64
 Maintainer: Carlos Fernandes <noreply@users.noreply.github.com>
 Installed-Size: $INSTALLED_KB
 Depends: libx11-6, libice6, libsm6, libfontconfig1
+Recommends: python3, python3-gi, gir1.2-webkit2-4.1
 Suggests: spotify-client
 Homepage: https://github.com/CarlosVinniFernandes/Taskitify
 Description: Synced Spotify lyrics for Linux

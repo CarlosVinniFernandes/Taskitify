@@ -67,11 +67,22 @@ jq -r .line "$XDG_RUNTIME_DIR/taskitify/line.json"
 As variáveis `XDG_*` são respeitadas. Os 6 idiomas do app do Windows são compartilhados (Configurações →
 Idioma; o padrão segue o idioma do sistema).
 
-## O que ainda não existe no Linux
+## Letras do próprio Spotify (opcional, experimental)
 
-- **A fonte de letras do próprio Spotify** (o login opcional e experimental do app do Windows) não foi
-  portada: precisa de um navegador embutido (lá, o WebView2). LRCLIB e arquivos locais funcionam como no
-  Windows.
+Mesma ideia do app do Windows: Spotify primeiro, LRCLIB quando o Spotify não tem letra sincronizada.
+**Configurações → Letras do Spotify → Conectar** abre uma janela de login do Spotify (WebKitGTK). Precisa de
+`python3-gi` e `gir1.2-webkit2-4.1` (o `.deb` recomenda):
+
+```bash
+sudo apt install python3-gi gir1.2-webkit2-4.1
+```
+
+O login fica num perfil só dele, `~/.local/share/taskitify/spotify-web-session`; os perfis do Spotify Desktop e
+do navegador nunca são lidos. O web player escondido só abre quando precisa de token ou busca e fecha 30 s
+depois. **Desconectar** apaga esse perfil. Usa o serviço não oficial do player web do Spotify, então pode parar
+de funcionar se o Spotify mudar; o LRCLIB continua.
+
+## O que ainda não existe no Linux
 - **Volume** se controla no Spotify ou no mixer do sistema, não pela barra.
 - O Spotify no navegador não é acompanhado (igual ao Windows, de propósito).
 
@@ -81,6 +92,7 @@ Idioma; o padrão segue o idioma do sistema).
 dotnet test tests/Taskitify.Tests                                  # Core, compartilhado com o Windows
 dbus-run-session -- dotnet test tests/Taskitify.Platform.Linux.Tests   # MPRIS contra um player falso
 dotnet run --project src/Taskitify.Linux
+xvfb-run -a python3 tests/spotify-web-helper/test_helper.py        # o helper WebKitGTK, contra um web player falso local
 ```
 
 Sem precisar de conta no Spotify: `tools/fake-spotify/fake_spotify.py` toca uma playlist falsa em

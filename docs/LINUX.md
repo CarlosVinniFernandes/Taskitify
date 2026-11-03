@@ -66,10 +66,22 @@ jq -r .line "$XDG_RUNTIME_DIR/taskitify/line.json"
 The `XDG_*` variables are honoured. The 6 languages of the Windows app are shared (Settings → Language;
 the default follows the system locale).
 
-## What is not on Linux yet
+## Spotify's own lyrics (optional, experimental)
 
-- **Spotify's own lyrics source** (the optional, experimental login in the Windows app) is not ported: it
-  needs an embedded browser (WebView2 there). LRCLIB and local files work as on Windows.
+Same idea as the Windows app: Spotify first, LRCLIB when Spotify has no synced lyrics. **Settings → Spotify
+lyrics → Connect** opens a Spotify sign-in window (WebKitGTK). It needs `python3-gi` and
+`gir1.2-webkit2-4.1` (the `.deb` recommends them):
+
+```bash
+sudo apt install python3-gi gir1.2-webkit2-4.1
+```
+
+The sign-in lives in its own profile, `~/.local/share/taskitify/spotify-web-session`; Spotify Desktop's and
+your browser's profiles are never read. The hidden web player starts only when a token or search is needed
+and stops 30 s later. **Disconnect** deletes that profile. It uses Spotify's unofficial web-player service,
+so it can stop working when Spotify changes it; LRCLIB keeps working.
+
+## What is not on Linux yet
 - **Volume** is controlled in Spotify or the system mixer, not from the bar.
 - Spotify in the browser is not followed (same as Windows, on purpose).
 
@@ -79,6 +91,7 @@ the default follows the system locale).
 dotnet test tests/Taskitify.Tests                                  # Core, shared with Windows
 dbus-run-session -- dotnet test tests/Taskitify.Platform.Linux.Tests   # MPRIS against a fake player
 dotnet run --project src/Taskitify.Linux
+xvfb-run -a python3 tests/spotify-web-helper/test_helper.py        # the WebKitGTK helper, against a local fake web player
 ```
 
 No Spotify account needed: `tools/fake-spotify/fake_spotify.py` plays a small fake playlist on
@@ -89,8 +102,8 @@ Layout:
 
 ```
 src/Taskitify.Core            Media/IMediaSource, Lyrics/LyricsSession: no OS or UI types, shared with Windows
-src/Taskitify.Platform.Linux  MPRIS client, XDG paths, autostart, line file, settings
-src/Taskitify.Linux           Avalonia app: bar, mini player, settings, tray
+src/Taskitify.Platform.Linux  MPRIS client, XDG paths, autostart, line file, settings, Spotify web session
+src/Taskitify.Linux           Avalonia app: bar, mini player, settings, tray; SpotifyWeb/spotify_web.py is the WebKitGTK helper
 gnome-extension/              the top-bar extension
 packaging/linux/              .deb build, .desktop file
 ```

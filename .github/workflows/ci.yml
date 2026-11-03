@@ -25,6 +25,11 @@ jobs:
         env:
           TASKITIFY_REQUIRE_DBUS: '1'
         run: dbus-run-session -- dotnet test tests/Taskitify.Platform.Linux.Tests
+      - name: Spotify web helper (WebKitGTK) against a local fake web player
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb python3-gi gir1.2-webkit2-4.1
+          xvfb-run -a python3 tests/spotify-web-helper/test_helper.py
       - name: Check the GNOME Shell extension is valid
         run: |
           python3 -c "import json; json.load(open('gnome-extension/taskitify-lyrics@carlosvinnifernandes.github.io/metadata.json'))"
