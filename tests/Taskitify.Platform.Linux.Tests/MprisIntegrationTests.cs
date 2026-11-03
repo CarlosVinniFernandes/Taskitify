@@ -124,7 +124,30 @@ public sealed class MprisIntegrationTests
         }
     }
 
-    private static bool HasSessionBus => Address.Session is not null && File.Exists(Address.Session.Replace("unix:path=", "").Split(',')[0]);
+    /// <summary>
+    /// Whether a session bus answers. CI sets TASKITIFY_REQUIRE_DBUS=1 so that "no bus" fails the test
+    /// instead of silently skipping it.
+    /// </summary>
+    private static async Task<bool> HasSessionBusAsync()
+    {
+        var available = false;
+        if (Address.Session is { } address)
+        {
+            try
+            {
+                using var probe = new Connection(address);
+                await probe.ConnectAsync().WaitAsync(TimeSpan.FromSeconds(3));
+                available = true;
+            }
+            catch (Exception ex) when (ex is ConnectException or IOException or TimeoutException or DBusException)
+            {
+            }
+        }
+
+        if (!available && Environment.GetEnvironmentVariable("TASKITIFY_REQUIRE_DBUS") == "1")
+            Assert.Fail("TASKITIFY_REQUIRE_DBUS=1 but there is no D-Bus session bus (run under dbus-run-session).");
+        return available;
+    }
 
     private static async Task<bool> WaitFor(Func<bool> condition, int ms = 5000)
     {
@@ -152,7 +175,7 @@ public sealed class MprisIntegrationTests
     [Fact]
     public async Task Reads_state_follows_changes_and_sends_commands()
     {
-        if (!HasSessionBus)
+        if (!await HasSessionBusAsync())
             return;
         var (conn, player, name) = await StartFakeAsync();
         using var _ = conn;
@@ -206,7 +229,7 @@ public sealed class MprisIntegrationTests
     [Fact]
     public async Task Reports_no_session_when_the_player_is_absent_and_attaches_when_it_appears()
     {
-        if (!HasSessionBus)
+        if (!await HasSessionBusAsync())
             return;
         var name = "org.mpris.MediaPlayer2.taskitifytest" + Guid.NewGuid().ToString("N")[..12];
         using var source = new MprisMediaSource(name);
