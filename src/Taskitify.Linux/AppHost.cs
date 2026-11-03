@@ -3,8 +3,10 @@ using System.Globalization;
 using Avalonia.Threading;
 using Taskitify.Core.Lyrics;
 using Taskitify.Core.Media;
+using Taskitify.Core.Net;
 using Taskitify.Platform.Linux;
 using Taskitify.Platform.Linux.Mpris;
+using Taskitify.Platform.Linux.Spotify;
 using Taskitify.Services;
 
 namespace Taskitify.Linux;
@@ -16,6 +18,13 @@ namespace Taskitify.Linux;
 internal sealed class AppHost : IDisposable
 {
     private readonly HttpClient _lyricsHttp;
+    private readonly HttpClient _spotifyHttp = new(new SocketsHttpHandler { AllowAutoRedirect = false, UseCookies = false, ConnectCallback = StaggeredConnect.ConnectAsync })
+    { Timeout = TimeSpan.FromSeconds(10) };
+    private readonly SwitchableLyricsService _lyrics;
+    private readonly LocalLyricsProvider _local;
+    private readonly LrclibProvider _lrclib;
+    private readonly LyricsCache _cache;
+    private readonly SpotifyLyricsProvider _spotifyProvider;
     private readonly HttpClient _coverHttp = new() { Timeout = TimeSpan.FromSeconds(15) };
     private readonly CoverLoader _covers;
     private readonly LineFile _lineFile;
@@ -37,12 +46,22 @@ internal sealed class AppHost : IDisposable
 
         var version = typeof(AppHost).Assembly.GetName().Version?.ToString(3);
         _lyricsHttp = LrclibClient.CreateHttpClient($"Taskitify/{version} (+https://github.com/CarlosVinniFernandes/Taskitify)");
-        var lyrics = new LyricsService(
-            [new LocalLyricsProvider(xdg.UserLyricsDirectory), new LrclibProvider(new LrclibClient(_lyricsHttp))],
-            new LyricsCache(xdg.LyricsCacheDirectory));
+        _local = new LocalLyricsProvider(xdg.UserLyricsDirectory);
+        _lrclib = new LrclibProvider(new LrclibClient(_lyricsHttp));
+        _cache = new LyricsCache(xdg.LyricsCacheDirectory);
+        Spotify = new SpotifyWebSession(new HelperWebPlayer(Path.Combine(AppContext.BaseDirectory, "spotify_web.py")));
+        _spotifyProvider = new SpotifyLyricsProvider(_spotifyHttp, Spotify);
+        _lyrics = new SwitchableLyricsService(BuildLyrics());
+        if (Settings.SpotifyLyricsEnabled)
+        {
+            Spotify.Enabled = true;
+            // Not confirmed until a lookup gets a token, like the Windows app's "connected, not yet confirmed".
+            Spotify.ReportStatus("SpotifyLyricsReady");
+        }
+        Spotify.StatusChanged += () => Dispatcher.UIThread.Post(() => SpotifyStatusChanged?.Invoke());
 
         Media = new MprisMediaSource();
-        Session = new LyricsSession(Media, lyrics) { OffsetMs = Settings.SyncOffsetMs };
+        Session = new LyricsSession(Media, _lyrics) { OffsetMs = Settings.SyncOffsetMs };
         Media.TrackChanged += (_, _) => OnTrackChanged();
         Media.PlaybackChanged += (_, _) => PostChanged();
         Media.TimelineChanged += (_, _) => PostChanged();
@@ -57,6 +76,10 @@ internal sealed class AppHost : IDisposable
     public MprisMediaSource Media { get; }
 
     public LyricsSession Session { get; }
+
+    public SpotifyWebSession Spotify { get; }
+
+    public event Action? SpotifyStatusChanged;
 
     public Cover? Cover { get; private set; }
 
@@ -141,6 +164,22 @@ internal sealed class AppHost : IDisposable
 
     public bool AutostartEnabled => _autostart.IsEnabled;
 
+    private ILyricsService BuildLyrics() => new LyricsService(
+        [_local, Settings.SpotifyLyricsEnabled ? new FallbackLyricsProvider(_spotifyProvider, _lrclib) : _lrclib], _cache);
+
+    /// <summary>Turn the Spotify source on (opens the sign-in window) or off (forgets the sign-in).</summary>
+    public async Task SetSpotifyAsync(bool enabled)
+    {
+        Settings.SpotifyLyricsEnabled = enabled;
+        if (enabled)
+            Spotify.Connect();
+        else
+            await Spotify.DisconnectAsync();
+        _lyrics.Current = BuildLyrics();
+        SaveSettings();
+        await Session.ForceReloadAsync();
+    }
+
     public void OpenLyricsFolder()
     {
         Directory.CreateDirectory(Xdg.UserLyricsDirectory);
@@ -160,7 +199,9 @@ internal sealed class AppHost : IDisposable
         Session.Dispose();
         Media.Dispose();
         _lineFile.Clear();
+        Spotify.Dispose();
         _lyricsHttp.Dispose();
+        _spotifyHttp.Dispose();
         _coverHttp.Dispose();
     }
 

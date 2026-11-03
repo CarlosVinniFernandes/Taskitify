@@ -34,6 +34,8 @@
     <!-- The translations and their loader are shared with the Windows app. -->
     <Compile Include="..\Taskitify\Services\LocalizationCatalog.cs" Link="Shared\LocalizationCatalog.cs" />
     <EmbeddedResource Include="..\Taskitify\Resources\Languages\*.json" LogicalName="Taskitify.Languages.%(Filename)%(Extension)" />
+    <!-- The Spotify web player runs in this helper (WebKitGTK), next to the executable. -->
+    <None Include="SpotifyWeb\spotify_web.py" Link="spotify_web.py" CopyToOutputDirectory="PreserveNewest" />
     <AvaloniaResource Include="..\..\docs\images\logo.png" Link="Assets\taskitify.png" />
   </ItemGroup>
 

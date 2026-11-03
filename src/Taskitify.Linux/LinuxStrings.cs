@@ -27,6 +27,15 @@ internal static class LinuxStrings
             ["es"] = "Barra de letras flotante (desactivada: solo la barra de GNOME)", ["fr"] = "Barre de paroles flottante (désactivée : barre GNOME seule)",
             ["de"] = "Schwebende Textleiste (aus: nur GNOME-Leiste)", ["it"] = "Barra dei testi mobile (spenta: solo la barra GNOME)",
         },
+        ["SpotifyBrowserError"] = new()
+        {
+            ["en"] = "Could not start the Spotify web player. Install python3-gi and gir1.2-webkit2-4.1, then try again.",
+            ["pt"] = "Não foi possível abrir o player web do Spotify. Instale python3-gi e gir1.2-webkit2-4.1 e tente de novo.",
+            ["es"] = "No se pudo iniciar el reproductor web de Spotify. Instala python3-gi y gir1.2-webkit2-4.1 e inténtalo de nuevo.",
+            ["fr"] = "Impossible de lancer le lecteur web Spotify. Installez python3-gi et gir1.2-webkit2-4.1, puis réessayez.",
+            ["de"] = "Der Spotify-Webplayer ließ sich nicht starten. Installiere python3-gi und gir1.2-webkit2-4.1 und versuche es erneut.",
+            ["it"] = "Impossibile avviare il web player di Spotify. Installa python3-gi e gir1.2-webkit2-4.1 e riprova.",
+        },
         ["Width"] = new()
         {
             ["en"] = "Bar width", ["pt"] = "Largura da barra", ["es"] = "Ancho de la barra", ["fr"] = "Largeur de la barre", ["de"] = "Breite der Leiste", ["it"] = "Larghezza della barra",

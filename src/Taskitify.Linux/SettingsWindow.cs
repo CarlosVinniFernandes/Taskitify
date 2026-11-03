@@ -49,11 +49,41 @@ internal sealed class SettingsWindow : Window
             host.SaveSettings();
         }));
 
+        panel.Children.Add(SpotifySection(host));
+
         var folder = new Button { Content = host.T("OpenLyricsFolder"), HorizontalAlignment = HorizontalAlignment.Left };
         folder.Click += (_, _) => host.OpenLyricsFolder();
         panel.Children.Add(folder);
 
         Content = panel;
+    }
+
+    private static Control SpotifySection(AppHost host)
+    {
+        var status = new TextBlock { TextWrapping = Avalonia.Media.TextWrapping.Wrap, FontSize = 12 };
+        var button = new Button { HorizontalAlignment = HorizontalAlignment.Left };
+        void Refresh()
+        {
+            var key = host.Spotify.StatusKey;
+            status.Text = key == "SpotifyLyricsBrowserError" ? host.L("SpotifyBrowserError") : host.T(key);
+            button.Content = host.Settings.SpotifyLyricsEnabled ? host.T("SpotifyLyricsDisconnect") : host.T("SpotifyLyricsConnect");
+        }
+        button.Click += async (_, _) =>
+        {
+            button.IsEnabled = false;
+            await host.SetSpotifyAsync(!host.Settings.SpotifyLyricsEnabled);
+            button.IsEnabled = true;
+            Refresh();
+        };
+        host.SpotifyStatusChanged += Refresh;
+        Refresh();
+
+        var box = new StackPanel { Spacing = 6 };
+        box.Children.Add(new TextBlock { Text = host.T("SpotifyLyricsTitle"), FontWeight = Avalonia.Media.FontWeight.SemiBold });
+        box.Children.Add(new TextBlock { Text = host.T("SpotifyLyricsHint"), Opacity = 0.7, TextWrapping = Avalonia.Media.TextWrapping.Wrap, FontSize = 12 });
+        box.Children.Add(status);
+        box.Children.Add(button);
+        return box;
     }
 
     private static Control Labelled(string label, Control input)

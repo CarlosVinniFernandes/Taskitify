@@ -22,6 +22,9 @@ public sealed class LinuxSettings
     /// </summary>
     public bool? FloatingBar { get; set; }
 
+    /// <summary>Use Spotify's own lyrics first (needs the sign-in window), LRCLIB when it has none.</summary>
+    public bool SpotifyLyricsEnabled { get; set; }
+
     public bool StartAtLogin { get; set; }
 
     /// <summary>Two-letter UI language; null follows the system locale.</summary>
