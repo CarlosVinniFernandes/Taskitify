@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  linux:
+    name: Linux (Core, MPRIS, Linux app)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Build the portable projects and the Linux app
+        run: |
+          dotnet build src/Taskitify.Core
+          dotnet build src/Taskitify.Platform.Linux
+          dotnet build src/Taskitify.Linux
+      - name: Core tests
+        run: dotnet test tests/Taskitify.Tests
+      - name: Linux platform tests (MPRIS runs against a fake player on a private D-Bus session bus)
+        run: dbus-run-session -- dotnet test tests/Taskitify.Platform.Linux.Tests
+      - name: Check the GNOME Shell extension is valid
+        run: |
+          python3 -c "import json; json.load(open('gnome-extension/taskitify-lyrics@carlosvinnifernandes.github.io/metadata.json'))"
+          cp gnome-extension/taskitify-lyrics@carlosvinnifernandes.github.io/extension.js /tmp/extension.mjs
+          node --check /tmp/extension.mjs
+      - name: Build the .deb
+        run: packaging/linux/build-deb.sh 0.0.0-ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: taskitify-deb
+          path: dist/*.deb
+          if-no-files-found: error
+
+  windows:
+    name: Windows (WPF app and tests)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet build Taskitify.sln
+      - run: dotnet test Taskitify.sln --no-build

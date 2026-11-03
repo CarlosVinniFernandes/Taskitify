@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Taskitify
+GenericName=Synced Spotify lyrics
+Comment=Synced Spotify lyrics on your desktop
+Comment[pt_BR]=Letras sincronizadas do Spotify no seu desktop
+Exec=taskitify
+Icon=taskitify
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+Keywords=spotify;lyrics;letras;music;
+StartupNotify=false
