@@ -19,7 +19,6 @@ public sealed class MprisMediaSource : IMediaSource
     private readonly string _busName;
     private readonly PlaybackClock _clock = new();
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
-    private readonly Action<string>? _log;
     private Connection? _connection;
     private IMprisPlayer? _player;
     private IDisposable? _propertiesWatch;
@@ -30,11 +29,7 @@ public sealed class MprisMediaSource : IMediaSource
     private string? _trackId;
     private bool _disposed;
 
-    public MprisMediaSource(string busName = SpotifyBusName, Action<string>? log = null)
-    {
-        _busName = busName;
-        _log = log;
-    }
+    public MprisMediaSource(string busName = SpotifyBusName) => _busName = busName;
 
     public bool HasSession => _player is not null && Status != MediaPlaybackStatus.NoSession;
 
@@ -114,7 +109,7 @@ public sealed class MprisMediaSource : IMediaSource
         }
         catch (DBusException ex)
         {
-            _log?.Invoke($"MPRIS call failed: {ex.Message}");
+            Console.Error.WriteLine($"MPRIS call failed: {ex.Message}");
         }
     }
 

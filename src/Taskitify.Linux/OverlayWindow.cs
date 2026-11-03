@@ -20,7 +20,7 @@ internal sealed class OverlayWindow : Window
     private readonly Grid _row;
     private readonly TextBlock _text;
     private readonly StackPanel _buttons;
-    private readonly Control[] _coverSlot = new Control[1];
+    private Control? _cover;
     private PixelPoint? _dragStartWindow;
     private PixelPoint _dragStartPointer;
     private bool _moved;
@@ -133,16 +133,13 @@ internal sealed class OverlayWindow : Window
         _frame.Background = Ui.Gradient(_host.Cover);
 
         var status = _host.Media.Status;
-        _row.Children.Remove(_coverSlot[0]);
-        if (_host.Cover is not null)
+        if (_cover is not null)
+            _row.Children.Remove(_cover);
+        _cover = _host.Cover is null ? null : Ui.CoverView(_host.Cover, 36, 6);
+        if (_cover is not null)
         {
-            _coverSlot[0] = Ui.CoverView(_host.Cover, 36, 6);
-            _row.Children.Add(_coverSlot[0]);
-            Grid.SetColumn(_coverSlot[0], 0);
-        }
-        else
-        {
-            _coverSlot[0] = new Border();
+            _row.Children.Add(_cover);
+            Grid.SetColumn(_cover, 0);
         }
 
         _buttons.Children.Clear();

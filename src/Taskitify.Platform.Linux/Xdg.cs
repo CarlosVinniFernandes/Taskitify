@@ -20,9 +20,7 @@ public sealed class Xdg
     /// <summary>Per-user runtime dir (tmpfs, cleared at logout); null when the system has none.</summary>
     public string? RuntimeDir => Absolute("XDG_RUNTIME_DIR");
 
-    public string ConfigDirectory => Path.Combine(ConfigHome, AppName);
-
-    public string SettingsFile => Path.Combine(ConfigDirectory, "settings.json");
+    public string SettingsFile => Path.Combine(ConfigHome, AppName, "settings.json");
 
     public string LyricsCacheDirectory => Path.Combine(CacheHome, AppName, "lyrics");
 
