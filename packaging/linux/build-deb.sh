@@ -2,10 +2,10 @@
 # Builds dist/taskitify_<version>_amd64.deb: a self-contained .NET publish under /opt/taskitify,
 # a /usr/bin/taskitify symlink, the menu entry, the icon and the GNOME Shell extension.
 #
-#   packaging/linux/build-deb.sh [version]      # default 1.0.0
+#   packaging/linux/build-deb.sh [version]      # default 1.0.3
 set -euo pipefail
 
-VERSION="${1:-1.0.0}"
+VERSION="${1:-1.0.3}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -31,7 +31,7 @@ Version: $VERSION
 Section: sound
 Priority: optional
 Architecture: amd64
-Maintainer: Carlos Fernandes <noreply@users.noreply.github.com>
+Maintainer: Carlos Fernandes <CarlosVinniFernandes@users.noreply.github.com>
 Installed-Size: $INSTALLED_KB
 Depends: libx11-6, libice6, libsm6, libfontconfig1
 Recommends: python3, python3-gi, gir1.2-webkit2-4.1
