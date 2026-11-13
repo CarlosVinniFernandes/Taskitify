@@ -55,6 +55,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     private string _durationText = "0:00";
     private string? _statusMessage;
     private int _currentIndex = -1;
+    private double? _previewSeconds;
 
     public MiniPlayerViewModel(ISpotifyMonitor monitor, LyricsSyncService sync, SettingsService settings, AppVolumeService volume)
     {
@@ -224,8 +225,25 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     /// <summary>Seek from the progress bar.</summary>
     public void SeekTo(double seconds)
     {
+        _previewSeconds = null;
         if (_monitor.CanSeek)
+            // The monitor moves its clock before awaiting Spotify, so the bar shows the new spot at once.
             _ = _monitor.SeekAsync(TimeSpan.FromSeconds(Math.Clamp(seconds, 0, DurationSeconds)));
+        UpdateProgress();
+    }
+
+    /// <summary>Arrow keys: a few seconds back or forward.</summary>
+    public void SeekBy(double seconds)
+    {
+        if (_monitor.CanSeek)
+            SeekTo(_monitor.Position.TotalSeconds + seconds);
+    }
+
+    /// <summary>While the progress bar is dragged, the time label follows the pointer (null: the song again).</summary>
+    public void PreviewPosition(double? seconds)
+    {
+        _previewSeconds = seconds;
+        UpdateProgress();
     }
 
     public void Dispose()
@@ -340,7 +358,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         var position = _monitor.Position;
         DurationSeconds = Math.Max(1, duration.TotalSeconds);
         PositionSeconds = Math.Min(position.TotalSeconds, DurationSeconds);
-        PositionText = Format(position);
+        PositionText = Format(_previewSeconds is { } preview ? TimeSpan.FromSeconds(preview) : position);
         DurationText = duration > TimeSpan.Zero ? Format(duration) : "--:--";
     }
 

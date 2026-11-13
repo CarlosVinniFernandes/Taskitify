@@ -103,6 +103,10 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
     private DateTimeOffset _trackChangedAt = DateTimeOffset.MinValue;
     private (bool Value, DateTime Until)? _pendingShuffle;
     private (RepeatMode Value, DateTime Until)? _pendingRepeat;
+    // A seek just sent: reports that still show the old position are ignored for a moment, so
+    // the progress bar does not jump back before Spotify catches up.
+    private (TimeSpan Target, DateTimeOffset SentAt, DateTimeOffset Until)? _pendingSeek;
+    private static readonly TimeSpan PendingSeekWindow = TimeSpan.FromSeconds(3);
 
     // How long a just-sent shuffle/repeat change wins over (possibly stale) session reports.
     private static readonly TimeSpan PendingModeWindow = TimeSpan.FromSeconds(2);
@@ -191,10 +195,24 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
     {
         if (_session is not { } s || !CanSeek)
             return;
-        if (await TryControl(() => s.TryChangePlaybackPositionAsync(position.Ticks).AsTask(), "seek"))
+        if (position < TimeSpan.Zero)
+            position = TimeSpan.Zero;
+        if (_clock.Duration is { } duration && duration > TimeSpan.Zero && position > duration)
+            position = duration;
+
+        // Optimistic, and before the call: Spotify can take a moment to answer, and the bar must
+        // not snap back to the old position meanwhile. It confirms with a timeline event later.
+        var now = DateTimeOffset.UtcNow;
+        _pendingSeek = (position, now, now + PendingSeekWindow);
+        _clock.Sync(position, now, Status == PlaybackState.Playing);
+        TimelineChanged?.Invoke(this, EventArgs.Empty);
+
+        if (!await TryControl(() => s.TryChangePlaybackPositionAsync(position.Ticks).AsTask(), "seek"))
         {
-            // Optimistic: Spotify confirms with a timeline event a moment later.
-            _clock.Sync(position, DateTimeOffset.UtcNow, Status == PlaybackState.Playing);
+            // Refused: go back to what the session reports.
+            _pendingSeek = null;
+            _lastTimelineStamp = default;
+            ReadTimeline();
             TimelineChanged?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -325,6 +343,7 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
         _coverRetry.Stop();
         _clock.SetPlaying(false);
         _clock.Reset();
+        _pendingSeek = null;
         _clock.Duration = null;
         CanSeek = CanGoNext = CanGoPrevious = false;
         var hadTrack = Track is not null;
@@ -410,6 +429,7 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
                 : changedBy is { } at && at < DateTimeOffset.UtcNow ? at - TimeSpan.FromSeconds(1) : DateTimeOffset.UtcNow;
             Track = track;
             _clock.Reset();
+            _pendingSeek = null;
             _clock.Duration = null;
             // The report that revealed the song is its own, but it went to the previous song's
             // clock and only new reports are applied: read it again after the reset.
@@ -645,6 +665,26 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
         return stamp >= _trackChangedAt - TimeSpan.FromSeconds(1) && (t.Position - t.StartTime) < TimeSpan.FromSeconds(10);
     }
 
+    /// <summary>
+    /// While a seek is pending, a report far from where the seek should be by now is one Spotify
+    /// sent before it applied the seek. The first report that agrees (or the window running out) ends it.
+    /// </summary>
+    private bool IsStaleAfterSeek(TimeSpan reported, DateTimeOffset reportedAt)
+    {
+        if (_pendingSeek is not { } seek)
+            return false;
+        var now = DateTimeOffset.UtcNow;
+        var playing = Status == PlaybackState.Playing;
+        var expected = seek.Target + (playing ? now - seek.SentAt : TimeSpan.Zero);
+        var projected = reported + (playing && reportedAt <= now ? now - reportedAt : TimeSpan.Zero);
+        if (now > seek.Until || Math.Abs((projected - expected).TotalSeconds) < 1.5)
+        {
+            _pendingSeek = null;
+            return false;
+        }
+        return true;
+    }
+
     private void ReadTimeline()
     {
         if (_session is null)
@@ -687,8 +727,11 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
         {
             _lastTimelineStamp = t.LastUpdatedTime;
             _lastTimelinePosition = position;
-            _clock.Sync(position, t.LastUpdatedTime, Status == PlaybackState.Playing);
-            changed = true;
+            if (!IsStaleAfterSeek(position, t.LastUpdatedTime))
+            {
+                _clock.Sync(position, t.LastUpdatedTime, Status == PlaybackState.Playing);
+                changed = true;
+            }
         }
 
         if (changed)

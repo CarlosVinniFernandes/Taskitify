@@ -1,6 +1,7 @@
 <Window x:Class="Taskitify.Views.MiniPlayerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Taskitify.Views"
         Title="Taskitify — mini player"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -147,8 +148,8 @@
 
                 <!-- Progress -->
                 <StackPanel Visibility="{Binding ShowProgress, Converter={StaticResource BoolToVisibility}}">
-                    <Slider x:Name="Progress" Style="{StaticResource ProgressSlider}" Minimum="0"
-                            Maximum="{Binding DurationSeconds, Mode=OneWay}" IsEnabled="{Binding CanSeek}" />
+                    <local:SeekBar x:Name="Progress" IsEnabled="{Binding CanSeek}"
+                                   AutomationProperties.Name="{DynamicResource Loc.Seek}" />
                     <Grid Margin="0,2,0,0">
                         <TextBlock Text="{Binding PositionText}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" />
                         <TextBlock Text="{Binding DurationText}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"

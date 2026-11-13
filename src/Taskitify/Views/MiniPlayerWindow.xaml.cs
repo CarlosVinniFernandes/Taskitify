@@ -24,7 +24,6 @@ public partial class MiniPlayerWindow : Window
     private readonly OutsideClickWatcher _outsideClicks;
     private IntPtr _previousForeground;
     private PixelRect _anchor;
-    private bool _dragging;
     // The user scrolled the lyrics: they stay put until "sync", a line click, a new song or reopening.
     private bool _browsing;
 
@@ -60,13 +59,8 @@ public partial class MiniPlayerWindow : Window
         };
         VolumeButton.MouseEnter += (_, _) => _vm.RefreshVolume();
 
-        Progress.PreviewMouseLeftButtonDown += (_, _) => _dragging = true;
-        Progress.PreviewMouseLeftButtonUp += (_, _) =>
-        {
-            _dragging = false;
-            _vm.SeekTo(Progress.Value);
-        };
-        Progress.LostMouseCapture += (_, _) => _dragging = false;
+        Progress.Seek += _vm.SeekTo;
+        Progress.Preview += _vm.PreviewPosition;
 
         SourceInitialized += (_, _) =>
         {
@@ -169,6 +163,13 @@ public partial class MiniPlayerWindow : Window
             case Key.Space:
                 _vm.PlayPauseCommand.Execute(null);
                 break;
+            // Arrows step through the song, like most players.
+            case Key.Left when !Progress.IsDragging:
+                _vm.SeekBy(-5);
+                break;
+            case Key.Right when !Progress.IsDragging:
+                _vm.SeekBy(5);
+                break;
         }
     }
 
@@ -249,8 +250,8 @@ public partial class MiniPlayerWindow : Window
 
     private void UpdateProgressValue()
     {
-        if (!_dragging)
-            Progress.Value = _vm.PositionSeconds;
+        Progress.Maximum = _vm.DurationSeconds;
+        Progress.Value = _vm.PositionSeconds;
     }
 
     private void OnLyricLineClicked(object sender, MouseButtonEventArgs e)
