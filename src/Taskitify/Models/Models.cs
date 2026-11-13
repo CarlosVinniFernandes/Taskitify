@@ -116,10 +116,15 @@ public sealed class BarLayout
     [JsonIgnore]
     public bool AnyText => ShowText || ShowCaption;
 
-    public static BarLayout DefaultNormal() => new() { ShowCover = true, ShowText = true, ShowCaption = true, ShowProgress = true, Width = 300 };
+    /// <summary>Cover, lyric, the playback buttons, volume and progress.</summary>
+    public static BarLayout DefaultNormal() => new()
+    {
+        ShowCover = true, ShowText = true, ShowPrevious = true, ShowPlayPause = true, ShowNext = true, ShowVolume = true,
+        ShowProgress = true, Width = 300,
+    };
 
-    /// <summary>Cover, track name and a play button: about the size of the weather widget.</summary>
-    public static BarLayout DefaultMinimized() => new() { ShowCover = true, ShowText = true, ShowPlayPause = true, Width = 110 };
+    /// <summary>Cover, track name, artist and a play button.</summary>
+    public static BarLayout DefaultMinimized() => new() { ShowCover = true, ShowText = true, ShowCaption = true, ShowPlayPause = true, Width = 180 };
 
     /// <summary>The mini player as it always looked; Width is its card's (the lyrics are always there).</summary>
     public static BarLayout DefaultMiniPlayer() => new()
@@ -149,7 +154,7 @@ public sealed class AppSettings
     /// <summary>The popup with the lyrics, opened by clicking the taskbar player.</summary>
     public BarLayout MiniPlayer { get; set; } = BarLayout.DefaultMiniPlayer();
 
-    public ProgressPlacement ProgressPlacement { get; set; } = ProgressPlacement.Below;
+    public ProgressPlacement ProgressPlacement { get; set; } = ProgressPlacement.BesideCover;
 
     /// <summary>Scroll single-line text that does not fit (uses a little more CPU while scrolling).</summary>
     public bool MarqueeLongText { get; set; }
