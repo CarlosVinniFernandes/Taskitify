@@ -13,7 +13,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>Taskitify</AssemblyName>
     <RootNamespace>Taskitify</RootNamespace>
-    <Version>1.0.0</Version>
+    <Version>1.0.4</Version>
     <Product>Taskitify</Product>
     <Description>Synced Spotify lyrics on the Windows 11 taskbar.</Description>
     <Authors>Carlos Fernandes</Authors>

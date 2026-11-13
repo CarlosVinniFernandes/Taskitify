@@ -7,7 +7,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>taskitify</AssemblyName>
     <RootNamespace>Taskitify.Linux</RootNamespace>
-    <Version>1.0.3</Version>
+    <Version>1.0.4</Version>
     <Product>Taskitify</Product>
     <Description>Synced Spotify lyrics on Linux (MPRIS).</Description>
     <Authors>Carlos Fernandes</Authors>

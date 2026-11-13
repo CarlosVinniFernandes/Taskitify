@@ -2,10 +2,10 @@
 # Builds dist/taskitify_<version>_amd64.deb: a self-contained .NET publish under /opt/taskitify,
 # a /usr/bin/taskitify symlink, the menu entry, the icon and the GNOME Shell extension.
 #
-#   packaging/linux/build-deb.sh [version]      # default 1.0.3
+#   packaging/linux/build-deb.sh [version]      # default 1.0.4
 set -euo pipefail
 
-VERSION="${1:-1.0.3}"
+VERSION="${1:-1.0.4}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
