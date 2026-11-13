@@ -91,6 +91,9 @@ public sealed class SettingsViewModel : ObservableObject
 
     public bool IsMinimizeOnPause => S.PausedBehavior == PausedBehavior.Minimize;
 
+    /// <summary>The minimized bar page explains why its settings are greyed out.</summary>
+    public bool ShowMinimizeOffNotice => !IsMinimizeOnPause;
+
     private IReadOnlyList<MonitorOption> CreateMonitors() => [new MonitorOption(null, () => LocalizationService.Get("PrimaryMonitor")),
             .. TaskbarPositionService.GetMonitors().Select((m, i) =>
                 new MonitorOption(m.DeviceName, () => $"{LocalizationService.Get("Monitor")} {i + 1} — {m.Bounds.Width}×{m.Bounds.Height}{(m.IsPrimary ? LocalizationService.Get("PrimarySuffix") : "")}"))];

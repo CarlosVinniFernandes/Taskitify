@@ -43,7 +43,7 @@ Não precisa de Spicetify, login no Spotify nem Premium para usar a fonte padrã
 | 🎛️ **Player na barra** | Anterior, tocar/pausar, próxima, aleatório, repetir, volume e barra de progresso. Você escolhe quais aparecem. |
 | 🪟 **Mini player** | Um clique na letra abre a capa, os controles e a letra completa rolando, com a linha atual em destaque. Clique numa linha para pular até ela. Os elementos e a largura se escolhem nas configurações, como os da barra. |
 | ⏸️ **Player minimizado** | Ao pausar, o Taskitify pode encolher para o tamanho do clima (capa, nome e botão de tocar) em vez de sumir. |
-| 🧩 **Monte a sua barra** | Uma réplica do player nas configurações: clique em cada elemento para ligar (verde) ou desligar (branco). |
+| 🧩 **Monte cada player** | A barra, a barra minimizada e o mini player têm cada um a sua página nas configurações, com uma réplica daquele player: clique em cada elemento para ligar (verde) ou desligar (apagado). |
 | 🖥️ **Feito para o Windows 11** | Some junto com a barra em tela cheia, não rouba o foco, não aparece no Alt+Tab e respeita DPI e tema escuro. |
 | 🌍 **6 idiomas** | Português, English, Español, Français, Deutsch e Italiano. Troque em Configurações → Geral → Idioma (o padrão é inglês). |
 | 🪶 **Leve** | Cerca de 60 MB de memória e menos de 1% de um núcleo enquanto toca; pausado, fica parado. Nada roda como administrador. |
@@ -89,10 +89,10 @@ Para abrir junto com o Windows: **Configurações → Geral → Iniciar com o Wi
 
 ## Personalização
 
-Em **Configurações → Estilo**, o Taskitify mostra uma réplica do player. Clique em cada elemento, inclusive na letra: **verde** aparece na barra de tarefas, **branco** fica escondido. O player minimizado (quando a música está pausada) tem o seu próprio montador e a sua própria largura.
+Em **Configurações → Barra**, o Taskitify mostra uma réplica do player. Clique em cada elemento, inclusive na letra: **verde** aparece na barra de tarefas, **apagado** fica escondido. A **Barra minimizada** (quando a música está pausada) e o **Mini player** (a janela com a letra) têm páginas próprias, cada uma com a sua réplica e a sua largura.
 
 <p align="center">
-  <img src="docs/images/settings-style.png" alt="Configurações de estilo com o montador do player" width="480" />
+  <img src="docs/images/settings-style.png" alt="Configurações da barra com o montador do player" width="480" />
 </p>
 
 Também dá para escolher:

@@ -1,0 +1,59 @@
+<UserControl x:Class="Taskitify.Views.MiniPlayerPicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- A replica of the mini player popup, laid out like it (header, controls, lyrics, progress).
+         Every element but the lyrics is a toggle bound to a BarLayoutViewModel. -->
+    <UserControl.Resources>
+        <ResourceDictionary Source="/Taskitify;component/Resources/PickerStyles.xaml" />
+    </UserControl.Resources>
+
+    <Border Width="300" CornerRadius="10" BorderBrush="#22FFFFFF" BorderThickness="1" Padding="14,14,14,10">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Offset="0" Color="#FF2A3A48" />
+                <GradientStop Offset="1" Color="#FF1B1B22" />
+            </LinearGradientBrush>
+        </Border.Background>
+        <StackPanel>
+            <!-- Header -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ToggleButton Style="{StaticResource PickCover}" IsChecked="{Binding ShowCover}" Width="48" Height="48"
+                              ToolTip="{DynamicResource Loc.Cover}" AutomationProperties.Name="{DynamicResource Loc.Cover}" />
+                <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <ToggleButton Style="{StaticResource PickMainText}" FontSize="14" FontWeight="SemiBold" IsChecked="{Binding ShowText}" Content="{Binding TextLabel}"
+                                  HorizontalAlignment="Left" ToolTip="{Binding TextLabel}" AutomationProperties.Name="{Binding TextLabel}" />
+                    <ToggleButton Style="{StaticResource PickText}" FontSize="12" Margin="0,2,0,0" IsChecked="{Binding ShowCaption}" Content="{Binding CaptionLabel}"
+                                  HorizontalAlignment="Left" ToolTip="{Binding CaptionLabel}" AutomationProperties.Name="{Binding CaptionLabel}" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Controls -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowShuffle}" Content="&#xE8B1;" ToolTip="{DynamicResource Loc.Shuffle}" AutomationProperties.Name="{DynamicResource Loc.Shuffle}" />
+                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowPrevious}" Content="&#xE892;" ToolTip="{DynamicResource Loc.Previous}" AutomationProperties.Name="{DynamicResource Loc.Previous}" />
+                <ToggleButton Style="{StaticResource PickPlay}" IsChecked="{Binding ShowPlayPause}" Content="&#xE769;" Width="34" Height="34" Margin="8,0"
+                              ToolTip="{DynamicResource Loc.PlayPause}" AutomationProperties.Name="{DynamicResource Loc.PlayPause}" />
+                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowNext}" Content="&#xE893;" ToolTip="{DynamicResource Loc.Next}" AutomationProperties.Name="{DynamicResource Loc.Next}" />
+                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowRepeat}" Content="&#xE8EE;" ToolTip="{DynamicResource Loc.Repeat}" AutomationProperties.Name="{DynamicResource Loc.Repeat}" />
+                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowVolume}" Content="&#xE995;"
+                              ToolTip="{DynamicResource Loc.MixerVolume}" AutomationProperties.Name="{DynamicResource Loc.Volume}" />
+            </StackPanel>
+
+            <!-- Lyrics: always shown, so not a toggle. -->
+            <StackPanel Margin="0,10,0,10" IsHitTestVisible="False" ToolTipService.IsEnabled="False">
+                <Border Height="5" Width="150" CornerRadius="2.5" Background="#26FFFFFF" HorizontalAlignment="Center" />
+                <TextBlock Text="{DynamicResource Loc.LyricsAlwaysShown}" FontSize="12" FontWeight="SemiBold" Foreground="#E6FFFFFF"
+                           HorizontalAlignment="Center" Margin="0,7" />
+                <Border Height="5" Width="190" CornerRadius="2.5" Background="#26FFFFFF" HorizontalAlignment="Center" />
+            </StackPanel>
+
+            <!-- Progress -->
+            <ToggleButton Style="{StaticResource PickProgress}" IsChecked="{Binding ShowProgress}"
+                          ToolTip="{DynamicResource Loc.Progress}" AutomationProperties.Name="{DynamicResource Loc.Progress}" />
+        </StackPanel>
+    </Border>
+</UserControl>
