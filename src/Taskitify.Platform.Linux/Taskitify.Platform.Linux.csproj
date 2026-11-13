@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Taskitify.Platform.Linux</RootNamespace>
+    <!-- Tmds.DBus generates proxies at runtime from the [DBusInterface] types. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Tmds.DBus" Version="0.95.2" />
+    <ProjectReference Include="..\Taskitify.Core\Taskitify.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Taskitify.Platform.Linux.Tests" />
+  </ItemGroup>
+
+</Project>

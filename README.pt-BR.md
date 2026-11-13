@@ -65,6 +65,12 @@ Não precisa de Spicetify, login no Spotify nem Premium para usar a fonte padrã
 
 **Requisitos:** Windows 11 (ou Windows 10 versão 1809 ou mais nova) de 64 bits, e o **Spotify Desktop** instalado. Não precisa instalar .NET.
 
+## Linux
+
+No Ubuntu e em outros desktops GNOME o Taskitify mostra a linha da letra na **barra superior, ao lado do
+relógio** (ou numa barra flutuante), acompanhando o Spotify Desktop pelo MPRIS. Instale o `.deb` e veja
+[**docs/LINUX.pt-BR.md**](docs/LINUX.pt-BR.md).
+
 ## Como usar
 
 | Ação | O que acontece |
