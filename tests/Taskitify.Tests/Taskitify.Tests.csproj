@@ -25,6 +25,7 @@
     <ProjectReference Include="..\..\src\Taskitify.Core\Taskitify.Core.csproj" />
     <Compile Include="..\..\src\Taskitify\Services\LocalizationCatalog.cs" Link="LocalizationCatalog.cs" />
     <Compile Include="..\..\src\Taskitify\Models\Models.cs" Link="AppModels.cs" />
+    <Compile Include="..\..\src\Taskitify\Services\LatestVersionPolicy.cs" Link="LatestVersionPolicy.cs" />
     <EmbeddedResource Include="..\..\src\Taskitify\Resources\Languages\*.json" LogicalName="Taskitify.Languages.%(Filename)%(Extension)" />
   </ItemGroup>
 

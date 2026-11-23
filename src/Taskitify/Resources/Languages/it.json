@@ -16,6 +16,8 @@
   "General": "Generale",
   "Language": "Lingua",
   "Startup": "Avvia con Windows",
+  "DesktopShortcut": "Collegamento sul desktop",
+  "DesktopShortcutHint": "Apre sempre la versione più recente.",
   "TrayIcon": "Icona nell’area di notifica",
   "TrayHint": "Senza l’icona, fai clic destro sul testo o riapri l’app per accedere alle impostazioni.",
   "Animations": "Animazioni",

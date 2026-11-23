@@ -16,6 +16,8 @@
   "General": "Général",
   "Language": "Langue",
   "Startup": "Démarrer avec Windows",
+  "DesktopShortcut": "Raccourci sur le bureau",
+  "DesktopShortcutHint": "Ouvre toujours la dernière version.",
   "TrayIcon": "Icône de notification",
   "TrayHint": "Sans l’icône, faites un clic droit sur les paroles ou relancez l’application pour ouvrir les paramètres.",
   "Animations": "Animations",

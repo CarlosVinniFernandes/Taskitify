@@ -69,6 +69,9 @@ internal static class AppPaths
     // Measurements and tests run against a copy of the user's data (tools/perf), never the real one.
     private static readonly string? DataOverride = Environment.GetEnvironmentVariable("TASKITIFY_DATA_DIR");
 
+    /// <summary>True for those runs: they leave the desktop shortcut and startup entry alone.</summary>
+    public static bool IsIsolated => !string.IsNullOrWhiteSpace(DataOverride);
+
     /// <summary>%AppData%\Taskitify — settings.</summary>
     public static string RoamingDirectory { get; } = string.IsNullOrWhiteSpace(DataOverride)
         ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Taskitify")

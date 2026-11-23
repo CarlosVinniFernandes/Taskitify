@@ -200,6 +200,17 @@ public sealed class SettingsViewModel : ObservableObject
 
     public bool ShowTrayIcon { get => S.ShowTrayIcon; set => Update(s => s.ShowTrayIcon = value); }
 
+    public bool DesktopShortcut
+    {
+        get => S.DesktopShortcut;
+        set
+        {
+            if (value == S.DesktopShortcut) return;
+            Update(s => s.DesktopShortcut = value);
+            Task.Run(() => DesktopShortcutService.Apply(value));
+        }
+    }
+
     public bool DebugMode { get => S.DebugMode; set => Update(s => s.DebugMode = value); }
 
     public bool IsManualPlacement => S.ManualPlacement;

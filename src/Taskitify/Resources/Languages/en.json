@@ -16,6 +16,8 @@
   "General": "General",
   "Language": "Language",
   "Startup": "Start with Windows",
+  "DesktopShortcut": "Desktop shortcut",
+  "DesktopShortcutHint": "Always opens the latest version.",
   "TrayIcon": "Notification area icon",
   "TrayHint": "Without the icon, right-click the lyrics or launch the app again to open settings.",
   "Animations": "Animations",

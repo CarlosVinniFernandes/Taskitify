@@ -174,6 +174,9 @@ public sealed class AppSettings
 
     public bool ShowTrayIcon { get; set; } = true;
 
+    /// <summary>Keep a desktop shortcut that opens the latest copy of the app.</summary>
+    public bool DesktopShortcut { get; set; } = true;
+
     public bool DebugMode { get; set; }
 
     public bool SpotifyLyricsEnabled { get; set; }

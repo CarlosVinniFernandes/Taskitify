@@ -16,6 +16,8 @@
   "General": "General",
   "Language": "Idioma",
   "Startup": "Iniciar con Windows",
+  "DesktopShortcut": "Acceso directo en el escritorio",
+  "DesktopShortcutHint": "Siempre abre la versión más reciente.",
   "TrayIcon": "Icono del área de notificación",
   "TrayHint": "Sin el icono, haz clic derecho en la letra o abre la app de nuevo para acceder a la configuración.",
   "Animations": "Animaciones",

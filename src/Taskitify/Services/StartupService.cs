@@ -80,6 +80,47 @@ public static class StartupService
         }
     }
 
+    /// <summary>
+    /// Portable copies: when "start with Windows" is on for an older copy (a previous release
+    /// folder), point it at this one.
+    /// </summary>
+    public static void MoveEntryToThisCopy()
+    {
+#if DEBUG
+        return;
+#else
+        if (IsPackaged || AppPaths.IsIsolated) return;
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(RunKey);
+            if (key?.GetValue(ValueName) is not string command) return;
+            var exe = Environment.ProcessPath;
+            var version = typeof(App).Assembly.GetName().Version;
+            if (exe is null || version is null) return;
+            if (!LatestVersionPolicy.ShouldPointHere(ExecutableOf(command), exe, version, LatestVersionPolicy.FileVersion)) return;
+            SetEnabled(true);
+            Log.Info($"Start with Windows now opens {exe}");
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Could not update startup registration", ex);
+        }
+#endif
+    }
+
+    /// <summary>The executable of a Run entry: "C:\path\Taskitify.exe" --background.</summary>
+    private static string ExecutableOf(string command)
+    {
+        command = command.Trim();
+        if (command.StartsWith('"'))
+        {
+            var end = command.IndexOf('"', 1);
+            return end > 0 ? command[1..end] : command[1..];
+        }
+        var space = command.IndexOf(' ');
+        return space > 0 ? command[..space] : command;
+    }
+
     public static void SetEnabled(bool enabled)
     {
         try

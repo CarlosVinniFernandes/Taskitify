@@ -52,6 +52,7 @@ O script valida o manifesto com MakeAppx e guarda o log e os arquivos intermedi�
 - `runFullTrust` é necessário porque o aplicativo é WPF/Win32 e acompanha a sessão de mídia, o mixer de áudio e a barra de tarefas. Explique essa finalidade ao preencher a submissão.
 - Não declare `globalMediaControl`: a Store recusa essa capacidade, e o app full trust já acessa a API de sessões de mídia do Windows sem ela.
 - Na versão MSIX, “Start with Windows” usa `Windows.ApplicationModel.StartupTask`, desativado por padrão. O app respeita bloqueios feitos pelo usuário ou por políticas do Windows. Na versão portátil, continua usando o registro do usuário.
+- Atalho na área de trabalho (ligado por padrão, em Geral): na versão MSIX, o app cria `Taskitify.lnk` apontando para o app instalado (`shell:AppsFolder\<PFN>!Taskitify`), que o Windows mantém na versão mais recente. Na versão portátil, cada cópia aponta o atalho e o “Iniciar com o Windows” para si mesma, a não ser que eles já abram uma cópia mais nova. Builds de Debug e execuções com `TASKITIFY_DATA_DIR` não mexem em nenhum dos dois. Desinstalar o pacote não apaga o atalho; desligue a opção antes, se quiser removê-lo.
 - O pacote não escreve em sua pasta de instalação. Configurações e cache continuam usando as pastas de dados do usuário, sujeitas ao redirecionamento de dados do MSIX.
 - Antes de testar o pacote instalado, encerre a versão portátil: ambas usam a mesma proteção contra duas instâncias simultâneas.
 

@@ -16,6 +16,8 @@
   "General": "Geral",
   "Language": "Idioma",
   "Startup": "Iniciar com o Windows",
+  "DesktopShortcut": "Atalho na área de trabalho",
+  "DesktopShortcutHint": "Sempre abre a versão mais recente.",
   "TrayIcon": "Ícone na área de notificação",
   "TrayHint": "Sem o ícone, abra as configurações pelo clique direito na letra ou executando o app de novo.",
   "Animations": "Animações",

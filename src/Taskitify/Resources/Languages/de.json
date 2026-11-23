@@ -16,6 +16,8 @@
   "General": "Allgemein",
   "Language": "Sprache",
   "Startup": "Mit Windows starten",
+  "DesktopShortcut": "Desktopverknüpfung",
+  "DesktopShortcutHint": "Öffnet immer die neueste Version.",
   "TrayIcon": "Symbol im Infobereich",
   "TrayHint": "Ohne Symbol öffnen Sie die Einstellungen per Rechtsklick auf den Songtext oder durch erneutes Starten der App.",
   "Animations": "Animationen",

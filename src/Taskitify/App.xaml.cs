@@ -98,6 +98,16 @@ public partial class App : Application
         Log.WriteToFile = _settings.Current.DebugMode;
         Log.Info($"Taskitify starting (Windows {Environment.OSVersion.Version}, background={background})");
 
+        // A new release opened from its own folder takes over the desktop shortcut and the
+        // "start with Windows" entry of the previous one. Off the UI thread: the desktop may be
+        // a OneDrive folder.
+        var desktopShortcut = _settings.Current.DesktopShortcut;
+        _ = Task.Run(() =>
+        {
+            StartupService.MoveEntryToThisCopy();
+            DesktopShortcutService.Apply(desktopShortcut);
+        });
+
         _theme = new ThemeService();
 
         // LRCLIB asks clients to identify themselves with a name and a link.

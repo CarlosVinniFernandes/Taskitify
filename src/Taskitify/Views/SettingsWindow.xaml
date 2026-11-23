@@ -195,6 +195,15 @@
                             </Border>
                             <Border Style="{StaticResource Row}">
                                 <DockPanel>
+                                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding DesktopShortcut}" AutomationProperties.Name="{DynamicResource Loc.DesktopShortcut}" />
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.DesktopShortcut}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.DesktopShortcutHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <DockPanel>
                                     <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding ShowTrayIcon}" AutomationProperties.Name="{DynamicResource Loc.TrayIcon}" />
                                     <StackPanel Style="{StaticResource RowText}">
                                         <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.TrayIcon}" />
