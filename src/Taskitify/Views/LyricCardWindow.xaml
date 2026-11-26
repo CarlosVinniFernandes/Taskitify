@@ -24,6 +24,7 @@
         <Style x:Key="Chip" TargetType="ListBoxItem">
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Margin" Value="0,0,6,6" />
+            <Setter Property="AutomationProperties.Name" Value="{Binding Label}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
@@ -52,6 +53,7 @@
         <Style x:Key="SwatchItem" TargetType="ListBoxItem">
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Margin" Value="0,0,8,8" />
+            <Setter Property="AutomationProperties.Name" Value="{Binding Color}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
@@ -167,7 +169,8 @@
                         <ItemsControl ItemsSource="{Binding Lines}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <ToggleButton IsChecked="{Binding IsSelected}" Cursor="Hand" Focusable="True" Margin="0,1">
+                                    <ToggleButton IsChecked="{Binding IsSelected}" Cursor="Hand" Focusable="True" Margin="0,1"
+                                                  AutomationProperties.Name="{Binding Text}">
                                         <ToggleButton.Template>
                                             <ControlTemplate TargetType="ToggleButton">
                                                 <Border x:Name="Bg" CornerRadius="4" Padding="10,6" Background="Transparent">
