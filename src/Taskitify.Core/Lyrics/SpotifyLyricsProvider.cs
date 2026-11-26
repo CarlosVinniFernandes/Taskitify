@@ -10,7 +10,8 @@ namespace Taskitify.Core.Lyrics;
 
 public sealed record SpotifyCredentials(string AccessToken, string? ClientToken);
 /// <param name="CoverUrl">The album cover on Spotify's image CDN, about the size the overlay draws.</param>
-public sealed record SpotifyTrack(string Id, LrclibRecord Metadata, string? CoverUrl = null);
+/// <param name="AlbumId">The Spotify album the track is on, when the search said.</param>
+public sealed record SpotifyTrack(string Id, LrclibRecord Metadata, string? CoverUrl = null, string? AlbumId = null);
 
 public interface ISpotifyLyricsSession
 {
@@ -137,7 +138,10 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
         if (matching.Select(t => t.CoverUrl).FirstOrDefault(url => url is not null) is { } cover)
             RememberCover(LyricsCache.KeyFor(query), cover);
         if (matching.Count > 0)
+        {
             RememberTrackIds(LyricsCache.KeyFor(query), matching.Select(t => t.Id));
+            _albums[LyricsCache.KeyFor(query)] = matching.Take(MaxTrackIds).Select(t => t.AlbumId ?? "").ToList();
+        }
 
         LrclibRecord? plain = null;
         var renewed = false;
@@ -214,17 +218,30 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
 
     public const int MaxTrackIds = 5;
 
+    // The album of each remembered track, in the same order as _trackIds.
+    private readonly ConcurrentDictionary<string, IReadOnlyList<string>> _albums = new();
+
+    /// <summary>The track on <paramref name="albumId"/> first, when it is one of them.</summary>
+    private IReadOnlyList<string> Prefer(IReadOnlyList<string> ids, string key, string? albumId)
+    {
+        if (albumId is null || !_albums.TryGetValue(key, out var albums))
+            return ids;
+        var index = albums.ToList().IndexOf(albumId);
+        return index <= 0 || index >= ids.Count ? ids : [ids[index], .. ids.Where((_, i) => i != index)];
+    }
+
     /// <summary>
     /// The Spotify tracks that are this song, best match first (up to <see cref="MaxTrackIds"/>):
     /// the ones a lookup of it already matched, else Spotify's search. With <paramref name="wake"/>
     /// false the web player is never opened (only a still valid token and the captured search are
     /// used); with it true it may be. Empty when signed out or when no Spotify track matches.
     /// </summary>
-    public async Task<IReadOnlyList<string>> FindTrackIdsAsync(TrackQuery query, bool wake, CancellationToken ct)
+    public async Task<IReadOnlyList<string>> FindTrackIdsAsync(TrackQuery query, bool wake, CancellationToken ct, string? albumId = null)
     {
         var key = LyricsCache.KeyFor(query);
-        if (_trackIds.TryGetValue(key, out var known))
-            return known;
+        // The playing album (read from Spotify's own window) names the exact version.
+        if (_trackIds.TryGetValue(key, out var known) && (albumId is null || _albums.TryGetValue(key, out var a) && a.Contains(albumId)))
+            return Prefer(known, key, albumId);
         var credentials = wake ? await session.GetCredentialsAsync(query, ct).ConfigureAwait(false) : session.ValidCredentials;
         if (credentials is null)
             return [];
@@ -241,9 +258,10 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
         if (found.Count == 0)
             return [];
         RememberTrackIds(key, found.Select(t => t.Id));
+        _albums[key] = found.Take(MaxTrackIds).Select(t => t.AlbumId ?? "").ToList();
         if (found[0].CoverUrl is { } cover)
             RememberCover(key, cover);
-        return _trackIds[key];
+        return Prefer(_trackIds[key], key, albumId);
 
         List<SpotifyTrack> Matching(IEnumerable<SpotifyTrack> candidates) => candidates.Where(t => TrackMatcher.IsMatch(query, t.Metadata))
             .OrderBy(t => TrackMatcher.DurationDistance(query, t.Metadata)).DistinctBy(t => t.Id).ToList();
@@ -281,7 +299,10 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
     private void RememberTrackIds(string key, IEnumerable<string> ids)
     {
         if (_trackIds.Count >= MaxCovers)
+        {
             _trackIds.Clear();
+            _albums.Clear();
+        }
         _trackIds[key] = ids.Distinct().Take(MaxTrackIds).ToList();
     }
 
@@ -487,9 +508,11 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
                          && ms.TryGetDouble(out duration)) seconds = duration / 1000;
                 var hasAlbum = node.TryGetProperty("album", out var a) || node.TryGetProperty("albumOfTrack", out a);
                 var album = hasAlbum ? String(a, "name") : null;
+                var albumUri = hasAlbum ? String(a, "uri") : null;
+                var albumId = albumUri?.StartsWith("spotify:album:", StringComparison.Ordinal) == true ? albumUri[14..] : null;
                 if (names.Length > 0 && seconds is > 0)
                     found[id] = new SpotifyTrack(id, new LrclibRecord(0, title, string.Join(", ", names), album, seconds, false, null, null),
-                        hasAlbum ? CoverUrl(a) : null);
+                        hasAlbum ? CoverUrl(a) : null, albumId);
             }
             foreach (var property in node.EnumerateObject()) Visit(property.Value);
         }
@@ -542,7 +565,9 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
             lrc.Append(CultureInfo.InvariantCulture, $"[{ms / 60000:00}:{ms / 1000 % 60:00}.{ms % 1000:000}]{words}\n");
         }
         if (plain.All(string.IsNullOrWhiteSpace)) return null;
-        return metadata with { PlainLyrics = string.Join('\n', plain), SyncedLyrics = lrc.Length > 0 ? lrc.ToString() : null };
+        // Spotify names its lyrics partner; it is credited where the lyrics are shown.
+        var credit = String(lyrics, "providerDisplayName") ?? String(lyrics, "provider");
+        return metadata with { PlainLyrics = string.Join('\n', plain), SyncedLyrics = lrc.Length > 0 ? lrc.ToString() : null, Credit = credit };
     }
 
     private static string? String(JsonElement element, string name) =>

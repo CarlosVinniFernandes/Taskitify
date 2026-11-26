@@ -92,6 +92,11 @@ public sealed class TaskbarOverlayService : IDisposable
     /// <summary>The overlay was clicked; the mini player toggles.</summary>
     public event EventHandler? Clicked;
 
+    /// <summary>The right-click menu's "share lyrics" and "settings".</summary>
+    public event EventHandler? ShareRequested;
+
+    public event EventHandler? SettingsRequested;
+
     public event EventHandler<bool>? CalibrationChanged;
 
     public bool IsCalibrating => _vm.IsCalibrating;
@@ -116,6 +121,8 @@ public sealed class TaskbarOverlayService : IDisposable
         RegisterAppBar();
 
         _window.Clicked += (_, _) => Clicked?.Invoke(this, EventArgs.Empty);
+        _window.ShareRequested += (_, _) => ShareRequested?.Invoke(this, EventArgs.Empty);
+        _window.SettingsRequested += (_, _) => SettingsRequested?.Invoke(this, EventArgs.Empty);
         _window.CalibrationBoundsChanged += (_, _) =>
         {
             // After a side drag the new width becomes the width setting; a move keeps it.

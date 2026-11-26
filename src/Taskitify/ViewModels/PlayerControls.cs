@@ -111,6 +111,7 @@ public sealed class LikeControl : ObservableObject, IDisposable
     {
         _likes = likes;
         _likes.Changed += OnChanged;
+        _likes.Liked += OnLiked;
         LocalizationService.Changed += OnChanged;
         ClickCommand = new RelayCommand(() =>
         {
@@ -140,7 +141,8 @@ public sealed class LikeControl : ObservableObject, IDisposable
 
     public bool IsLiked => _likes.IsLiked == true;
 
-    public string Glyph => IsLiked ? "" : "";
+    /// <summary>The song was just liked here: the views play the heart's pop.</summary>
+    public event EventHandler? JustLiked;
 
     public string Tip => _likes.Failed ? LocalizationService.Get("LikeFailed")
         : _likes.IsBusy ? LocalizationService.Get("LikeSaving")
@@ -160,8 +162,11 @@ public sealed class LikeControl : ObservableObject, IDisposable
         OnPropertyChanged(string.Empty);
     }
 
+    private void OnLiked(object? sender, EventArgs e) => JustLiked?.Invoke(this, EventArgs.Empty);
+
     public void Dispose()
     {
+        _likes.Liked -= OnLiked;
         _likes.Changed -= OnChanged;
         LocalizationService.Changed -= OnChanged;
     }

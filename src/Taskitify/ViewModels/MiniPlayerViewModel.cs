@@ -51,6 +51,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     private string _positionText = "0:00";
     private string _durationText = "0:00";
     private string? _statusMessage;
+    private string? _credit;
     private int _currentIndex = -1;
     private double? _previewSeconds;
 
@@ -164,6 +165,9 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     /// <summary>Shown instead of the lyric list when there are no synced lyrics.</summary>
     public string? StatusMessage { get => _statusMessage; private set => Set(ref _statusMessage, value); }
+
+    /// <summary>"Lyrics provided by Musixmatch", under the last line, for Spotify's lyrics.</summary>
+    public string? Credit { get => _credit; private set => Set(ref _credit, value); }
 
     public int CurrentIndex { get => _currentIndex; private set => Set(ref _currentIndex, value); }
 
@@ -312,6 +316,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
                 Lines.Add(new LyricLineViewModel(i, timeline.Lines[i].Time, timeline.Lines[i].Text));
         }
 
+        Credit = Lines.Count > 0 ? LyricsCredit.For(_sync.Result) : null;
         StatusMessage = _monitor.Track is null ? null : _sync.State switch
         {
             LyricsState.Synced => null,

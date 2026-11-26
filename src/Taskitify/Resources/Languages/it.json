@@ -238,5 +238,6 @@
   "CardReset": "Ripristina personalizzazione",
   "CardPlayingFrom": "IN RIPRODUZIONE DA",
   "CardLyricsLabel": "Testo",
-  "CardNowPlaying": "In riproduzione"
+  "CardNowPlaying": "In riproduzione",
+  "LyricsCredit": "Testo fornito da {0}"
 }

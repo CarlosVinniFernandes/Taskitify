@@ -238,5 +238,6 @@
   "CardReset": "Restaurar personalização",
   "CardPlayingFrom": "TOCANDO DE",
   "CardLyricsLabel": "Letra",
-  "CardNowPlaying": "Tocando agora"
+  "CardNowPlaying": "Tocando agora",
+  "LyricsCredit": "Letra fornecida por {0}"
 }

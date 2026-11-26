@@ -24,6 +24,7 @@ public sealed record LyricCardSource(
     Color PaletteStart,
     Color PaletteEnd,
     TimeSpan? Duration,
+    string? Credit,
     Func<Task<byte[]?>>? LargeCover);
 
 public sealed class LyricCardLineItem(int index, LyricCardLine line) : ObservableObject
@@ -96,7 +97,8 @@ public sealed class LyricCardViewModel : ObservableObject
     private readonly DispatcherTimer _thumbnailTimer;
     private BitmapSource? _cover;
     private LyricCardOptions _options;
-    private FrameworkElement? _preview;
+    private ImageSource? _preview;
+    private bool _previewQueued;
     private string? _status;
     private bool _updating;
     private int _tab;
@@ -109,6 +111,9 @@ public sealed class LyricCardViewModel : ObservableObject
         _settings = settings;
         _cover = source.Cover;
         _options = settings.Current.LyricCard.Clone();
+        // A fixed colour from an older version or another song: start from this album's.
+        if (ParseHex(_options.Color) is not null)
+            _options.Color = null;
         Title = source.Title;
         Artist = source.Artist;
 
@@ -148,11 +153,12 @@ public sealed class LyricCardViewModel : ObservableObject
         ];
         // The album's colours first: as it is, a livelier version, its second colour; then presets.
         Swatches.Add(new LyricCardSwatch(source.PaletteStart, null, LocalizationService.Get("CardColorAlbum")));
-        AddSwatch(LyricCardRenderer.Vivid(source.PaletteStart), LocalizationService.Get("CardColorAlbumVivid"));
-        AddSwatch(source.PaletteEnd, LocalizationService.Get("CardColorAlbumSecond"));
+        // Album colours are saved by role, not value: the next song gets its own.
+        Swatches.Add(new LyricCardSwatch(LyricCardRenderer.Vivid(source.PaletteStart), AlbumVivid, LocalizationService.Get("CardColorAlbumVivid")));
+        Swatches.Add(new LyricCardSwatch(source.PaletteEnd, AlbumSecond, LocalizationService.Get("CardColorAlbumSecond")));
         foreach (var hex in Presets)
             AddSwatch((Color)ColorConverter.ConvertFromString(hex), hex);
-        _customColor = _options.Color ?? "";
+        _customColor = ParseHex(_options.Color) is null ? "" : _options.Color!;
 
         foreach (var preset in settings.Current.LyricCardPresets)
             SavedPresets.Add(preset);
@@ -179,6 +185,9 @@ public sealed class LyricCardViewModel : ObservableObject
     public string Title { get; }
 
     public string Artist { get; }
+
+    /// <summary>"Lyrics provided by Musixmatch" under the preview, for Spotify's lyrics.</summary>
+    public string? Credit => _source.Credit;
 
     public ObservableCollection<LyricCardLineItem> Lines { get; } = [];
 
@@ -286,7 +295,7 @@ public sealed class LyricCardViewModel : ObservableObject
         set
         {
             if (value is null) return;
-            _customColor = value.Hex ?? "";
+            _customColor = ParseHex(value.Hex) is null ? "" : value.Hex!;
             OnPropertyChanged(nameof(CustomColor));
             Change(o => o.Color = value.Hex);
         }
@@ -315,8 +324,11 @@ public sealed class LyricCardViewModel : ObservableObject
         }
     }
 
-    /// <summary>The card itself, at full size; the window scales it down.</summary>
-    public FrameworkElement? Preview { get => _preview; private set => Set(ref _preview, value); }
+    /// <summary>
+    /// The exported image itself, at full size: the window scales it down with high-quality
+    /// filtering, so the preview is smooth and exactly what is copied or saved.
+    /// </summary>
+    public ImageSource? Preview { get => _preview; private set => Set(ref _preview, value); }
 
     public double PreviewWidth => LyricCardRenderer.SizeOf(_options.Format).Width;
 
@@ -325,7 +337,27 @@ public sealed class LyricCardViewModel : ObservableObject
     /// <summary>"Copied", "Saved", or why not.</summary>
     public string? Status { get => _status; private set => Set(ref _status, value); }
 
-    private Color Accent => ParseHex(_options.Color) ?? _source.PaletteStart;
+    internal const string AlbumVivid = "album-vivid";
+    internal const string AlbumSecond = "album-second";
+
+    private Color Accent => _options.Color switch
+    {
+        AlbumVivid => LyricCardRenderer.Vivid(_source.PaletteStart),
+        AlbumSecond => _source.PaletteEnd,
+        var other => ParseHex(other) ?? _source.PaletteStart,
+    };
+
+    /// <summary>
+    /// What is remembered for the next card: everything but a fixed colour (that one belongs to
+    /// this card, or to a preset), so a new song starts in its own album's colours.
+    /// </summary>
+    private LyricCardOptions Remembered()
+    {
+        var remembered = _options.Clone();
+        if (ParseHex(remembered.Color) is not null)
+            remembered.Color = null;
+        return remembered;
+    }
 
     private LyricCardContent Content() => new(
         Title,
@@ -341,7 +373,7 @@ public sealed class LyricCardViewModel : ObservableObject
     private void Change(Action<LyricCardOptions> change, bool thumbnails = true)
     {
         change(_options);
-        _settings.Update(s => s.LyricCard = _options.Clone());
+        _settings.Update(s => s.LyricCard = Remembered());
         RaiseOptions();
         Rebuild(thumbnails);
     }
@@ -349,8 +381,8 @@ public sealed class LyricCardViewModel : ObservableObject
     private void Apply(LyricCardOptions options)
     {
         _options = options;
-        _customColor = options.Color ?? "";
-        _settings.Update(s => s.LyricCard = _options.Clone());
+        _customColor = ParseHex(options.Color) is null ? "" : options.Color!;
+        _settings.Update(s => s.LyricCard = Remembered());
         OnPropertyChanged(nameof(CustomColor));
         RaiseOptions();
         Rebuild(thumbnails: true);
@@ -401,7 +433,16 @@ public sealed class LyricCardViewModel : ObservableObject
 
     private void Rebuild(bool thumbnails)
     {
-        Preview = LyricCardRenderer.Build(Content(), _options);
+        // Several changes in a row (a slider drag) draw once.
+        if (!_previewQueued)
+        {
+            _previewQueued = true;
+            Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Render, () =>
+            {
+                _previewQueued = false;
+                Preview = Render();
+            });
+        }
         if (thumbnails)
         {
             _thumbnailTimer.Stop();

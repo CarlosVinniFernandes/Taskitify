@@ -212,14 +212,23 @@
         <!-- Preview: the exported card itself, scaled to fit; nothing of the window is in it. -->
         <Border Background="{DynamicResource ControlBackgroundBrush}">
             <Grid>
-                <Viewbox Margin="32" Stretch="Uniform">
-                    <Border Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}">
-                        <Border.Effect>
-                            <DropShadowEffect BlurRadius="70" ShadowDepth="12" Direction="270" Opacity="0.45" Color="Black" />
-                        </Border.Effect>
-                        <ContentPresenter Content="{Binding Preview}" />
-                    </Border>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <!-- The shadow is its own layer: an effect over the image would re-rasterise it unsmoothed. -->
+                <Viewbox Margin="32,32,32,10" Stretch="Uniform">
+                    <Grid Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}">
+                        <Border Background="Black">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="70" ShadowDepth="12" Direction="270" Opacity="0.45" Color="Black" />
+                            </Border.Effect>
+                        </Border>
+                        <Image Source="{Binding Preview}" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" />
+                    </Grid>
                 </Viewbox>
+                <TextBlock Grid.Row="1" Text="{Binding Credit}" FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,14"
+                           Foreground="{DynamicResource TextTertiaryBrush}" Visibility="{Binding Credit, Converter={StaticResource NullToCollapsed}}" />
                 <!-- No line chosen: say so, over the card. -->
                 <Border Background="#D0141414" CornerRadius="10" Padding="22,16" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="340">
                     <Border.Style>

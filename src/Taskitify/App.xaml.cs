@@ -172,6 +172,8 @@ public partial class App : Application
         _overlay = new TaskbarOverlayService(_monitor, _sync, _settings, new TaskbarPositionService(), _taskbarVm);
         _overlay.Initialize();
         _overlay.Clicked += (_, _) => ToggleMiniPlayer();
+        _overlay.ShareRequested += (_, _) => ShowLyricCard();
+        _overlay.SettingsRequested += (_, _) => ShowSettings();
         _overlay.CalibrationChanged += (_, on) => _settingsVm?.SyncCalibrating(on);
 
         _miniPlayerVm = new MiniPlayerViewModel(_monitor, _sync, _settings, new AppVolumeService(), _likes);
@@ -312,7 +314,7 @@ public partial class App : Application
         var query = new TrackQuery(track.Title, track.Artist, track.Album, _monitor.Duration);
         var provider = _spotifyProvider;
         var source = new LyricCardSource(track.Title, track.Artist, string.IsNullOrWhiteSpace(track.Album) ? null : track.Album, lines, current, cover,
-            _monitor.Palette.Start, _monitor.Palette.End, _monitor.Duration,
+            _monitor.Palette.Start, _monitor.Palette.End, _monitor.Duration, LyricsCredit.For(_sync.Result),
             provider is null ? null : () => provider.FindLargeCoverAsync(query, CancellationToken.None));
 
         _lyricCardWindow?.Close();

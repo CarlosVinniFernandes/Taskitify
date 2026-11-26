@@ -192,12 +192,12 @@ public sealed class LyricsService : ILyricsService
         if (r is null)
             return LyricsResult.NotFound;
         if (r.Instrumental)
-            return new LyricsResult(LyricsKind.Instrumental, [], null, r.TrackName, r.ArtistName) { Source = r.Source, Provisional = r.Provisional };
+            return new LyricsResult(LyricsKind.Instrumental, [], null, r.TrackName, r.ArtistName) { Source = r.Source, Provisional = r.Provisional, Credit = r.Credit };
         var lines = LrcParser.Parse(r.SyncedLyrics);
         if (lines.Count > 0)
-            return new LyricsResult(LyricsKind.Synced, lines, r.PlainLyrics, r.TrackName, r.ArtistName) { Source = r.Source, Provisional = r.Provisional };
+            return new LyricsResult(LyricsKind.Synced, lines, r.PlainLyrics, r.TrackName, r.ArtistName) { Source = r.Source, Provisional = r.Provisional, Credit = r.Credit };
         if (!string.IsNullOrWhiteSpace(r.PlainLyrics))
-            return new LyricsResult(LyricsKind.PlainOnly, [], r.PlainLyrics, r.TrackName, r.ArtistName) { Source = r.Source, Provisional = r.Provisional };
+            return new LyricsResult(LyricsKind.PlainOnly, [], r.PlainLyrics, r.TrackName, r.ArtistName) { Source = r.Source, Provisional = r.Provisional, Credit = r.Credit };
         return LyricsResult.NotFound;
     }
 

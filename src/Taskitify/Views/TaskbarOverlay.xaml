@@ -152,18 +152,9 @@
                 <Button x:Name="VolumeButton" Style="{StaticResource BarButton}" Command="{Binding Volume.ToggleOpenCommand}" Content="{Binding Volume.Glyph}"
                         Foreground="{Binding Foreground}" ToolTip="{Binding Volume.Tip}"
                         Visibility="{Binding ShowVolume, Converter={StaticResource BoolToVisibility}}" />
-                <Button x:Name="LikeButton" Command="{Binding Like.ClickCommand}" Content="{Binding Like.Glyph}" ToolTip="{Binding Like.Tip}"
-                        Visibility="{Binding ShowLike, Converter={StaticResource BoolToVisibility}}">
-                    <Button.Style>
-                        <Style TargetType="Button" BasedOn="{StaticResource BarButton}">
-                            <Setter Property="Foreground" Value="{Binding Foreground}" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Like.IsLiked}" Value="True">
-                                    <Setter Property="Foreground" Value="#FF1ED760" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
+                <Button x:Name="LikeButton" Style="{StaticResource BarButton}" Command="{Binding Like.ClickCommand}" ToolTip="{Binding Like.Tip}"
+                        AutomationProperties.Name="{Binding Like.Tip}" Visibility="{Binding ShowLike, Converter={StaticResource BoolToVisibility}}">
+                    <local:LikeGlyph x:Name="LikeIcon" IsLiked="{Binding Like.IsLiked}" Stroke="{Binding Foreground}" Width="16" Height="16" />
                 </Button>
             </StackPanel>
         </Grid>

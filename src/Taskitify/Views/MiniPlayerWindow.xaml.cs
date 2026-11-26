@@ -62,6 +62,7 @@ public partial class MiniPlayerWindow : Window
         VolumeSlider.PreviewMouseWheel += wheel;
         VolumeButton.MouseEnter += (_, _) => _vm.Volume.Refresh();
 
+        _vm.Like.JustLiked += (_, _) => LikeIcon.Pulse();
         Progress.Seek += _vm.SeekTo;
         Progress.Preview += _vm.PreviewPosition;
 

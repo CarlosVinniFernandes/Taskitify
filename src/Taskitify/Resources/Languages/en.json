@@ -238,5 +238,6 @@
   "CardReset": "Reset customizations",
   "CardPlayingFrom": "PLAYING FROM",
   "CardLyricsLabel": "Lyrics",
-  "CardNowPlaying": "Now playing"
+  "CardNowPlaying": "Now playing",
+  "LyricsCredit": "Lyrics provided by {0}"
 }

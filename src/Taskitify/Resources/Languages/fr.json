@@ -238,5 +238,6 @@
   "CardReset": "Réinitialiser la personnalisation",
   "CardPlayingFrom": "EN LECTURE DEPUIS",
   "CardLyricsLabel": "Paroles",
-  "CardNowPlaying": "En cours"
+  "CardNowPlaying": "En cours",
+  "LyricsCredit": "Paroles fournies par {0}"
 }

@@ -238,5 +238,6 @@
   "CardReset": "Anpassungen zurücksetzen",
   "CardPlayingFrom": "WIRD GESPIELT AUS",
   "CardLyricsLabel": "Songtext",
-  "CardNowPlaying": "Läuft gerade"
+  "CardNowPlaying": "Läuft gerade",
+  "LyricsCredit": "Songtext bereitgestellt von {0}"
 }

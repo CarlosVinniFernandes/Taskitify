@@ -30,6 +30,9 @@ public sealed record LyricsResult(
     /// <summary>Provider that supplied the lyrics ("Spotify", "LRCLIB", "Local files"); null when unknown.</summary>
     public string? Source { get; init; }
 
+    /// <summary>Who licenses the lyrics to the source, to be credited (Spotify's partner, e.g. "Musixmatch").</summary>
+    public string? Credit { get; init; }
+
     /// <summary>Served from the memory or disk cache rather than looked up now.</summary>
     public bool FromCache { get; init; }
 
@@ -51,6 +54,10 @@ public sealed record LrclibRecord(
     /// <summary>Name of the provider that found this record; set by the provider chain, never by the API.</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public string? Source { get; init; }
+
+    /// <summary>Who licenses the lyrics to the source (Spotify names its partner: "Musixmatch", "LyricFind"...).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string? Credit { get; init; }
 
     /// <summary>Found while the primary source was failing; set by the provider chain, never by the API.</summary>
     [System.Text.Json.Serialization.JsonIgnore]

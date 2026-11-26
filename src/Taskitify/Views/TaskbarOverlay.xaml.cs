@@ -59,6 +59,7 @@ public partial class TaskbarOverlay : Window
             if (_vm.Volume.IsOpen) _vm.Like.IsConfirming = false;
             UpdateFlyoutWatch();
         };
+        _vm.Like.JustLiked += (_, _) => LikeIcon.Pulse();
         _vm.Like.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName is not (nameof(LikeControl.IsConfirming) or "")) return;
@@ -103,6 +104,41 @@ public partial class TaskbarOverlay : Window
 
     /// <summary>Plain left click (not in calibration, not on a control).</summary>
     public event EventHandler? Clicked;
+
+    /// <summary>"Share lyrics as an image" from the right-click menu.</summary>
+    public event EventHandler? ShareRequested;
+
+    /// <summary>"Settings" from the right-click menu.</summary>
+    public event EventHandler? SettingsRequested;
+
+    protected override void OnMouseRightButtonUp(MouseButtonEventArgs e)
+    {
+        base.OnMouseRightButtonUp(e);
+        if (_vm.IsCalibrating)
+            return;
+        var menu = new ContextMenu();
+        var share = new MenuItem { Header = Taskitify.Services.LocalizationService.Get("LyricCardOpen"), Icon = MenuGlyph("\uE72D") };
+        share.Click += (_, _) => ShareRequested?.Invoke(this, EventArgs.Empty);
+        var player = new MenuItem { Header = Taskitify.Services.LocalizationService.Get("ShowPlayer"), Icon = MenuGlyph("\uE90B") };
+        player.Click += (_, _) => Clicked?.Invoke(this, EventArgs.Empty);
+        var settings = new MenuItem { Header = Taskitify.Services.LocalizationService.Get("Settings"), Icon = MenuGlyph("\uE713") };
+        settings.Click += (_, _) => SettingsRequested?.Invoke(this, EventArgs.Empty);
+        menu.Items.Add(share);
+        menu.Items.Add(player);
+        menu.Items.Add(new Separator());
+        menu.Items.Add(settings);
+        menu.PlacementTarget = this;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.MousePoint;
+        menu.IsOpen = true;
+        e.Handled = true;
+    }
+
+    private static TextBlock MenuGlyph(string glyph) => new()
+    {
+        Text = glyph,
+        FontFamily = (FontFamily)Application.Current.FindResource("IconFont"),
+        FontSize = 14,
+    };
 
     /// <summary>Calibration drag finished; the service persists the new bounds.</summary>
     public event EventHandler? CalibrationBoundsChanged;

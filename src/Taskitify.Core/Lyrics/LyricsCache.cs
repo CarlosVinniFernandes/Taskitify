@@ -67,7 +67,7 @@ public sealed class LyricsCache
             // Lyrics with no source on record predate this field: like a stand-in, they may be the
             // fallback's version from a time the primary was failing.
             var temporary = entry.Kind == LyricsKind.NotFound || entry.Provisional || entry.Source is null;
-            return (result with { Source = entry.Source, Provisional = entry.Provisional }, temporary && _now() - entry.SavedAt > NegativeTtl);
+            return (result with { Source = entry.Source, Provisional = entry.Provisional, Credit = entry.Credit }, temporary && _now() - entry.SavedAt > NegativeTtl);
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
@@ -80,7 +80,7 @@ public sealed class LyricsCache
         if (result.Kind == LyricsKind.Error)
             return;
         System.IO.Directory.CreateDirectory(_directory);
-        var entry = new Entry(FormatVersion, result.Kind, rawSynced, result.PlainText, result.MatchedTitle, result.MatchedArtist, _now(), result.Source, result.Provisional);
+        var entry = new Entry(FormatVersion, result.Kind, rawSynced, result.PlainText, result.MatchedTitle, result.MatchedArtist, _now(), result.Source, result.Provisional, result.Credit);
         var path = PathFor(query);
         var tmp = path + ".tmp";
         await using (var stream = File.Create(tmp))
@@ -120,5 +120,6 @@ public sealed class LyricsCache
         DateTimeOffset SavedAt,
         // Added after version 2 shipped; older entries read them as null ("unknown") and false.
         string? Source = null,
-        bool Provisional = false);
+        bool Provisional = false,
+        string? Credit = null);
 }

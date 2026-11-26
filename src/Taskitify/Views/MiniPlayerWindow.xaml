@@ -88,9 +88,11 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <Button Style="{StaticResource ModeButton}" Command="{Binding Like.ClickCommand}" Content="{Binding Like.Glyph}" Tag="{Binding Like.IsLiked}"
-                            HorizontalAlignment="Left" ToolTip="{Binding Like.Tip}" AutomationProperties.Name="{Binding Like.Tip}"
-                            Visibility="{Binding ShowLike, Converter={StaticResource BoolToVisibility}}" />
+                    <Button Style="{StaticResource RowButton}" Command="{Binding Like.ClickCommand}" HorizontalAlignment="Left"
+                            ToolTip="{Binding Like.Tip}" AutomationProperties.Name="{Binding Like.Tip}"
+                            Visibility="{Binding ShowLike, Converter={StaticResource BoolToVisibility}}">
+                        <local:LikeGlyph x:Name="LikeIcon" IsLiked="{Binding Like.IsLiked}" Stroke="{DynamicResource TextPrimaryBrush}" Width="18" Height="18" />
+                    </Button>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Style="{StaticResource ModeButton}" Command="{Binding ShuffleCommand}" Content="&#xE8B1;" Tag="{Binding IsShuffleActive}"
                                 ToolTip="{DynamicResource Loc.Shuffle}" Visibility="{Binding ShowShuffle, Converter={StaticResource BoolToVisibility}}" />
@@ -166,11 +168,11 @@
 
                     <!-- A Canvas measures its child with infinite height, so no layout clip cuts the list. -->
                     <Canvas>
-                    <ItemsControl x:Name="LyricsList" ItemsSource="{Binding Lines}"
-                                  Width="{Binding ActualWidth, ElementName=LyricsViewport}">
-                        <ItemsControl.RenderTransform>
-                            <TranslateTransform x:Name="LyricsOffset" />
-                        </ItemsControl.RenderTransform>
+                    <StackPanel Width="{Binding ActualWidth, ElementName=LyricsViewport}">
+                    <StackPanel.RenderTransform>
+                        <TranslateTransform x:Name="LyricsOffset" />
+                    </StackPanel.RenderTransform>
+                    <ItemsControl x:Name="LyricsList" ItemsSource="{Binding Lines}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Text}" TextWrapping="Wrap" TextAlignment="Center"
@@ -195,6 +197,10 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    <!-- Who licenses the lyrics, after the last line. -->
+                    <TextBlock Text="{Binding Credit}" FontSize="11" TextAlignment="Center" Margin="0,14,0,4" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextTertiaryBrush}" Visibility="{Binding Credit, Converter={StaticResource NullToCollapsed}}" />
+                    </StackPanel>
                     </Canvas>
 
                     <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" TextAlignment="Center"
