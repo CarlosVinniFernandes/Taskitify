@@ -393,12 +393,14 @@ public enum StudioImageSource
 public sealed class LyricCardVariant
 {
     public Dictionary<string, string> Fields { get; set; } = new(StringComparer.Ordinal);
+    public LyricCardFont? Typeface { get; set; }
     public StudioImageSource ImageSource { get; set; }
     public string? PhotoPath { get; set; }
 
     public LyricCardVariant Clone() => new()
     {
         Fields = new Dictionary<string, string>(Fields ?? [], StringComparer.Ordinal),
+        Typeface = Typeface,
         ImageSource = ImageSource,
         PhotoPath = PhotoPath,
     };

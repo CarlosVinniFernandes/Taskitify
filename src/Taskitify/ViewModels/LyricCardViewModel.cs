@@ -103,7 +103,7 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
     private bool _previewQueued;
     private string? _status;
     private bool _updating;
-    private int _tab;
+    private int _tab = 1;
     private string _customColor = "";
     private string _presetName = "";
 
@@ -113,6 +113,7 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
         _settings = settings;
         _cover = source.Cover;
         _options = settings.Current.LyricCard.Clone();
+        RememberTypeface(_options);
         // A fixed colour from an older version or another song: start from this album's.
         if (ParseHex(_options.Color) is not null)
             _options.Color = null;
@@ -261,7 +262,12 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
         {
             if (value is null || _options.Style == value.Style)
                 return;
-            Change(o => o.Style = value.Style, thumbnails: false);
+            Change(o =>
+            {
+                RememberTypeface(o);
+                o.Style = value.Style;
+                o.Font = TypefaceFor(o, value.Style);
+            }, thumbnails: false);
             UpdateFields();
         }
     }
@@ -275,7 +281,16 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
     public LyricCardChoice<LyricCardFont>? SelectedFont
     {
         get => Fonts.FirstOrDefault(f => f.Value == _options.Font);
-        set { if (value is not null) Change(o => o.Font = value.Value); }
+        set
+        {
+            if (value is null || !CanChooseTypeface || value.Value == _options.Font)
+                return;
+            Change(o =>
+            {
+                o.Font = value.Value;
+                Variant(o, o.Style).Typeface = value.Value;
+            });
+        }
     }
 
     public LyricCardChoice<LyricCardAlign>? SelectedAlign
@@ -357,6 +372,8 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
 
     public double PreviewHeight => LyricCardRenderer.SizeOf(_options.Format).Height;
 
+    public string PreviewDimensions => $"{PreviewWidth:0} × {PreviewHeight:0}";
+
     /// <summary>"Copied", "Saved", or why not.</summary>
     public string? Status { get => _status; private set => Set(ref _status, value); }
 
@@ -427,6 +444,7 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
     private void Apply(LyricCardOptions options)
     {
         _options = options;
+        RememberTypeface(_options);
         UpdateFields();
         _customColor = ParseHex(options.Color) is null ? "" : options.Color!;
         _settings.Update(s => s.LyricCard = Remembered());
@@ -440,7 +458,7 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
         foreach (var name in new[]
         {
             nameof(SelectedStyle), nameof(SelectedFormat), nameof(SelectedFont), nameof(SelectedAlign), nameof(SelectedMark), nameof(FontPercent),
-            nameof(ShowCover), nameof(ShowTimestamp), nameof(SelectedSwatch), nameof(PreviewWidth), nameof(PreviewHeight), nameof(SelectedImage),
+            nameof(ShowCover), nameof(ShowTimestamp), nameof(SelectedSwatch), nameof(PreviewWidth), nameof(PreviewHeight), nameof(PreviewDimensions), nameof(SelectedImage),
         })
             OnPropertyChanged(name);
     }

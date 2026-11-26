@@ -2,8 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Taskitify.Views"
-        Title="{DynamicResource Loc.LyricCardTitle}"
-        Width="1100" Height="800" MinWidth="880" MinHeight="600"
+        Title="Lyrics Studio"
+        Width="1100" Height="800" MinWidth="880" MinHeight="600" WindowState="Maximized"
         WindowStartupLocation="CenterScreen"
         Icon="pack://application:,,,/Resources/Taskitify.ico"
         Background="{DynamicResource WindowBackgroundBrush}"
@@ -207,8 +207,9 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="1.65*" />
-            <ColumnDefinition Width="*" MinWidth="375" MaxWidth="652" />
+            <ColumnDefinition x:Name="PreviewColumn" Width="2*" MinWidth="238" />
+            <ColumnDefinition Width="6" />
+            <ColumnDefinition x:Name="GalleryColumn" Width="3*" MinWidth="425" />
         </Grid.ColumnDefinitions>
 
         <!-- Preview: the exported card itself, scaled to fit; nothing of the window is in it. -->
@@ -229,16 +230,23 @@
                         <Image Source="{Binding Preview}" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" />
                     </Grid>
                 </Viewbox>
-                <TextBlock Grid.Row="1" Text="{Binding Credit}" FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,14"
-                           Foreground="{DynamicResource TextTertiaryBrush}" Visibility="{Binding Credit, Converter={StaticResource NullToCollapsed}}" />
+                <StackPanel Grid.Row="1" HorizontalAlignment="Center" Margin="0,0,0,16">
+                    <TextBlock Text="{Binding PreviewDimensions}" FontSize="12" TextAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock Text="{Binding Credit}" FontSize="12" TextAlignment="Center" Margin="0,4,0,0"
+                               Foreground="{DynamicResource TextTertiaryBrush}" Visibility="{Binding Credit, Converter={StaticResource NullToCollapsed}}" />
+                </StackPanel>
 
             </Grid>
         </Border>
 
-        <!-- Settings -->
-        <DockPanel Grid.Column="1" Margin="24,20,22,20">
+        <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                      ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" ShowsPreview="True"
+                      Background="{DynamicResource PopupBorderBrush}" />
+
+        <DockPanel Grid.Column="2" Margin="20,18,22,14">
             <StackPanel DockPanel.Dock="Top">
-                <TextBlock Text="{DynamicResource Loc.LyricCardTitle}" FontFamily="{StaticResource UiDisplayFont}" FontSize="24" FontWeight="SemiBold" />
+                <TextBlock Text="Lyrics Studio" FontFamily="{StaticResource UiDisplayFont}" FontSize="24" FontWeight="SemiBold" />
                 <TextBlock Margin="0,4,0,0" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis">
                     <Run Text="{Binding Title, Mode=OneWay}" /> · <Run Text="{Binding Artist, Mode=OneWay}" />
                 </TextBlock>
@@ -386,77 +394,85 @@
                 </DockPanel>
 
                 <!-- Tab 1: style and format -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <ScrollViewer.Style>
-                        <Style TargetType="ScrollViewer">
+                <DockPanel Margin="0,4,0,0">
+                    <DockPanel.Style>
+                        <Style TargetType="DockPanel">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Tab}" Value="1"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
                             </Style.Triggers>
                         </Style>
-                    </ScrollViewer.Style>
-                    <StackPanel Margin="0,4,4,0">
-                        <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardFormat}" Margin="0,6,0,8" />
-                        <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Formats}"
-                                 SelectedItem="{Binding SelectedFormat}" AutomationProperties.Name="{DynamicResource Loc.CardFormat}" />
-                        <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.StudioSearch}" Margin="0,14,0,6" />
-                        <TextBox Style="{StaticResource Field}" Text="{Binding StyleSearch, UpdateSourceTrigger=PropertyChanged}"
-                                 AutomationProperties.Name="{DynamicResource Loc.StudioSearch}" Margin="0,0,0,8" />
-                        <TextBlock Text="{DynamicResource Loc.StudioNoResults}" Margin="0,10,0,0" TextWrapping="Wrap">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding HasStyleResults}" Value="False">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                        <ListBox x:Name="StudioGallery" Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource StyleTile}"
-                                 ItemsSource="{Binding Gallery}" SelectedItem="{Binding SelectedStyle}"
-                                 AutomationProperties.Name="{DynamicResource Loc.CardStyle}" HorizontalContentAlignment="Stretch">
-                            <ListBox.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <UniformGrid Columns="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource StudioColumnCount}}" />
-                                </ItemsPanelTemplate>
-                            </ListBox.ItemsPanel>
-                            <ListBox.GroupStyle>
-                                <GroupStyle>
-                                    <GroupStyle.ContainerStyle>
-                                        <Style TargetType="GroupItem">
-                                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="GroupItem">
-                                                        <StackPanel>
-                                                            <ContentPresenter ContentTemplate="{TemplateBinding ContentTemplate}"
-                                                                              Content="{TemplateBinding Content}" />
-                                                            <ItemsPresenter />
-                                                        </StackPanel>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Style>
-                                    </GroupStyle.ContainerStyle>
-                                    <GroupStyle.Panel>
-                                        <ItemsPanelTemplate><StackPanel /></ItemsPanelTemplate>
-                                    </GroupStyle.Panel>
-                                    <GroupStyle.HeaderTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Margin="0,13,0,9">
-                                                <Border BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,9" />
-                                                <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}"
-                                                           FontSize="14" FontWeight="SemiBold" />
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </GroupStyle.HeaderTemplate>
-                                </GroupStyle>
-                            </ListBox.GroupStyle>
-                        </ListBox>
-                    </StackPanel>
-                </ScrollViewer>
+                    </DockPanel.Style>
+                    <DockPanel DockPanel.Dock="Top" Margin="0,3,0,10">
+                        <StackPanel DockPanel.Dock="Left" Margin="0,0,18,0">
+                            <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardFormat}" Margin="0,6,0,8" />
+                            <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Formats}"
+                                     SelectedItem="{Binding SelectedFormat}" AutomationProperties.Name="{DynamicResource Loc.CardFormat}" />
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.StudioSearch}" Margin="0,6,0,8" />
+                            <TextBox Style="{StaticResource Field}" Text="{Binding StyleSearch, UpdateSourceTrigger=PropertyChanged}"
+                                     AutomationProperties.Name="{DynamicResource Loc.StudioSearch}" />
+                        </StackPanel>
+                    </DockPanel>
+                    <ScrollViewer x:Name="GalleryScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Margin="0,0,7,0">
+                            <TextBlock Text="{DynamicResource Loc.StudioNoResults}" Margin="0,10,0,0" TextWrapping="Wrap">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasStyleResults}" Value="False">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <ListBox x:Name="StudioGallery" Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource StyleTile}"
+                                     ItemsSource="{Binding Gallery}" SelectedItem="{Binding SelectedStyle}"
+                                     AutomationProperties.Name="{DynamicResource Loc.CardStyle}" HorizontalContentAlignment="Stretch">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource StudioColumnCount}}" />
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.GroupStyle>
+                                    <GroupStyle>
+                                        <GroupStyle.ContainerStyle>
+                                            <Style TargetType="GroupItem">
+                                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="GroupItem">
+                                                            <StackPanel>
+                                                                <ContentPresenter ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                                                  Content="{TemplateBinding Content}" />
+                                                                <ItemsPresenter />
+                                                            </StackPanel>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </GroupStyle.ContainerStyle>
+                                        <GroupStyle.Panel>
+                                            <ItemsPanelTemplate><StackPanel /></ItemsPanelTemplate>
+                                        </GroupStyle.Panel>
+                                        <GroupStyle.HeaderTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Margin="0,13,0,9">
+                                                    <Border BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,9" />
+                                                    <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}"
+                                                               FontSize="14" FontWeight="SemiBold" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </GroupStyle.HeaderTemplate>
+                                    </GroupStyle>
+                                </ListBox.GroupStyle>
+                            </ListBox>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
 
                 <!-- Tab 2: customize -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto">

@@ -33,6 +33,11 @@ public partial class LyricCardWindow : Window
             }
         };
         Loaded += (_, _) => ScrollToSelection(vm);
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(LyricCardViewModel.StyleSearch))
+                GalleryScroll.ScrollToTop();
+        };
     }
 
     /// <summary>The line the card starts with is the one playing: show it.</summary>
@@ -48,7 +53,7 @@ public partial class LyricCardWindow : Window
 public sealed class StudioColumnCountConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
-        value is double width ? Math.Clamp((int)(width / 114), 3, 5) : 3;
+        value is double width ? Math.Clamp((int)(width / 150), 3, 6) : 3;
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
 }

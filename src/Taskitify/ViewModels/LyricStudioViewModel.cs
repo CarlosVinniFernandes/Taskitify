@@ -103,6 +103,17 @@ public sealed partial class LyricCardViewModel
         }
     }
 
+    private static LyricCardFont TypefaceFor(LyricCardOptions options, LyricCardStyle style) =>
+        options.Variants.GetValueOrDefault(style)?.Typeface ?? LyricCardFont.Auto;
+
+    // Older settings and presets stored the font beside the selected composition.
+    private static void RememberTypeface(LyricCardOptions options)
+    {
+        if (options.Font != LyricCardFont.Auto && options.Variants.GetValueOrDefault(options.Style)?.Typeface is null)
+            Variant(options, options.Style).Typeface = options.Font;
+        options.Font = TypefaceFor(options, options.Style);
+    }
+
     private static LyricCardVariant Variant(LyricCardOptions options, LyricCardStyle style)
     {
         if (!options.Variants.TryGetValue(style, out var variant))
@@ -152,6 +163,7 @@ public sealed partial class LyricCardViewModel
         }
         var options = _options.Clone();
         options.Style = tile.Style;
+        options.Font = TypefaceFor(options, tile.Style);
         options.Format = LyricCardFormat.Square;
         try
         {

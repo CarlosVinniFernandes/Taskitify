@@ -153,6 +153,105 @@ public static partial class LyricCardRenderer
         return new Viewbox { Height = height, Stretch = Stretch.Uniform, Child = canvas };
     }
 
+    private static Brush Desk(Color light, Color deep) => new RadialGradientBrush(light, deep)
+    {
+        Center = new Point(.37, .28), GradientOrigin = new Point(.29, .16), RadiusX = .87, RadiusY = .77,
+    };
+
+    private static Border Enamel(UIElement child, Color color, Thickness pad, CornerRadius corners)
+    {
+        return new Border
+        {
+            Child = child, Padding = pad, CornerRadius = corners,
+            Background = new LinearGradientBrush(new GradientStopCollection
+            {
+                new(Lighten(color, .24), 0), new(color, .42), new(Darken(color, .76), 1)
+            }, 116),
+            BorderThickness = new Thickness(2.5, 2, 5, 7),
+            BorderBrush = new LinearGradientBrush(Lighten(color, .48), Darken(color, .44), 117),
+        };
+    }
+
+    private static Border Recess(UIElement child, Color color, double pad, double radius) => new()
+    {
+        Child = child, Padding = new Thickness(pad), CornerRadius = new CornerRadius(radius),
+        Background = new LinearGradientBrush(Darken(color, .85), color, 88),
+        BorderThickness = new Thickness(3, 5, 2, 2),
+        BorderBrush = new LinearGradientBrush(Darken(color, .45), Lighten(color, .26), 100),
+    };
+
+    private static FrameworkElement Screw(Color metal, double size)
+    {
+        var screw = new Grid { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center };
+        screw.Children.Add(new Ellipse { Fill = new LinearGradientBrush(Lighten(metal, .5), Darken(metal, .43), 80),
+            Stroke = Brush(Darken(metal, .38)), StrokeThickness = 1 });
+        screw.Children.Add(new Border { Width = size * .52, Height = size * .12, Background = Brush(Darken(metal, .36)),
+            RenderTransformOrigin = new Point(.5, .5), RenderTransform = new RotateTransform(-29) });
+        return screw;
+    }
+
+    private static FrameworkElement Vents(Color color, int count, double width, double height)
+    {
+        var vents = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+        for (var i = 0; i < count; i++)
+            vents.Children.Add(new Border { Width = width, Height = height, Margin = new Thickness(width * .6, 0, 0, 0),
+                Background = Brush(color), CornerRadius = new CornerRadius(width / 2), RenderTransform = new SkewTransform(-17, 0) });
+        return vents;
+    }
+
+    private static Border Mounted(Border item, double shadow = 22)
+    {
+        item.Effect = new System.Windows.Media.Effects.DropShadowEffect
+        {
+            Color = Colors.Black, BlurRadius = shadow * 1.9, ShadowDepth = shadow * .55, Direction = 270,
+            Opacity = .34, RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance,
+        };
+        return item;
+    }
+
+    private static FrameworkElement WindowBar(Studio d, string title, Color ink, Color left, Color right, string[] controls)
+    {
+        var caption = new DockPanel { LastChildFill = true };
+        var icons = new StackPanel { Orientation = Orientation.Horizontal };
+        foreach (var label in controls)
+        {
+            var button = Box(d.Small(label, ink, 23, TextAlignment.Center), Alpha(Colors.White, 44), 0, 4, Alpha(ink, 66));
+            button.Width = 40;
+            button.Height = 36;
+            button.Margin = new Thickness(4, 0, 0, 0);
+            ((FrameworkElement)button.Child).VerticalAlignment = VerticalAlignment.Center;
+            icons.Children.Add(button);
+        }
+        DockPanel.SetDock(icons, Dock.Right);
+        caption.Children.Add(icons);
+        var text = d.Small(title, ink, 29);
+        text.VerticalAlignment = VerticalAlignment.Center;
+        text.MaxHeight = 37;
+        caption.Children.Add(text);
+        return new Border { Child = caption, Padding = new Thickness(17, 11, 10, 11), CornerRadius = new CornerRadius(7, 7, 0, 0),
+            Background = new LinearGradientBrush(left, right, 3) };
+    }
+
+    private static Brush Fibers(Color paper, Color thread, double scale = 1)
+    {
+        var drawing = new DrawingGroup();
+        var page = new Rect(0, 0, 1000, 1350);
+        drawing.Children.Add(new GeometryDrawing(Brush(paper), null, new RectangleGeometry(page)));
+        // Stable, non-repeating grain avoids visible tile seams at thumbnail scale.
+        var random = new Random(761);
+        var fibers = new GeometryGroup();
+        for (var i = 0; i < 370; i++)
+        {
+            fibers.Children.Add(new EllipseGeometry(new Point(random.NextDouble() * page.Width, random.NextDouble() * page.Height),
+                scale * (1 + random.NextDouble() * 2.4), scale * (.24 + random.NextDouble() * .49)));
+        }
+        drawing.Children.Add(new GeometryDrawing(Brush(thread), null, fibers));
+        drawing.Freeze();
+        var brush = new DrawingBrush(drawing);
+        brush.Freeze();
+        return brush;
+    }
+
     private sealed class Studio
     {
         private readonly Ctx _ctx;
@@ -168,6 +267,8 @@ public static partial class LyricCardRenderer
 
         public double Width { get; }
         public bool Wide => _ctx.Landscape;
+        public bool Story => _ctx.O.Format == LyricCardFormat.Story;
+        public double Height => _ctx.H;
         public Color Accent => _ctx.C.Accent;
         public string Title => _ctx.C.Title;
         public string Artist => _ctx.C.Artist;
@@ -251,14 +352,14 @@ public static partial class LyricCardRenderer
             Small(string.IsNullOrWhiteSpace(Artist) ? Title : Title + "  ·  " + Artist, color, size);
 
         public FrameworkElement Stage(FrameworkElement content, Color background, Color foot, double? width = null,
-            Brush? outer = null, bool top = false)
+            Brush? outer = null, bool top = false, double inset = 34, double footerGap = 38)
         {
-            var stack = Stack(content, Space(Footer(_ctx, foot, background, TextAlignment.Center, new Thickness()), H(38)));
+            var stack = Stack(content, Space(Footer(_ctx, foot, background, TextAlignment.Center, new Thickness()), H(footerGap)));
             stack.Width = width ?? Width;
             stack.HorizontalAlignment = HorizontalAlignment.Center;
             stack.VerticalAlignment = top ? VerticalAlignment.Top : VerticalAlignment.Center;
-            stack.Margin = new Thickness(0, 34, 0, 32);
-            _ctx.Fit(stack, _ctx.H - 34);
+            stack.Margin = new Thickness(0, H(inset), 0, H(inset));
+            _ctx.Fit(stack, _ctx.H - 8);
             var root = new Grid { Background = outer ?? Brush(background) };
             if (_ctx.O.Color is not null)
                 root.Children.Add(new Border { Background = Brush(Alpha(Accent, 61)) });
