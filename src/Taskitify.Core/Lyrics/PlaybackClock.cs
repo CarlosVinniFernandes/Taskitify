@@ -21,13 +21,17 @@ public sealed class PlaybackClock
 
     public bool IsPlaying { get; private set; }
 
+    public double Rate { get; private set; } = 1;
+
     public TimeSpan? Duration { get; set; }
+
+    private TimeSpan Project(TimeSpan elapsed) => elapsed * Rate;
 
     public TimeSpan Position
     {
         get
         {
-            var p = IsPlaying ? _base + (_now() - _baseAt) : _base;
+            var p = IsPlaying ? _base + Project(_now() - _baseAt) : _base;
             if (p < TimeSpan.Zero)
                 return TimeSpan.Zero;
             if (Duration is { } d && d > TimeSpan.Zero && p > d)
@@ -54,6 +58,17 @@ public sealed class PlaybackClock
         _baseAt = _now();
     }
 
+    public bool SetRate(double rate)
+    {
+        if (!double.IsFinite(rate) || rate is < 0.05 or > 16)
+            rate = 1;
+        if (rate == Rate)
+            return false;
+        Reset(Position);
+        Rate = rate;
+        return true;
+    }
+
     /// <summary>Apply a position reported by the session, sampled at <paramref name="reportedAt"/>.</summary>
     public void Sync(TimeSpan reported, DateTimeOffset reportedAt, bool playing)
     {
@@ -62,7 +77,7 @@ public sealed class PlaybackClock
             reportedAt = now;
 
         IsPlaying = playing;
-        _base = playing ? reported + (now - reportedAt) : reported;
+        _base = playing ? reported + Project(now - reportedAt) : reported;
         _baseAt = now;
     }
 }

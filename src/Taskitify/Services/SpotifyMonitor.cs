@@ -31,6 +31,7 @@ public interface ISpotifyMonitor : IDisposable
     TimeSpan Position { get; }
 
     TimeSpan? Duration { get; }
+    double PlaybackRate => 1;
 
     ImageSource? Thumbnail { get; }
 
@@ -146,6 +147,7 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
     public PlaybackState Status { get; private set; } = PlaybackState.NoSession;
     public TimeSpan Position => _clock.Position;
     public TimeSpan? Duration => _clock.Duration;
+    public double PlaybackRate => _clock.Rate;
     public ImageSource? Thumbnail { get; private set; }
 
     /// <summary>The encoded cover (as Windows or Spotify's CDN gave it), for the lyric card.</summary>
@@ -638,6 +640,9 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
             _ => PlaybackState.Stopped, // Closed
         };
 
+        var rateChanged = _clock.SetRate(info.PlaybackRate ?? 1);
+        if (rateChanged)
+            TimelineChanged?.Invoke(this, EventArgs.Empty);
         if (status == Status)
         {
             if (modesChanged)
@@ -681,8 +686,8 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
             return false;
         var now = DateTimeOffset.UtcNow;
         var playing = Status == PlaybackState.Playing;
-        var expected = seek.Target + (playing ? now - seek.SentAt : TimeSpan.Zero);
-        var projected = reported + (playing && reportedAt <= now ? now - reportedAt : TimeSpan.Zero);
+        var expected = seek.Target + (playing ? (now - seek.SentAt) * PlaybackRate : TimeSpan.Zero);
+        var projected = reported + (playing && reportedAt <= now ? (now - reportedAt) * PlaybackRate : TimeSpan.Zero);
         if (now > seek.Until || Math.Abs((projected - expected).TotalSeconds) < 1.5)
         {
             _pendingSeek = null;

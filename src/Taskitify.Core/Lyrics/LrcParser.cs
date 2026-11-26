@@ -5,7 +5,7 @@ namespace Taskitify.Core.Lyrics;
 
 /// <summary>
 /// Parses LRC text: "[mm:ss.xx]text", multiple time tags per line, the [offset:±ms] tag and
-/// enhanced-LRC word tags ("&lt;mm:ss.xx&gt;"), which are stripped.
+/// Enhanced LRC word tags ("&lt;mm:ss.xx&gt;"), retained as text-position anchors.
 /// </summary>
 public static partial class LrcParser
 {
@@ -15,7 +15,7 @@ public static partial class LrcParser
     [GeneratedRegex(@"^\[offset:\s*([+-]?\d+)\s*\]$", RegexOptions.IgnoreCase)]
     private static partial Regex OffsetTag();
 
-    [GeneratedRegex(@"<\d{1,3}:\d{1,2}(?:[.:]\d{1,3})?>")]
+    [GeneratedRegex(@"<(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?>")]
     private static partial Regex WordTag();
 
     [GeneratedRegex(@"\s+")]
@@ -26,9 +26,8 @@ public static partial class LrcParser
         if (string.IsNullOrWhiteSpace(lrc))
             return [];
 
-        var entries = new List<(TimeSpan Time, int Order, string Text)>();
+        var entries = new List<LyricsLine>();
         long offsetMs = 0;
-        var order = 0;
 
         foreach (var raw in lrc.Split('\n'))
         {
@@ -60,19 +59,49 @@ public static partial class LrcParser
             if (times.Count == 0)
                 continue;
 
-            var text = Whitespace().Replace(WordTag().Replace(line[pos..], string.Empty), " ").Trim();
+            var (text, anchors) = ReadText(line[pos..]);
             foreach (var t in times)
-                entries.Add((t, order++, text));
+            {
+                var repeatShift = t - times[0];
+                entries.Add(new LyricsLine(t, text)
+                {
+                    Anchors = anchors?.Select(anchor => anchor with { Time = anchor.Time + repeatShift }).ToArray(),
+                });
+            }
         }
 
         // LRC spec: a positive offset makes lyrics appear sooner.
-        var shift = TimeSpan.FromMilliseconds(offsetMs);
+        var shift = TimeSpan.FromMilliseconds(Math.Clamp(offsetMs, -1_000_000_000_000L, 1_000_000_000_000L));
         return entries
-            .Select(e => e with { Time = e.Time - shift < TimeSpan.Zero ? TimeSpan.Zero : e.Time - shift })
+            .Select(e => e with
+            {
+                Time = e.Time - shift < TimeSpan.Zero ? TimeSpan.Zero : e.Time - shift,
+                Anchors = e.Anchors?.Select(anchor => anchor with { Time = anchor.Time - shift }).ToArray(),
+            })
             .OrderBy(e => e.Time)
-            .ThenBy(e => e.Order)
-            .Select(e => new LyricsLine(e.Time, e.Text))
             .ToList();
+    }
+
+    private static (string Text, LyricAnchor[]? Anchors) ReadText(string tagged)
+    {
+        var found = new List<(TimeSpan Time, int Offset)>();
+        var invalid = false;
+        var removed = 0;
+        var raw = WordTag().Replace(tagged, match =>
+        {
+            if (int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture) < 60)
+                found.Add((ToTime(match), match.Index - removed));
+            else
+                invalid = true;
+            removed += match.Length;
+            return string.Empty;
+        });
+        var text = Whitespace().Replace(raw, " ").Trim();
+        if (invalid || found.Count == 0)
+            return (text, null);
+
+        return (text, found.Select(anchor => new LyricAnchor(anchor.Time,
+            text.Length - Whitespace().Replace(raw[anchor.Offset..], " ").Trim().Length)).ToArray());
     }
 
     private static TimeSpan ToTime(Match m)

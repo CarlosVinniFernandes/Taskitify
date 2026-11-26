@@ -1,7 +1,13 @@
 namespace Taskitify.Core.Lyrics;
 
 /// <summary>One timed line of a synced (LRC) lyric.</summary>
-public sealed record LyricsLine(TimeSpan Time, string Text);
+public sealed record LyricsLine(TimeSpan Time, string Text)
+{
+    /// <summary>Optional Enhanced LRC anchors, indexed into the normalized UTF-16 text.</summary>
+    public IReadOnlyList<LyricAnchor>? Anchors { get; init; }
+}
+
+public readonly record struct LyricAnchor(TimeSpan Time, int TextOffset);
 
 /// <summary>What we know about the track when asking for lyrics.</summary>
 public sealed record TrackQuery(string Title, string Artist, string? Album, TimeSpan? Duration);
