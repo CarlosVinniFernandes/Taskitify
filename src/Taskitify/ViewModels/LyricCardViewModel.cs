@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using Taskitify.Core.Imaging;
 using Taskitify.Infrastructure;
 using Taskitify.Models;
 using Taskitify.Services;
@@ -152,7 +153,7 @@ public sealed class LyricCardViewModel : ObservableObject
             new(LyricCardMark.Spotify, "Spotify"), new(LyricCardMark.Taskitify, "Taskitify"), new(LyricCardMark.None, LocalizationService.Get("CardMarkNone")),
         ];
         // The album's colours first: as it is, a livelier version, its second colour; then presets.
-        Swatches.Add(new LyricCardSwatch(source.PaletteStart, null, LocalizationService.Get("CardColorAlbum")));
+        Swatches.Add(new LyricCardSwatch(AutomaticAccent, null, LocalizationService.Get("CardColorAlbum")));
         // Album colours are saved by role, not value: the next song gets its own.
         Swatches.Add(new LyricCardSwatch(LyricCardRenderer.Vivid(source.PaletteStart), AlbumVivid, LocalizationService.Get("CardColorAlbumVivid")));
         Swatches.Add(new LyricCardSwatch(source.PaletteEnd, AlbumSecond, LocalizationService.Get("CardColorAlbumSecond")));
@@ -344,8 +345,21 @@ public sealed class LyricCardViewModel : ObservableObject
     {
         AlbumVivid => LyricCardRenderer.Vivid(_source.PaletteStart),
         AlbumSecond => _source.PaletteEnd,
-        var other => ParseHex(other) ?? _source.PaletteStart,
+        var other => ParseHex(other) ?? AutomaticAccent,
     };
+
+    private Color AutomaticAccent
+    {
+        get
+        {
+            // The second tone tracks the cover's chromatic accent. Lift it out of the
+            // dark range reserved for backgrounds, preserving the hue and neutral covers.
+            var end = _source.PaletteEnd;
+            var (h, s, l) = AlbumPalette.ToHsl(new Rgb(end.R, end.G, end.B));
+            var selection = AlbumPalette.FromHsl(h, Math.Min(s, 0.78), Math.Max(s < 0.13 ? 0.32 : 0.41, l));
+            return Color.FromRgb(selection.R, selection.G, selection.B);
+        }
+    }
 
     /// <summary>
     /// What is remembered for the next card: everything but a fixed colour (that one belongs to

@@ -277,6 +277,17 @@
                             </Border>
                             <Border Style="{StaticResource Row}">
                                 <DockPanel>
+                                    <ComboBox DockPanel.Dock="Right" ItemsSource="{Binding TaskbarFlowOptions}" DisplayMemberPath="Label"
+                                              SelectedValuePath="Value" SelectedValue="{Binding TaskbarLyricFlow}"
+                                              AutomationProperties.Name="{DynamicResource Loc.TaskbarFlow}" />
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.TaskbarFlow}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.FlowHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <DockPanel>
                                     <ComboBox DockPanel.Dock="Right" ItemsSource="{Binding NoLyricsOptions}" DisplayMemberPath="Label"
                                               SelectedValuePath="Value" SelectedValue="{Binding NoLyricsBehavior}"
                                               AutomationProperties.Name="{DynamicResource Loc.NoSyncedLyrics}" />
@@ -451,6 +462,22 @@
                                     <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookHighlight}" />
                                     <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ChoiceChip}" ItemsSource="{Binding MiniLook.Highlights}"
                                              SelectedItem="{Binding MiniLook.Highlight}" Margin="0,8,0,0" AutomationProperties.Name="{DynamicResource Loc.LookHighlight}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.FlowTitle}" />
+                                    <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.FlowHint}" />
+                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ChoiceChip}" ItemsSource="{Binding MiniLook.Flows}"
+                                             SelectedItem="{Binding MiniLook.Flow}" Margin="0,8,0,0" AutomationProperties.Name="{DynamicResource Loc.FlowTitle}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.MotionTitle}" />
+                                    <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.MotionHint}" />
+                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ChoiceChip}" ItemsSource="{Binding MiniLook.Motions}"
+                                             SelectedItem="{Binding MiniLook.Motion}" Margin="0,8,0,0" AutomationProperties.Name="{DynamicResource Loc.MotionTitle}" />
                                 </StackPanel>
                             </Border>
                             <Border Style="{StaticResource Row}">

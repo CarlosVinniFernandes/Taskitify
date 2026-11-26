@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Taskitify.Models;
+using Taskitify.Core.Lyrics;
 using Taskitify.Services;
 using Taskitify.Views;
 
@@ -33,6 +34,8 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
         Presets = LookPreset.All
             .Select(p => new LookOption<LookPreset>(p, LocalizationService.Get("LookPreset" + p.Key), PresetThumbnail(p, cover, palette)))
             .ToList();
+        Flows = Enum.GetValues<LyricFlowMode>().Select(mode => new LookOption<LyricFlowMode>(mode, LocalizationService.Get("Flow" + mode))).ToList();
+        Motions = Enum.GetValues<LyricMotionMode>().Select(mode => new LookOption<LyricMotionMode>(mode, LocalizationService.Get("Motion" + mode))).ToList();
         Highlights = Enum.GetValues<LyricsHighlight>().Select(h => new LookOption<LyricsHighlight>(h, LocalizationService.Get("LookHighlight" + h))).ToList();
         Typefaces = Enum.GetValues<LyricsTypeface>().Select(t => new LookOption<LyricsTypeface>(t, LocalizationService.Get("LookTypeface" + t))).ToList();
         Alignments = Enum.GetValues<LyricsAlignment>().Select(a => new LookOption<LyricsAlignment>(a, LocalizationService.Get("LookAlign" + a))).ToList();
@@ -67,6 +70,21 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     public IReadOnlyList<LookOption<MiniPlayerLayout>> Layouts { get; }
 
     public IReadOnlyList<LookOption<MiniPlayerBackground>> Backgrounds { get; }
+
+    public IReadOnlyList<LookOption<LyricFlowMode>> Flows { get; }
+    public IReadOnlyList<LookOption<LyricMotionMode>> Motions { get; }
+
+    public LookOption<LyricFlowMode>? Flow
+    {
+        get => Flows.FirstOrDefault(option => option.Value == Look.Flow);
+        set { if (value is not null && value.Value != Look.Flow) Change(s => s.MiniPlayerLook.Flow = value.Value); }
+    }
+
+    public LookOption<LyricMotionMode>? Motion
+    {
+        get => Motions.FirstOrDefault(option => option.Value == Look.Motion);
+        set { if (value is not null && value.Value != Look.Motion) Change(s => s.MiniPlayerLook.Motion = value.Value); }
+    }
 
     public IReadOnlyList<LookOption<LyricsHighlight>> Highlights { get; }
 

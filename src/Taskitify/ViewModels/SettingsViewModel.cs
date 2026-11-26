@@ -111,12 +111,22 @@ public sealed class SettingsViewModel : ObservableObject
             if (string.IsNullOrEmpty(value) || value == Language) return;
             Update(s => s.Language = value);
             foreach (var option in NoLyricsOptions) option.Refresh();
+            foreach (var option in TaskbarFlowOptions) option.Refresh();
             foreach (var option in BackgroundOptions) option.Refresh();
             foreach (var option in PrimaryTextOptions) option.Refresh();
             foreach (var option in ProgressPlacementOptions) option.Refresh();
             foreach (var option in PausedOptions) option.Refresh();
             foreach (var option in Monitors) option.Refresh();
         }
+    }
+
+    public IReadOnlyList<ChoiceOption<LyricFlowMode>> TaskbarFlowOptions { get; } =
+        Enum.GetValues<LyricFlowMode>().Select(mode => new ChoiceOption<LyricFlowMode>(mode, "Flow" + mode)).ToArray();
+
+    public LyricFlowMode TaskbarLyricFlow
+    {
+        get => S.TaskbarLyricFlow;
+        set { if (value != S.TaskbarLyricFlow) Update(s => s.TaskbarLyricFlow = value); }
     }
 
     public IReadOnlyList<ChoiceOption<NoLyricsBehavior>> NoLyricsOptions { get; } =
