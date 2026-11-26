@@ -43,11 +43,10 @@ public static class LyricCardRenderer
     private static readonly FontFamily Classic95 = new("Tahoma, Segoe UI");
     private static readonly FontFamily Icons = new("Segoe Fluent Icons, Segoe MDL2 Assets");
 
-    // Each try makes room: first the artwork gets smaller, then the lines, until everything fits.
-    private static readonly (double Text, double Art)[] Shrinks =
+    // Keep the artwork at its designed size unless the lyrics would have to get too small.
+    private static readonly (double Art, double MinimumText)[] FitPasses =
     [
-        (1, 1), (0.92, 1), (0.88, 0.85), (0.84, 0.72), (0.8, 0.6), (0.76, 0.5), (0.7, 0.45), (0.64, 0.42),
-        (0.58, 0.4), (0.52, 0.38), (0.47, 0.36), (0.42, 0.34),
+        (1, 0.78), (0.78, 0.68), (0.58, 0.58), (0.34, 0.2),
     ];
 
     public static (int Width, int Height) SizeOf(LyricCardFormat format) => format switch
@@ -71,20 +70,20 @@ public static class LyricCardRenderer
     {
         var (width, height) = SizeOf(options.Format);
         FrameworkElement? card = null;
-        foreach (var (shrink, art) in Shrinks)
+        foreach (var (art, minimumText) in FitPasses)
         {
-            var ctx = new Ctx(content, options, width, height, shrink, art);
+            var ctx = new Ctx(content, options, width, height, art);
             card = Compose(ctx);
-            if (ctx.AllFit())
+            card.Width = width;
+            card.Height = height;
+            card.ClipToBounds = true;
+            TextOptions.SetTextFormattingMode(card, TextFormattingMode.Ideal);
+            TextOptions.SetTextRenderingMode(card, TextRenderingMode.Grayscale);
+            if (ctx.FitLyrics(minimumText))
                 break;
         }
-        card!.Width = width;
-        card.Height = height;
-        card.ClipToBounds = true;
-        TextOptions.SetTextFormattingMode(card, TextFormattingMode.Ideal);
-        TextOptions.SetTextRenderingMode(card, TextRenderingMode.Grayscale);
-        RenderOptions.SetBitmapScalingMode(card, BitmapScalingMode.HighQuality);
-        return card;
+        RenderOptions.SetBitmapScalingMode(card!, BitmapScalingMode.HighQuality);
+        return card!;
     }
 
     /// <summary>The card as a bitmap at its full size, or scaled (thumbnails) by <paramref name="scale"/>.</summary>
@@ -910,7 +909,7 @@ public static class LyricCardRenderer
             {
                 Text = text,
                 FontFamily = Figtree,
-                FontSize = 32 * u,
+                FontSize = 27 * u,
                 FontWeight = FontWeights.SemiBold,
                 Foreground = Brush(Alpha(fg, 0xA6)),
                 VerticalAlignment = VerticalAlignment.Center,
@@ -924,14 +923,14 @@ public static class LyricCardRenderer
     private static FrameworkElement? Mark(Ctx ctx, Color fg, Color bg)
     {
         var u = ctx.U;
-        var height = 46 * u;
+        var height = 36 * u;
         if (ctx.O.Mark == LyricCardMark.None)
             return null;
         var row = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
         if (ctx.O.Mark == LyricCardMark.Spotify)
         {
             row.Children.Add(SpotifyLogo(height, fg, bg));
-            row.Children.Add(new TextBlock { Text = "Spotify", FontFamily = Figtree, FontSize = 38 * u, FontWeight = FontWeights.Bold, Foreground = Brush(fg), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12 * u, 0, 0, 3 * u) });
+            row.Children.Add(new TextBlock { Text = "Spotify", FontFamily = Figtree, FontSize = 31 * u, FontWeight = FontWeights.SemiBold, Foreground = Brush(fg), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12 * u, 0, 0, 3 * u) });
             return row;
         }
         row.Children.Add(new Border
@@ -939,7 +938,7 @@ public static class LyricCardRenderer
             Width = height, Height = height, CornerRadius = new CornerRadius(height / 2), Background = Brush(fg),
             Child = new TextBlock { Text = "♫", FontSize = 27 * u, FontWeight = FontWeights.Bold, Foreground = Brush(bg), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, -2 * u, 0, 0) },
         });
-        row.Children.Add(new TextBlock { Text = "Taskitify", FontFamily = Figtree, FontSize = 36 * u, FontWeight = FontWeights.Bold, Foreground = Brush(fg), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12 * u, 0, 0, 3 * u) });
+        row.Children.Add(new TextBlock { Text = "Taskitify", FontFamily = Figtree, FontSize = 29 * u, FontWeight = FontWeights.SemiBold, Foreground = Brush(fg), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12 * u, 0, 0, 3 * u) });
         return row;
     }
 
@@ -1053,9 +1052,10 @@ public static class LyricCardRenderer
     internal readonly record struct Face(FontFamily Family, FontWeight Weight, FontStyle Style, FontStretch Stretch, double SizeFactor, double LineHeight);
 
     /// <summary>One build of a card: its size, options, and the parts that must fit.</summary>
-    private sealed class Ctx(LyricCardContent content, LyricCardOptions options, double width, double height, double shrink, double art)
+    private sealed class Ctx(LyricCardContent content, LyricCardOptions options, double width, double height, double art)
     {
         private readonly List<(FrameworkElement Element, double MaxHeight)> _fits = [];
+        private readonly List<TextBlock> _lyrics = [];
 
         public LyricCardContent C { get; } = content;
         public LyricCardOptions O { get; } = options;
@@ -1089,24 +1089,14 @@ public static class LyricCardRenderer
             LyricCardFont.Handwritten => new(Hand, FontWeights.Normal, FontStyles.Normal, FontStretches.Normal, 0.98, 1.24),
             LyricCardFont.Mono => new(Mono, FontWeights.SemiBold, FontStyles.Normal, FontStretches.Normal, 0.8, 1.32),
             LyricCardFont.Condensed => new(Condensed, FontWeights.Bold, FontStyles.Normal, FontStretches.SemiCondensed, 1.08, 1.08),
-            _ => new(Figtree, FontWeights.ExtraBold, FontStyles.Normal, FontStretches.Normal, 1, 1.14),
+            _ => new(Figtree, FontWeights.ExtraBold, FontStyles.Normal, FontStretches.Normal, 1, 1.08),
         };
 
-        /// <summary>The lines' size: larger when there is little to say, then the user's scale and any shrink to fit.</summary>
+        /// <summary>The style's preferred size before measuring the wrapped lines.</summary>
         public double LyricSize(double large)
         {
-            var chars = C.Lines.Sum(l => l.Text.Length) + (C.Lines.Count * 12);
-            var size = chars switch
-            {
-                <= 60 => large * 1.08,
-                <= 100 => large,
-                <= 150 => large * 0.88,
-                <= 210 => large * 0.77,
-                <= 280 => large * 0.68,
-                _ => large * 0.6,
-            };
             var format = O.Format switch { LyricCardFormat.Story => 1.12, LyricCardFormat.Landscape => 1.12, LyricCardFormat.Square => 0.94, _ => 1.0 };
-            return size * U * format * Math.Clamp(O.FontScale, 0.6, 1.5) * shrink;
+            return large * U * format * Math.Clamp(O.FontScale, 0.6, 1.5);
         }
 
         public StackPanel Lines(LyricCardFont styleDefault, double large, Color color, TextAlignment align, double width)
@@ -1115,30 +1105,78 @@ public static class LyricCardRenderer
             var size = LyricSize(large) * face.SizeFactor;
             var panel = new StackPanel { Width = width };
             foreach (var line in C.Lines)
-                panel.Children.Add(LineBlock(line.Text, face, size, color, align, width));
+            {
+                var block = LineBlock(line.Text, face, size, color, align, width);
+                if (panel.Children.Count > 0)
+                    block.Margin = new Thickness(0, size * 0.14, 0, 0);
+                panel.Children.Add(block);
+            }
             return panel;
         }
 
-        public TextBlock LineBlock(string text, Face face, double size, Color color, TextAlignment align, double width) => new()
+        public TextBlock LineBlock(string text, Face face, double size, Color color, TextAlignment align, double width)
         {
-            Text = text,
-            FontFamily = face.Family,
-            FontWeight = face.Weight,
-            FontStyle = face.Style,
-            FontStretch = face.Stretch,
-            FontSize = size,
-            Foreground = Brush(color),
-            TextAlignment = align,
-            TextWrapping = TextWrapping.Wrap,
-            LineHeight = size * face.LineHeight,
-            LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
-            Width = width,
-        };
+            var block = new TextBlock
+            {
+                Text = text,
+                FontFamily = face.Family,
+                FontWeight = face.Weight,
+                FontStyle = face.Style,
+                FontStretch = face.Stretch,
+                FontSize = size,
+                Foreground = Brush(color),
+                TextAlignment = align,
+                TextWrapping = TextWrapping.Wrap,
+                LineHeight = size * face.LineHeight,
+                LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
+                Width = width,
+            };
+            _lyrics.Add(block);
+            return block;
+        }
 
         /// <summary>This part must be no taller than <paramref name="maxHeight"/>, or the lines are set smaller.</summary>
         public void Fit(FrameworkElement element, double maxHeight) => _fits.Add((element, Math.Max(maxHeight, 120 * U)));
 
-        public bool AllFit() => _fits.All(f =>
+        public bool FitLyrics(double minimum)
+        {
+            if (AllFit())
+                return true;
+
+            // Capture after composing: Karaoke gives adjacent verses their own size and spacing.
+            var original = _lyrics.Select(line => (Line: line, line.FontSize, line.LineHeight, line.Margin)).ToArray();
+            void Apply(double scale)
+            {
+                foreach (var (line, size, height, margin) in original)
+                {
+                    line.FontSize = size * scale;
+                    line.LineHeight = height * scale;
+                    line.Margin = new Thickness(margin.Left, margin.Top * scale, margin.Right, margin.Bottom * scale);
+                    // This card is still detached, so layout invalidation has no window to propagate it.
+                    for (DependencyObject? parent = line; parent is UIElement element; parent = VisualTreeHelper.GetParent(element))
+                        element.InvalidateMeasure();
+                }
+            }
+
+            Apply(minimum);
+            if (!AllFit())
+                return false;
+
+            var upper = 1.0;
+            for (var i = 0; i < 6; i++)
+            {
+                var scale = (minimum + upper) / 2;
+                Apply(scale);
+                if (AllFit())
+                    minimum = scale;
+                else
+                    upper = scale;
+            }
+            Apply(minimum);
+            return true;
+        }
+
+        private bool AllFit() => _fits.All(f =>
         {
             f.Element.Measure(new Size(f.Element.Width is > 0 and var w ? w : W, double.PositiveInfinity));
             return f.Element.DesiredSize.Height <= f.MaxHeight;
