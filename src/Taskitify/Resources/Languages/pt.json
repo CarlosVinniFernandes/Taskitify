@@ -262,7 +262,7 @@
   "LookAlignLeft": "À esquerda",
   "LookTypeface": "Tipografia",
   "LookTypefaceSystem": "Windows",
-  "LookTypefaceModern": "Moderna",
+  "LookTypefaceModern": "Display (Inter)",
   "LookTypefaceSerif": "Serifada",
   "LookLyricsSize": "Tamanho do texto",
   "LookControls": "Controles",
@@ -279,5 +279,6 @@
   "ModeVertical": "Mini player: vertical",
   "ModeWide": "Mini player: wide",
   "OpenInSpotify": "Abrir no Spotify",
-  "MiniPlayerSettings": "Configurações do mini player…"
+  "MiniPlayerSettings": "Configurações do mini player…",
+  "LookTypefaceGeometric": "Geométrica"
 }

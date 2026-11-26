@@ -55,7 +55,7 @@
             <Grid x:Name="LayoutRoot">
 
                 <!-- Song: cover, title, artist and the secondary actions (like, share). -->
-                <Grid x:Name="HeaderPart" Visibility="{Binding ShowHeaderPart, Converter={StaticResource BoolToVisibility}}">
+                <Grid x:Name="HeaderPart" Visibility="{Binding ShowHeaderPart, Converter={StaticResource BoolToVisibility}}" TextOptions.TextFormattingMode="Ideal">
                     <Grid x:Name="CoverPart" Width="64" Height="64" Margin="0,0,14,0" VerticalAlignment="Top"
                           Visibility="{Binding ShowCover, Converter={StaticResource BoolToVisibility}}">
                         <Border x:Name="CoverPlaceholder" CornerRadius="8" Background="{DynamicResource SubtleFillHoverBrush}">
@@ -70,10 +70,10 @@
                         </Border>
                     </Grid>
                     <StackPanel x:Name="TitlePart" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Title}" FontFamily="{StaticResource UiDisplayFont}" FontSize="16" FontWeight="SemiBold"
+                        <TextBlock Text="{Binding Title}" FontFamily="{Binding TitleFont}" FontSize="{Binding TitleFontSize}" FontWeight="{Binding TitleWeight}"
                                    Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"
                                    ToolTip="{Binding Title}" Visibility="{Binding ShowTitle, Converter={StaticResource BoolToVisibility}}" />
-                        <TextBlock Text="{Binding Artist}" FontSize="13" Margin="0,2,0,0"
+                        <TextBlock Text="{Binding Artist}" FontSize="13.5" Margin="0,3,0,0" FontFamily="{Binding TitleFont}" FontWeight="Medium"
                                    Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"
                                    ToolTip="{Binding Artist}" Visibility="{Binding ShowArtist, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
@@ -90,7 +90,7 @@
 
                 <!-- Lyrics: a fixed viewport; the list is translated so the current line sits in the middle.
                      A transparent background lets the wheel scroll it anywhere, between lines too. -->
-                <Grid x:Name="LyricsPart" Margin="0,10,0,6">
+                <Grid x:Name="LyricsPart" Margin="0,10,0,6" TextOptions.TextFormattingMode="Ideal">
                     <Grid x:Name="LyricsViewport" Height="176" ClipToBounds="True" Background="Transparent">
                         <Grid.OpacityMask>
                             <!-- Absolute: relative mapping would use the bounds of the whole (translated) list. -->
@@ -120,7 +120,7 @@
                                                        Padding="{Binding DataContext.LyricsLinePadding, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                        RenderTransformOrigin="{Binding DataContext.LyricsScaleOrigin, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                        Foreground="{DynamicResource TextPrimaryBrush}" Opacity="{Binding Emphasis}"
-                                                       FontWeight="{Binding Weight}" MouseLeftButtonUp="OnLyricLineClicked">
+                                                       FontWeight="{Binding Weight}" Effect="{Binding Soften}" MouseLeftButtonUp="OnLyricLineClicked">
                                                 <TextBlock.RenderTransform>
                                                     <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}" />
                                                 </TextBlock.RenderTransform>

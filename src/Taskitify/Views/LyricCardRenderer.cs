@@ -35,6 +35,8 @@ public static class LyricCardRenderer
     private static readonly Uri FontFolder = new("pack://application:,,,/Taskitify;component/Resources/Fonts/");
     internal static readonly FontFamily Figtree = new(FontFolder, "./#Figtree");
     internal static readonly FontFamily DmSerif = new(FontFolder, "./#DM Serif Display");
+    /// <summary>Inter Display: tight, heavy display type (close to the system fonts of music apps), for lyrics on screen.</summary>
+    internal static readonly FontFamily InterDisplay = new(FontFolder, "./#Inter Display");
     private static readonly FontFamily Hand = new("Ink Free, Segoe Print");
     private static readonly FontFamily Mono = new("Cascadia Mono, Consolas");
     private static readonly FontFamily Condensed = new("Bahnschrift");

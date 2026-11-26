@@ -383,9 +383,16 @@ public enum LyricsHighlight
 
 public enum LyricsTypeface
 {
+    /// <summary>Windows' own (Segoe UI).</summary>
     System,
+
+    /// <summary>Inter Display: heavy, tight display type.</summary>
     Modern,
+
     Serif,
+
+    /// <summary>Figtree: round, geometric.</summary>
+    Geometric,
 }
 
 public enum LyricsAlignment
@@ -412,7 +419,10 @@ public sealed class MiniPlayerStyle
 
     public LyricsHighlight Highlight { get; set; } = LyricsHighlight.Classic;
 
-    public LyricsTypeface Typeface { get; set; } = LyricsTypeface.System;
+    public LyricsTypeface Typeface { get; set; } = LyricsTypeface.Modern;
+
+    /// <summary>1: the display typeface became the default (looks saved before keep their other choices).</summary>
+    public int Revision { get; set; } = 1;
 
     /// <summary>The lyrics' size: 0.85 to 1.3 of the usual 14 px.</summary>
     public double LyricsScale { get; set; } = 1;

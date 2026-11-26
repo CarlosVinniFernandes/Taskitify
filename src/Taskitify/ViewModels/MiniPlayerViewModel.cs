@@ -29,6 +29,7 @@ public sealed class LyricLineViewModel : ObservableObject
 
     public bool IsPast { get => _isPast; set => Set(ref _isPast, value); }
 
+    private System.Windows.Media.Effects.Effect? _soften;
     private double _emphasis = 1;
     private double _scale = 1;
     private System.Windows.FontWeight _weight = System.Windows.FontWeights.Normal;
@@ -41,27 +42,46 @@ public sealed class LyricLineViewModel : ObservableObject
 
     public System.Windows.FontWeight Weight { get => _weight; set => Set(ref _weight, value); }
 
-    /// <summary>The emphasis of a line <paramref name="distance"/> lines from the current one (0 = current, negative = past).</summary>
-    public void Emphasize(LyricsHighlight highlight, int distance, bool started)
+    /// <summary>A slight blur on lines away from the current one (expressive and progressive): depth, like a lens.</summary>
+    public System.Windows.Media.Effects.Effect? Soften { get => _soften; set => Set(ref _soften, value); }
+
+    private static readonly System.Windows.Media.Effects.BlurEffect[] Blurs = [.. new[] { 0.7, 1.3, 1.9, 2.4 }.Select(r =>
+    {
+        var blur = new System.Windows.Media.Effects.BlurEffect { Radius = r, KernelType = System.Windows.Media.Effects.KernelType.Gaussian };
+        blur.Freeze();
+        return blur;
+    })];
+
+    /// <summary>
+    /// The emphasis of a line <paramref name="distance"/> lines from the current one (0 = current,
+    /// negative = past). With a display typeface (<paramref name="heavy"/>) every line is bold, as
+    /// music apps set lyrics, and the current one stands out by brightness and size.
+    /// </summary>
+    public void Emphasize(LyricsHighlight highlight, int distance, bool started, bool heavy)
     {
         var current = started && distance == 0;
         var away = Math.Abs(distance);
+        var strong = heavy ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.SemiBold;
+        var quiet = heavy ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.Normal;
         switch (highlight)
         {
             case LyricsHighlight.Expressive:
-                Emphasis = current ? 1 : distance < 0 ? 0.32 : 0.42;
-                Scale = current ? 1.12 : 1;
-                Weight = current ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.Normal;
+                Emphasis = current ? 1 : distance < 0 ? 0.3 : 0.38;
+                Scale = current ? 1.08 : 1;
+                Weight = current ? (heavy ? System.Windows.FontWeights.ExtraBold : System.Windows.FontWeights.Bold) : quiet;
+                Soften = !started || current ? null : Blurs[Math.Min(away, 4) - 1];
                 break;
             case LyricsHighlight.Progressive:
-                Emphasis = !started ? 0.5 : away switch { 0 => 1, 1 => 0.62, 2 => 0.42, 3 => 0.3, _ => 0.22 };
-                Scale = current ? 1.05 : 1;
-                Weight = current ? System.Windows.FontWeights.SemiBold : System.Windows.FontWeights.Normal;
+                Emphasis = !started ? 0.5 : away switch { 0 => 1, 1 => 0.58, 2 => 0.38, 3 => 0.27, _ => 0.2 };
+                Scale = current ? 1.04 : 1;
+                Weight = current ? strong : quiet;
+                Soften = !started || away < 2 ? null : Blurs[Math.Min(away - 1, 4) - 1];
                 break;
             default:
-                Emphasis = current ? 1 : distance < 0 ? 0.36 : 0.48;
+                Emphasis = current ? 1 : distance < 0 ? 0.36 : 0.46;
                 Scale = 1;
-                Weight = current ? System.Windows.FontWeights.SemiBold : System.Windows.FontWeights.Normal;
+                Weight = current ? strong : (heavy ? System.Windows.FontWeights.SemiBold : System.Windows.FontWeights.Normal);
+                Soften = null;
                 break;
         }
     }
@@ -195,16 +215,28 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     /// <summary>Room at the sides for a line drawn larger.</summary>
     public System.Windows.Thickness LyricsLinePadding => Look.Highlight == LyricsHighlight.Expressive
-        ? new(Look.Alignment == LyricsAlignment.Left ? 4 : 18, 6, 18, 6) : new(4, 5, 4, 5);
+        ? new(Look.Alignment == LyricsAlignment.Left ? 4 : 18, 7, 18, 7) : new(4, DisplayType ? 6 : 5, 4, DisplayType ? 6 : 5);
 
     public FontFamily LyricsFont => Look.Typeface switch
     {
-        LyricsTypeface.Modern => Views.LyricCardRenderer.Figtree,
+        LyricsTypeface.Modern => Views.LyricCardRenderer.InterDisplay,
+        LyricsTypeface.Geometric => Views.LyricCardRenderer.Figtree,
         LyricsTypeface.Serif => Views.LyricCardRenderer.DmSerif,
         _ => (FontFamily)System.Windows.Application.Current.FindResource("UiFont"),
     };
 
-    public double LyricsFontSize => Math.Round(14 * Math.Clamp(Look.LyricsScale, 0.8, 1.4) * (IsCinema ? 1.12 : 1) * (Look.Typeface == LyricsTypeface.Serif ? 1.08 : 1), 1);
+    /// <summary>Display typefaces read as lyrics should: larger, heavier; the system font stays as it was.</summary>
+    private bool DisplayType => Look.Typeface != LyricsTypeface.System;
+
+    public double LyricsFontSize => Math.Round((DisplayType ? 17 : 14) * Math.Clamp(Look.LyricsScale, 0.8, 1.4) * (IsCinema ? 1.28 : 1)
+        * (Look.Typeface == LyricsTypeface.Serif ? 1.06 : 1), 1);
+
+    /// <summary>The song's title in the same type as the lyrics.</summary>
+    public FontFamily TitleFont => DisplayType ? LyricsFont : (FontFamily)System.Windows.Application.Current.FindResource("UiDisplayFont");
+
+    public double TitleFontSize => DisplayType ? (IsCinema ? 18 : 17) : 16;
+
+    public System.Windows.FontWeight TitleWeight => DisplayType ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.SemiBold;
 
     public bool ShowProgress => L.ShowProgress;
 
@@ -334,7 +366,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
             nameof(ShowCover), nameof(ShowTitle), nameof(ShowArtist), nameof(ShowHeader), nameof(ShowShuffle), nameof(ShowPrevious),
             nameof(ShowPlayPause), nameof(ShowNext), nameof(ShowRepeat), nameof(ShowVolume), nameof(ShowLike), nameof(ShowControls), nameof(ShowProgress),
             nameof(ShowTransport), nameof(Look), nameof(IsCinema), nameof(LyricsTextAlignment), nameof(LyricsScaleOrigin), nameof(LyricsLinePadding),
-            nameof(LyricsFont), nameof(LyricsFontSize),
+            nameof(LyricsFont), nameof(LyricsFontSize), nameof(TitleFont), nameof(TitleFontSize), nameof(TitleWeight),
             nameof(WindowWidth), nameof(IsShuffleActive), nameof(IsRepeatActive), nameof(RepeatGlyph),
         })
             OnPropertyChanged(name);
@@ -412,7 +444,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         {
             Lines[i].IsCurrent = i == index;
             Lines[i].IsPast = i < index;
-            Lines[i].Emphasize(highlight, i - Math.Max(index, 0), started: index >= 0);
+            Lines[i].Emphasize(highlight, i - Math.Max(index, 0), started: index >= 0, heavy: DisplayType);
         }
         CurrentIndex = index;
         CurrentLineChanged?.Invoke(this, EventArgs.Empty);

@@ -41,8 +41,13 @@ public sealed class SettingsService
         {
             if (File.Exists(FilePath))
             {
-                Current = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath), Json) ?? new AppSettings();
+                var text = File.ReadAllText(FilePath);
+                Current = JsonSerializer.Deserialize<AppSettings>(text, Json) ?? new AppSettings();
                 Current.MigrateLegacy();
+                // Looks saved before the display typeface had Windows' font as their default.
+                if (text.Contains("\"MiniPlayerLook\"", StringComparison.Ordinal) && !text.Contains("\"Revision\"", StringComparison.Ordinal)
+                    && Current.MiniPlayerLook.Typeface == Models.LyricsTypeface.System)
+                    Current.MiniPlayerLook.Typeface = Models.LyricsTypeface.Modern;
                 return;
             }
             IsFirstRun = true;

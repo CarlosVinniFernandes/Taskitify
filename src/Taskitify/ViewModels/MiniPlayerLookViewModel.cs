@@ -231,12 +231,12 @@ public sealed record LookPreset(string Key, MiniPlayerBackground Background, Lyr
 {
     public static IReadOnlyList<LookPreset> All { get; } =
     [
-        new("Classic", MiniPlayerBackground.Default, LyricsHighlight.Classic, LyricsTypeface.System, LyricsAlignment.Center, ControlsLook.Classic),
+        new("Classic", MiniPlayerBackground.Default, LyricsHighlight.Classic, LyricsTypeface.Modern, LyricsAlignment.Center, ControlsLook.Classic),
         new("Aurora", MiniPlayerBackground.Aurora, LyricsHighlight.Expressive, LyricsTypeface.Modern, LyricsAlignment.Left, ControlsLook.Solid),
-        new("Calm", MiniPlayerBackground.Atmosphere, LyricsHighlight.Progressive, LyricsTypeface.System, LyricsAlignment.Center, ControlsLook.Classic),
+        new("Calm", MiniPlayerBackground.Atmosphere, LyricsHighlight.Progressive, LyricsTypeface.Modern, LyricsAlignment.Center, ControlsLook.Classic),
         new("Velvet", MiniPlayerBackground.Velvet, LyricsHighlight.Progressive, LyricsTypeface.Serif, LyricsAlignment.Center, ControlsLook.Solid),
         new("Cover", MiniPlayerBackground.BlurredCover, LyricsHighlight.Expressive, LyricsTypeface.Modern, LyricsAlignment.Center, ControlsLook.Solid),
-        new("Minimal", MiniPlayerBackground.Theme, LyricsHighlight.Classic, LyricsTypeface.Modern, LyricsAlignment.Left, ControlsLook.Classic),
+        new("Minimal", MiniPlayerBackground.Theme, LyricsHighlight.Classic, LyricsTypeface.Geometric, LyricsAlignment.Left, ControlsLook.Classic),
     ];
 
     public bool Matches(MiniPlayerStyle look) => look.Background == Background && look.Highlight == Highlight && look.Typeface == Typeface
