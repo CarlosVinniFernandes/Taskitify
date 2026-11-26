@@ -240,7 +240,7 @@
   "CardLyricsLabel": "Paroles",
   "CardNowPlaying": "En cours",
   "LyricsCredit": "Paroles fournies par {0}",
-  "LookLayout": "Disposition",
+  "LookLayout": "Mise en page",
   "LookLayoutVertical": "Vertical classique",
   "LookLayoutCinema": "Cinéma large",
   "LookBackground": "Arrière-plan",
@@ -267,5 +267,17 @@
   "LookLyricsSize": "Taille du texte",
   "LookControls": "Commandes",
   "LookControlsClassic": "Classiques",
-  "LookControlsSolid": "Pleins"
+  "LookControlsSolid": "Pleins",
+  "LookMode": "Mode",
+  "LookPresetsHint": "Styles prêts à l'emploi : choisissez-en un, puis ajustez le reste. Aperçu en direct à côté.",
+  "LookPresetClassic": "Classique",
+  "LookPresetAurora": "Aurore",
+  "LookPresetCalm": "Calme",
+  "LookPresetVelvet": "Velours",
+  "LookPresetCover": "Pochette",
+  "LookPresetMinimal": "Minimaliste",
+  "ModeVertical": "Mini lecteur : vertical",
+  "ModeWide": "Mini lecteur : large",
+  "OpenInSpotify": "Ouvrir dans Spotify",
+  "MiniPlayerSettings": "Réglages du mini lecteur…"
 }

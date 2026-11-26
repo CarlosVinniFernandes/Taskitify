@@ -267,5 +267,17 @@
   "LookLyricsSize": "Textgröße",
   "LookControls": "Steuerung",
   "LookControlsClassic": "Klassisch",
-  "LookControlsSolid": "Gefüllt"
+  "LookControlsSolid": "Gefüllt",
+  "LookMode": "Modus",
+  "LookPresetsHint": "Fertige Looks: einen wählen, dann unten anpassen. Live-Vorschau daneben.",
+  "LookPresetClassic": "Klassisch",
+  "LookPresetAurora": "Aurora",
+  "LookPresetCalm": "Ruhig",
+  "LookPresetVelvet": "Samt",
+  "LookPresetCover": "Cover",
+  "LookPresetMinimal": "Minimal",
+  "ModeVertical": "Mini-Player: vertikal",
+  "ModeWide": "Mini-Player: breit",
+  "OpenInSpotify": "In Spotify öffnen",
+  "MiniPlayerSettings": "Mini-Player-Einstellungen…"
 }

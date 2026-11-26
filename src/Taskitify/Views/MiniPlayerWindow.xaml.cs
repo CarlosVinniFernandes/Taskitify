@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using Taskitify.Services;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -39,6 +40,8 @@ public partial class MiniPlayerWindow : Window
 
         _outsideClicks = new OutsideClickWatcher((x, y) =>
         {
+            if (IsPreview)
+                return;
             var inside = WindowInterop.GetBounds(_hwnd);
             // Clicks on the overlay toggle the popup themselves.
             if (!Contains(inside, x, y) && !Contains(_anchor, x, y))
@@ -65,6 +68,10 @@ public partial class MiniPlayerWindow : Window
         VolumeButton.MouseEnter += (_, _) => _vm.Volume.Refresh();
 
         _vm.Like.JustLiked += (_, _) => LikeIcon.Pulse();
+        ContentCard.ContextMenu = BuildMenu();
+        CoverPart.Cursor = Cursors.Hand;
+        CoverPart.ToolTip = LocalizationService.Get("OpenInSpotify");
+        CoverPart.MouseLeftButtonUp += (_, _) => OpenSpotify();
         Progress.Seek += _vm.SeekTo;
         Progress.Preview += _vm.PreviewPosition;
 
@@ -86,11 +93,101 @@ public partial class MiniPlayerWindow : Window
         };
     }
 
+    /// <summary>
+    /// Right-click on the player: its mode, its background, sharing the lyrics and its settings,
+    /// without going through the settings window.
+    /// </summary>
+    private ContextMenu BuildMenu()
+    {
+        var menu = new ContextMenu();
+        var vertical = new MenuItem { IsCheckable = true };
+        vertical.Click += (_, _) => _vm.SetLayout(MiniPlayerLayout.Vertical);
+        var wide = new MenuItem { IsCheckable = true };
+        wide.Click += (_, _) => _vm.SetLayout(MiniPlayerLayout.Cinema);
+        var background = new MenuItem();
+        foreach (var style in Enum.GetValues<MiniPlayerBackground>())
+        {
+            var item = new MenuItem { Tag = style, IsCheckable = true };
+            item.Click += (_, _) => _vm.SetBackground(style);
+            background.Items.Add(item);
+        }
+        var share = new MenuItem { Icon = MenuGlyph("\uE72D") };
+        share.Click += (_, _) => _vm.ShareCommand.Execute(null);
+        var spotify = new MenuItem { Icon = MenuGlyph("\uE8A7") };
+        spotify.Click += (_, _) => OpenSpotify();
+        var settings = new MenuItem { Icon = MenuGlyph("\uE713") };
+        settings.Click += (_, _) => (Application.Current as App)?.ShowSettings(SettingsPage.MiniPlayer);
+        menu.Items.Add(vertical);
+        menu.Items.Add(wide);
+        menu.Items.Add(background);
+        menu.Items.Add(new Separator());
+        menu.Items.Add(share);
+        menu.Items.Add(spotify);
+        menu.Items.Add(new Separator());
+        menu.Items.Add(settings);
+        menu.Opened += (_, _) =>
+        {
+            vertical.Header = LocalizationService.Get("ModeVertical");
+            wide.Header = LocalizationService.Get("ModeWide");
+            vertical.IsChecked = !_vm.IsCinema;
+            wide.IsChecked = _vm.IsCinema;
+            background.Header = LocalizationService.Get("LookBackground");
+            foreach (var item in background.Items.OfType<MenuItem>())
+            {
+                var style = (MiniPlayerBackground)item.Tag;
+                item.Header = LocalizationService.Get("LookBackground" + style);
+                item.IsChecked = _vm.Look.Background == style;
+            }
+            share.Header = LocalizationService.Get("LyricCardOpen");
+            spotify.Header = LocalizationService.Get("OpenInSpotify");
+            settings.Header = LocalizationService.Get("MiniPlayerSettings");
+        };
+        return menu;
+    }
+
+    private static TextBlock MenuGlyph(string glyph) => new()
+    {
+        Text = glyph,
+        FontFamily = (FontFamily)Application.Current.FindResource("IconFont"),
+        FontSize = 14,
+    };
+
+    /// <summary>Brings Spotify up (its own protocol: the running app comes to the front).</summary>
+    private static void OpenSpotify()
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("spotify:") { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            Log.Warn($"Could not open Spotify: {ex.Message}");
+        }
+    }
+
     /// <summary>When the popup last hid; lets the overlay click that caused it not re-open it.</summary>
     public DateTime LastHidden { get; private set; }
 
-    public void ShowAt(PixelRect anchor, PixelRect workArea, double scale)
+    /// <summary>
+    /// Shown as a live preview while its appearance is being customized in Settings: it stays
+    /// open next to the settings, without taking focus, until the preview ends.
+    /// </summary>
+    public bool IsPreview { get; private set; }
+
+    /// <summary>The settings closed: a preview hides; a player the user opened stays.</summary>
+    public void EndPreview()
     {
+        if (!IsPreview)
+            return;
+        IsPreview = false;
+        HidePopup();
+    }
+
+    public void ShowAt(PixelRect anchor, PixelRect workArea, double scale, bool preview = false)
+    {
+        // Opened by the user (a click): a regular popup again, even if it was a preview.
+        var wasVisible = IsVisible;
+        IsPreview = preview && (IsPreview || !wasVisible);
         _vm.IsActive = true;
         ApplyLayout();
         ApplyControlsStyle();
@@ -100,9 +197,12 @@ public partial class MiniPlayerWindow : Window
         ApplyBackground();
 
         // Remember who had focus so closing with Esc gives it back.
-        _previousForeground = NativeMethods.GetForegroundWindow();
+        if (!wasVisible)
+            _previousForeground = NativeMethods.GetForegroundWindow();
 
-        Opacity = 0;
+        if (!wasVisible)
+            Opacity = 0;
+        ShowActivated = !IsPreview;
         Show();
         UpdateLayout();
         _hwnd = WindowInterop.EnsureHandle(this);
@@ -124,11 +224,21 @@ public partial class MiniPlayerWindow : Window
         // Position only: WPF keeps owning the size (SizeToContent, DPI changes between monitors).
         WindowInterop.SetPosition(_hwnd, x, y);
         _anchor = anchor;
+        SetBrowsing(false);
+        ScrollToCurrent(animate: false);
+        if (IsPreview)
+        {
+            // Beside the settings, which keep the focus.
+            _outsideClicks.Stop();
+            BeginAnimation(OpacityProperty, null);
+            Opacity = 1;
+            return;
+        }
         _outsideClicks.Start();
         FocusHelper.ForceForeground(_hwnd);
         Activate();
-        SetBrowsing(false);
-        ScrollToCurrent(animate: false);
+        if (wasVisible)
+            return;
 
         if (_animationsEnabled())
         {
@@ -160,6 +270,9 @@ public partial class MiniPlayerWindow : Window
     protected override void OnDeactivated(EventArgs e)
     {
         base.OnDeactivated(e);
+        // A preview stays while the settings are used; a menu of its own does not close it either.
+        if (IsPreview || ContentCard.ContextMenu is { IsOpen: true })
+            return;
         HidePopup();
     }
 

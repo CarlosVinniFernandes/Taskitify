@@ -10,6 +10,9 @@ public partial class SettingsWindow : Window
     private readonly SettingsViewModel _vm;
     private readonly SpotifyLyricsSession _spotify;
 
+    /// <summary>Opens the given page (the mini player's menu goes straight to its own).</summary>
+    public void ShowPage(SettingsPage page) => Pages.SelectedIndex = (int)page;
+
     public SettingsWindow(SettingsViewModel vm, SpotifyLyricsSession spotify)
     {
         InitializeComponent();
@@ -43,4 +46,16 @@ public partial class SettingsWindow : Window
     private void OnOffsetPlus(object sender, RoutedEventArgs e) => _vm.NudgeOffset(250);
 
     private void OnOffsetReset(object sender, RoutedEventArgs e) => _vm.SyncOffsetMs = 0;
+}
+
+/// <summary>The settings pages, in their order.</summary>
+public enum SettingsPage
+{
+    General,
+    Bar,
+    MinimizedBar,
+    MiniPlayer,
+    Lyrics,
+    Position,
+    Advanced,
 }

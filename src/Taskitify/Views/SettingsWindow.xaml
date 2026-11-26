@@ -419,10 +419,19 @@
                     </Border>
 
                     <!-- Appearance: each part on its own, any layout with any background. -->
-                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookLayout}" />
+                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookMode}" />
                     <Border Style="{StaticResource Group}" Padding="18,14,18,8">
                         <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Layouts}"
-                                 SelectedItem="{Binding MiniLook.Layout}" AutomationProperties.Name="{DynamicResource Loc.LookLayout}" />
+                                 SelectedItem="{Binding MiniLook.Layout}" AutomationProperties.Name="{DynamicResource Loc.LookMode}" />
+                    </Border>
+
+                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookLayout}" />
+                    <Border Style="{StaticResource Group}" Padding="18,14,18,8">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SettingHint}" Margin="0,0,0,10" Text="{DynamicResource Loc.LookPresetsHint}" />
+                            <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Presets}"
+                                     SelectedItem="{Binding MiniLook.Preset}" AutomationProperties.Name="{DynamicResource Loc.LookLayout}" />
+                        </StackPanel>
                     </Border>
 
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookBackground}" />

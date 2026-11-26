@@ -183,6 +183,11 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     public bool IsCinema => Look.Layout == MiniPlayerLayout.Cinema;
 
+    /// <summary>From the right-click menus: vertical or cinema wide.</summary>
+    public void SetLayout(MiniPlayerLayout layout) => _settings.Update(s => s.MiniPlayerLook.Layout = layout);
+
+    public void SetBackground(MiniPlayerBackground background) => _settings.Update(s => s.MiniPlayerLook.Background = background);
+
     public System.Windows.TextAlignment LyricsTextAlignment =>
         Look.Alignment == LyricsAlignment.Left ? System.Windows.TextAlignment.Left : System.Windows.TextAlignment.Center;
 

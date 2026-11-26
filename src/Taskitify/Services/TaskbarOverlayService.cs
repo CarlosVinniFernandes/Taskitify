@@ -193,6 +193,11 @@ public sealed class TaskbarOverlayService : IDisposable
         share.Click += (_, _) => ShareRequested?.Invoke(this, EventArgs.Empty);
         var player = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("ShowPlayer"), Icon = MenuGlyph("\uE90B") };
         player.Click += (_, _) => Clicked?.Invoke(this, EventArgs.Empty);
+        // The mini player's mode, one click away.
+        var vertical = new System.Windows.Controls.MenuItem { IsCheckable = true };
+        vertical.Click += (_, _) => _settings.Update(s => s.MiniPlayerLook.Layout = MiniPlayerLayout.Vertical);
+        var wide = new System.Windows.Controls.MenuItem { IsCheckable = true };
+        wide.Click += (_, _) => _settings.Update(s => s.MiniPlayerLook.Layout = MiniPlayerLayout.Cinema);
         var calibrate = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("CalibratePosition"), Icon = MenuGlyph("\uE7C9") };
         calibrate.Click += (_, _) => SetCalibrating(!IsCalibrating);
         var settings = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("Settings"), Icon = MenuGlyph("\uE713") };
@@ -234,6 +239,10 @@ public sealed class TaskbarOverlayService : IDisposable
             share.Header = LocalizationService.Get("LyricCardOpen");
             share.IsEnabled = _monitor.Track is not null;
             player.Header = LocalizationService.Get("ShowPlayer");
+            vertical.Header = LocalizationService.Get("ModeVertical");
+            wide.Header = LocalizationService.Get("ModeWide");
+            vertical.IsChecked = _settings.Current.MiniPlayerLook.Layout == MiniPlayerLayout.Vertical;
+            wide.IsChecked = _settings.Current.MiniPlayerLook.Layout == MiniPlayerLayout.Cinema;
             calibrate.Header = IsCalibrating ? LocalizationService.Get("FinishCalibration") : LocalizationService.Get("CalibratePosition");
             settings.Header = LocalizationService.Get("Settings");
             exit.Header = LocalizationService.Get("Exit");
@@ -265,6 +274,8 @@ public sealed class TaskbarOverlayService : IDisposable
         };
         menu.Items.Add(share);
         menu.Items.Add(player);
+        menu.Items.Add(vertical);
+        menu.Items.Add(wide);
         menu.Items.Add(new System.Windows.Controls.Separator());
         menu.Items.Add(refetch);
         menu.Items.Add(showCaption);

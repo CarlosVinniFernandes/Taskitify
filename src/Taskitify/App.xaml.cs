@@ -236,12 +236,16 @@ public partial class App : Application
         base.OnExit(e);
     }
 
-    public void ShowSettings()
+    public void ShowSettings() => ShowSettings(null);
+
+    public void ShowSettings(SettingsPage? page)
     {
         if (_settings is null || _cache is null || _sync is null || _overlay is null)
             return;
         if (_settingsWindow is { IsLoaded: true })
         {
+            if (page is { } p)
+                _settingsWindow.ShowPage(p);
             _settingsWindow.Activate();
             return;
         }
@@ -250,11 +254,16 @@ public partial class App : Application
         {
             MiniLook = new MiniPlayerLookViewModel(_settings, _monitor?.Thumbnail as BitmapSource, _monitor?.Palette ?? default),
         };
+        // Customizing the mini player shows it, live, beside the settings.
+        _settingsVm.MiniLook!.PreviewRequested += (_, _) => PreviewMiniPlayer();
         _settingsWindow = new SettingsWindow(_settingsVm, _spotifyLyrics!);
+        if (page is { } first)
+            _settingsWindow.ShowPage(first);
         _settingsWindow.Closed += (_, _) =>
         {
             _settingsWindow = null;
             _settingsVm = null;
+            _miniPlayer?.EndPreview();
             _settings.Flush();
         };
         WindowInterop.SetDarkTitleBar(_settingsWindow, !_theme!.AppsUseLightTheme);
@@ -372,7 +381,21 @@ public partial class App : Application
         OpenMiniPlayer(anchor);
     }
 
-    private void OpenMiniPlayer(Core.Layout.PixelRect anchor)
+    /// <summary>The mini player as a live preview (no focus, stays open) after an appearance change.</summary>
+    private void PreviewMiniPlayer()
+    {
+        if (_miniPlayer is null || _overlay is null)
+            return;
+        // After the change is applied and the player has its new size.
+        Dispatcher.InvokeAsync(() =>
+        {
+            var anchor = _overlay.IsShown ? _overlay.Bounds
+                : _overlay.Placement is { } p ? TaskbarPositionService.ComputeOverlayRect(p, _settings!.Current) : default;
+            OpenMiniPlayer(anchor, preview: true);
+        }, DispatcherPriority.Loaded);
+    }
+
+    private void OpenMiniPlayer(Core.Layout.PixelRect anchor, bool preview = false)
     {
         if (_miniPlayer is null || _overlay is null)
             return;
@@ -383,7 +406,7 @@ public partial class App : Application
         if (anchor.IsEmpty)
             anchor = new Core.Layout.PixelRect(monitor.WorkArea.Right - 200, monitor.WorkArea.Bottom, 200, 0);
         var scale = _overlay.Placement?.Scale ?? WindowInterop.GetScale(_overlay.Handle);
-        _miniPlayer.ShowAt(anchor, monitor.WorkArea, scale);
+        _miniPlayer.ShowAt(anchor, monitor.WorkArea, scale, preview);
     }
 
     private void ApplySettings()

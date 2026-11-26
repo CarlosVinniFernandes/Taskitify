@@ -156,6 +156,17 @@ public partial class TaskbarOverlay : Window
         base.OnMouseWheel(e);
         if (_vm.IsCalibrating)
             CalibrationResize?.Invoke(this, e.Delta > 0 ? 1 : -1);
+        else if (!e.Handled)
+            // Anywhere on the bar, like over the volume button: Spotify's volume.
+            _vm.Volume.Nudge(e.Delta > 0 ? 1 : -1);
+    }
+
+    /// <summary>Middle click: play or pause, without aiming at the button.</summary>
+    protected override void OnMouseUp(MouseButtonEventArgs e)
+    {
+        base.OnMouseUp(e);
+        if (e.ChangedButton == MouseButton.Middle && !_vm.IsCalibrating)
+            _vm.PlayPauseCommand.Execute(null);
     }
 
     // Calibration: the sides resize like a window's borders, the middle moves (OnMouseLeftButtonDown).

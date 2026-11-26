@@ -30,6 +30,9 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
         Backgrounds = Enum.GetValues<MiniPlayerBackground>()
             .Select(b => new LookOption<MiniPlayerBackground>(b, LocalizationService.Get("LookBackground" + b), BackgroundThumbnail(b, cover, palette)))
             .ToList();
+        Presets = LookPreset.All
+            .Select(p => new LookOption<LookPreset>(p, LocalizationService.Get("LookPreset" + p.Key), PresetThumbnail(p, cover, palette)))
+            .ToList();
         Highlights = Enum.GetValues<LyricsHighlight>().Select(h => new LookOption<LyricsHighlight>(h, LocalizationService.Get("LookHighlight" + h))).ToList();
         Typefaces = Enum.GetValues<LyricsTypeface>().Select(t => new LookOption<LyricsTypeface>(t, LocalizationService.Get("LookTypeface" + t))).ToList();
         Alignments = Enum.GetValues<LyricsAlignment>().Select(a => new LookOption<LyricsAlignment>(a, LocalizationService.Get("LookAlign" + a))).ToList();
@@ -38,6 +41,28 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     }
 
     private MiniPlayerStyle Look => _settings.Current.MiniPlayerLook;
+
+    /// <summary>Something changed: the app shows the mini player, live, beside the settings.</summary>
+    public event EventHandler? PreviewRequested;
+
+    private void Change(Action<AppSettings> change)
+    {
+        _settings.Update(change);
+        PreviewRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Ready-made looks (background, lyrics and controls together), for picking one instead of
+    /// building it; the mode (vertical or wide) is kept. Any part can still be changed after.
+    /// </summary>
+    public IReadOnlyList<LookOption<LookPreset>> Presets { get; }
+
+    /// <summary>The preset the current look is, if it is one.</summary>
+    public LookOption<LookPreset>? Preset
+    {
+        get => Presets.FirstOrDefault(p => p.Value.Matches(Look));
+        set { if (value is not null) Change(s => value.Value.ApplyTo(s.MiniPlayerLook)); }
+    }
 
     public IReadOnlyList<LookOption<MiniPlayerLayout>> Layouts { get; }
 
@@ -54,47 +79,86 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     public LookOption<MiniPlayerLayout>? Layout
     {
         get => Layouts.FirstOrDefault(o => o.Value == Look.Layout);
-        set { if (value is not null) _settings.Update(s => s.MiniPlayerLook.Layout = value.Value); }
+        set { if (value is not null) Change(s => s.MiniPlayerLook.Layout = value.Value); }
     }
 
     public LookOption<MiniPlayerBackground>? Background
     {
         get => Backgrounds.FirstOrDefault(o => o.Value == Look.Background);
-        set { if (value is not null) _settings.Update(s => s.MiniPlayerLook.Background = value.Value); }
+        set { if (value is not null) Change(s => s.MiniPlayerLook.Background = value.Value); }
     }
 
     public LookOption<LyricsHighlight>? Highlight
     {
         get => Highlights.FirstOrDefault(o => o.Value == Look.Highlight);
-        set { if (value is not null) _settings.Update(s => s.MiniPlayerLook.Highlight = value.Value); }
+        set { if (value is not null) Change(s => s.MiniPlayerLook.Highlight = value.Value); }
     }
 
     public LookOption<LyricsTypeface>? Typeface
     {
         get => Typefaces.FirstOrDefault(o => o.Value == Look.Typeface);
-        set { if (value is not null) _settings.Update(s => s.MiniPlayerLook.Typeface = value.Value); }
+        set { if (value is not null) Change(s => s.MiniPlayerLook.Typeface = value.Value); }
     }
 
     public LookOption<LyricsAlignment>? Alignment
     {
         get => Alignments.FirstOrDefault(o => o.Value == Look.Alignment);
-        set { if (value is not null) _settings.Update(s => s.MiniPlayerLook.Alignment = value.Value); }
+        set { if (value is not null) Change(s => s.MiniPlayerLook.Alignment = value.Value); }
     }
 
     public LookOption<ControlsLook>? ControlsStyle
     {
         get => Controls.FirstOrDefault(o => o.Value == Look.Controls);
-        set { if (value is not null) _settings.Update(s => s.MiniPlayerLook.Controls = value.Value); }
+        set { if (value is not null) Change(s => s.MiniPlayerLook.Controls = value.Value); }
     }
 
     /// <summary>The lyrics' size in percent.</summary>
     public double LyricsPercent
     {
         get => Math.Round(Look.LyricsScale * 100);
-        set => _settings.Update(s => s.MiniPlayerLook.LyricsScale = Math.Clamp(Math.Round(value / 5) * 5, 80, 140) / 100);
+        set => Change(s => s.MiniPlayerLook.LyricsScale = Math.Clamp(Math.Round(value / 5) * 5, 80, 140) / 100);
     }
 
     // ---- thumbnails ----
+
+    /// <summary>The preset's background with sketched lyrics (its alignment and emphasis) and controls.</summary>
+    private static ImageSource PresetThumbnail(LookPreset preset, BitmapSource? cover, (Color Start, Color End) palette)
+    {
+        const double w = 72, h = 96;
+        var background = BackgroundThumbnail(preset.Background, cover, palette);
+        var left = preset.Alignment == LyricsAlignment.Left;
+        var white = Color.FromRgb(0xFF, 0xFF, 0xFF);
+        return Draw(w, h, dc =>
+        {
+            dc.DrawImage(background, new Rect(0, 0, w, h));
+            if (cover is not null)
+                dc.DrawImage(cover, new Rect(7, 7, 14, 14));
+            dc.DrawRectangle(new SolidColorBrush(Color.FromArgb(0xE0, 0xFF, 0xFF, 0xFF)), null, new Rect(25, 9, 24, 3.5));
+            dc.DrawRectangle(new SolidColorBrush(Color.FromArgb(0x90, 0xFF, 0xFF, 0xFF)), null, new Rect(25, 15, 16, 2.5));
+            double[] widths = [40, 46, 52, 38, 44];
+            for (var i = 0; i < widths.Length; i++)
+            {
+                var current = i == 2;
+                var alpha = preset.Highlight switch
+                {
+                    LyricsHighlight.Progressive => i == 2 ? 0xFF : Math.Abs(i - 2) == 1 ? 0x90 : 0x50,
+                    _ => current ? 0xFF : 0x60,
+                };
+                var lineW = widths[i] * (current && preset.Highlight == LyricsHighlight.Expressive ? 1.15 : 1);
+                var lineH = current && preset.Highlight == LyricsHighlight.Expressive ? 4.5 : 3;
+                var x = left ? 8 : (w - lineW) / 2;
+                dc.DrawRectangle(new SolidColorBrush(Color.FromArgb((byte)alpha, white.R, white.G, white.B)), null, new Rect(x, 30 + (i * 8), lineW, lineH));
+            }
+            dc.DrawRectangle(new SolidColorBrush(Color.FromArgb(0x70, 0xFF, 0xFF, 0xFF)), null, new Rect(8, 74, 56, 2));
+            var play = new SolidColorBrush(white);
+            if (preset.Controls == ControlsLook.Solid)
+                dc.DrawGeometry(play, null, Geometry.Parse("M33,80 L41,85 L33,90 Z"));
+            else
+                dc.DrawEllipse(play, null, new Point(36, 85), 5, 5);
+            dc.DrawRectangle(new SolidColorBrush(Color.FromArgb(0x90, 0xFF, 0xFF, 0xFF)), null, new Rect(20, 83, 6, 4));
+            dc.DrawRectangle(new SolidColorBrush(Color.FromArgb(0x90, 0xFF, 0xFF, 0xFF)), null, new Rect(47, 83, 6, 4));
+        });
+    }
 
     private static ImageSource BackgroundThumbnail(MiniPlayerBackground style, BitmapSource? cover, (Color Start, Color End) palette)
     {
@@ -158,5 +222,32 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
         bitmap.Render(visual);
         bitmap.Freeze();
         return bitmap;
+    }
+}
+
+/// <summary>A ready-made mini player look: background, lyrics and controls that go together.</summary>
+public sealed record LookPreset(string Key, MiniPlayerBackground Background, LyricsHighlight Highlight, LyricsTypeface Typeface,
+    LyricsAlignment Alignment, ControlsLook Controls)
+{
+    public static IReadOnlyList<LookPreset> All { get; } =
+    [
+        new("Classic", MiniPlayerBackground.Default, LyricsHighlight.Classic, LyricsTypeface.System, LyricsAlignment.Center, ControlsLook.Classic),
+        new("Aurora", MiniPlayerBackground.Aurora, LyricsHighlight.Expressive, LyricsTypeface.Modern, LyricsAlignment.Left, ControlsLook.Solid),
+        new("Calm", MiniPlayerBackground.Atmosphere, LyricsHighlight.Progressive, LyricsTypeface.System, LyricsAlignment.Center, ControlsLook.Classic),
+        new("Velvet", MiniPlayerBackground.Velvet, LyricsHighlight.Progressive, LyricsTypeface.Serif, LyricsAlignment.Center, ControlsLook.Solid),
+        new("Cover", MiniPlayerBackground.BlurredCover, LyricsHighlight.Expressive, LyricsTypeface.Modern, LyricsAlignment.Center, ControlsLook.Solid),
+        new("Minimal", MiniPlayerBackground.Theme, LyricsHighlight.Classic, LyricsTypeface.Modern, LyricsAlignment.Left, ControlsLook.Classic),
+    ];
+
+    public bool Matches(MiniPlayerStyle look) => look.Background == Background && look.Highlight == Highlight && look.Typeface == Typeface
+        && look.Alignment == Alignment && look.Controls == Controls;
+
+    public void ApplyTo(MiniPlayerStyle look)
+    {
+        look.Background = Background;
+        look.Highlight = Highlight;
+        look.Typeface = Typeface;
+        look.Alignment = Alignment;
+        look.Controls = Controls;
     }
 }
