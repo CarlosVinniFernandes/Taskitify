@@ -92,10 +92,8 @@ public sealed class TaskbarOverlayService : IDisposable
     /// <summary>The overlay was clicked; the mini player toggles.</summary>
     public event EventHandler? Clicked;
 
-    /// <summary>The right-click menu's "share lyrics" and "settings".</summary>
+    /// <summary>The right-click menu's "share lyrics as an image".</summary>
     public event EventHandler? ShareRequested;
-
-    public event EventHandler? SettingsRequested;
 
     public event EventHandler<bool>? CalibrationChanged;
 
@@ -121,8 +119,6 @@ public sealed class TaskbarOverlayService : IDisposable
         RegisterAppBar();
 
         _window.Clicked += (_, _) => Clicked?.Invoke(this, EventArgs.Empty);
-        _window.ShareRequested += (_, _) => ShareRequested?.Invoke(this, EventArgs.Empty);
-        _window.SettingsRequested += (_, _) => SettingsRequested?.Invoke(this, EventArgs.Empty);
         _window.CalibrationBoundsChanged += (_, _) =>
         {
             // After a side drag the new width becomes the width setting; a move keeps it.
@@ -183,21 +179,32 @@ public sealed class TaskbarOverlayService : IDisposable
         NativeMethods.SetWindowLong(_hwnd, NativeMethods.GWL_EXSTYLE, ex);
     }
 
+    private static System.Windows.Controls.TextBlock MenuGlyph(string glyph) => new()
+    {
+        Text = glyph,
+        FontFamily = (System.Windows.Media.FontFamily)Application.Current.FindResource("IconFont"),
+        FontSize = 14,
+    };
+
     private System.Windows.Controls.ContextMenu BuildContextMenu()
     {
         var menu = new System.Windows.Controls.ContextMenu();
-        var calibrate = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("CalibratePosition") };
+        var share = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("LyricCardOpen"), Icon = MenuGlyph("\uE72D") };
+        share.Click += (_, _) => ShareRequested?.Invoke(this, EventArgs.Empty);
+        var player = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("ShowPlayer"), Icon = MenuGlyph("\uE90B") };
+        player.Click += (_, _) => Clicked?.Invoke(this, EventArgs.Empty);
+        var calibrate = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("CalibratePosition"), Icon = MenuGlyph("\uE7C9") };
         calibrate.Click += (_, _) => SetCalibrating(!IsCalibrating);
-        var settings = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("Settings") };
+        var settings = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("Settings"), Icon = MenuGlyph("\uE713") };
         settings.Click += (_, _) => ((App)Application.Current).ShowSettings();
-        var exit = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("Exit") };
+        var exit = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("Exit"), Icon = MenuGlyph("\uE7E8") };
         exit.Click += (_, _) => Application.Current.Shutdown();
         // Off: the caption row disappears and the lyric may use both lines.
         var showCaption = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("ShowCaption"), IsCheckable = true };
         showCaption.Click += (_, _) => _settings.Update(s => s.Bar.ShowCaption = showCaption.IsChecked);
         // Bypasses the cache for the song playing now, asking one source of the user's choice (the
         // other one's version may be better timed). Without separate sources, the usual lookup.
-        var refetch = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("ReloadLyrics") };
+        var refetch = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("ReloadLyrics"), Icon = MenuGlyph("\uE72C") };
         foreach (var source in _sync.Sources)
         {
             var item = new System.Windows.Controls.MenuItem { Tag = source };
@@ -224,6 +231,9 @@ public sealed class TaskbarOverlayService : IDisposable
         });
         menu.Opened += (_, _) =>
         {
+            share.Header = LocalizationService.Get("LyricCardOpen");
+            share.IsEnabled = _monitor.Track is not null;
+            player.Header = LocalizationService.Get("ShowPlayer");
             calibrate.Header = IsCalibrating ? LocalizationService.Get("FinishCalibration") : LocalizationService.Get("CalibratePosition");
             settings.Header = LocalizationService.Get("Settings");
             exit.Header = LocalizationService.Get("Exit");
@@ -253,6 +263,9 @@ public sealed class TaskbarOverlayService : IDisposable
             if ((NativeMethods.GetAsyncKeyState(NativeMethods.VK_ESCAPE) & 0x8001) != 0)
                 menu.IsOpen = false;
         };
+        menu.Items.Add(share);
+        menu.Items.Add(player);
+        menu.Items.Add(new System.Windows.Controls.Separator());
         menu.Items.Add(refetch);
         menu.Items.Add(showCaption);
         menu.Items.Add(calibrate);

@@ -173,7 +173,6 @@ public partial class App : Application
         _overlay.Initialize();
         _overlay.Clicked += (_, _) => ToggleMiniPlayer();
         _overlay.ShareRequested += (_, _) => ShowLyricCard();
-        _overlay.SettingsRequested += (_, _) => ShowSettings();
         _overlay.CalibrationChanged += (_, on) => _settingsVm?.SyncCalibrating(on);
 
         _miniPlayerVm = new MiniPlayerViewModel(_monitor, _sync, _settings, new AppVolumeService(), _likes);
