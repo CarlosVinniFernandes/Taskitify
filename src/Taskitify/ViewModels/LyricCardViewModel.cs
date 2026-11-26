@@ -44,11 +44,12 @@ public sealed class LyricCardLineItem(int index, LyricCardLine line) : Observabl
     public bool IsSelected { get => _isSelected; set => Set(ref _isSelected, value); }
 }
 
-public sealed class LyricCardStyleItem(LyricCardStyle style, string label) : ObservableObject
+public sealed class LyricCardStyleItem(LyricCardStyle style, string label, string category) : ObservableObject
 {
     private ImageSource? _thumbnail;
 
     public LyricCardStyle Style { get; } = style;
+    public string Category { get; } = category;
 
     public string Label { get; } = label;
 
@@ -82,7 +83,7 @@ public sealed class LyricCardSwatch(Color color, string? hex, string label)
 /// finer settings, a live preview and copying or saving the image. The last settings are
 /// remembered, and any of them can be kept as a named preset.
 /// </summary>
-public sealed class LyricCardViewModel : ObservableObject
+public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
 {
     public const int MaxLines = 6;
     public const int MaxPresets = 12;
@@ -136,7 +137,9 @@ public sealed class LyricCardViewModel : ObservableObject
             _updating = false;
         }
 
-        StyleItems = Enum.GetValues<LyricCardStyle>().Select(s => new LyricCardStyleItem(s, LocalizationService.Get("CardStyle" + s))).ToList();
+        StyleItems = LyricStudioCatalog.All.Select(s => new LyricCardStyleItem(s.Style,
+            s.Name ?? LocalizationService.Get("CardStyle" + s.Style), LocalizationService.Get("StudioCategory" + s.Category))).ToList();
+        InitializeGallery();
         Formats =
         [
             new(LyricCardFormat.Story, "9:16", ""), new(LyricCardFormat.Portrait, "4:5", ""),
@@ -168,17 +171,18 @@ public sealed class LyricCardViewModel : ObservableObject
         SaveCommand = new RelayCommand(Save);
         ClearCommand = new RelayCommand(() => SetAll(false), () => HasSelection);
         SavePresetCommand = new RelayCommand(SavePreset, () => !string.IsNullOrWhiteSpace(PresetName));
-        ApplyPresetCommand = new RelayCommand(p => { if (p is LyricCardPreset preset) Apply(preset.Options.Clone()); });
+        ApplyPresetCommand = new RelayCommand(p => { if (p is LyricCardPreset preset) ApplyPreset(preset); });
         DeletePresetCommand = new RelayCommand(p => DeletePreset(p as LyricCardPreset));
-        ResetCommand = new RelayCommand(() => Apply(new LyricCardOptions { Style = _options.Style, Format = _options.Format }));
+        ResetCommand = new RelayCommand(() =>
+        {
+            var variants = _options.Clone().Variants;
+            variants.Remove(_options.Style);
+            Apply(new LyricCardOptions { Style = _options.Style, Format = _options.Format, Variants = variants });
+        });
         SelectTabCommand = new RelayCommand(p => Tab = int.TryParse(p?.ToString(), out var t) ? t : 0);
 
-        _thumbnailTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(180) };
-        _thumbnailTimer.Tick += (_, _) =>
-        {
-            _thumbnailTimer.Stop();
-            RenderThumbnails();
-        };
+        _thumbnailTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(20) };
+        _thumbnailTimer.Tick += (_, _) => RenderThumbnail();
         Rebuild(thumbnails: true);
         _ = LoadLargeCoverAsync();
     }
@@ -223,7 +227,19 @@ public sealed class LyricCardViewModel : ObservableObject
     public ICommand SelectTabCommand { get; }
 
     /// <summary>0 lines, 1 style, 2 customize.</summary>
-    public int Tab { get => _tab; set => Set(ref _tab, value); }
+    public int Tab
+    {
+        get => _tab;
+        set
+        {
+            if (!Set(ref _tab, value))
+                return;
+            if (value == 1)
+                QueueThumbnails();
+            else
+                _thumbnailTimer.Stop();
+        }
+    }
 
     public bool HasLines => Lines.Count > 0;
 
@@ -241,7 +257,13 @@ public sealed class LyricCardViewModel : ObservableObject
     public LyricCardStyleItem? SelectedStyle
     {
         get => StyleItems.FirstOrDefault(s => s.Style == _options.Style);
-        set { if (value is not null) Change(o => o.Style = value.Style, thumbnails: false); }
+        set
+        {
+            if (value is null || _options.Style == value.Style)
+                return;
+            Change(o => o.Style = value.Style, thumbnails: false);
+            UpdateFields();
+        }
     }
 
     public LyricCardChoice<LyricCardFormat>? SelectedFormat
@@ -380,7 +402,7 @@ public sealed class LyricCardViewModel : ObservableObject
         return remembered;
     }
 
-    private LyricCardContent Content() => new(
+    private LyricCardContent Content(LyricCardStyle style, bool thumbnail = false) => new(
         Title,
         Artist,
         _source.Album,
@@ -389,7 +411,10 @@ public sealed class LyricCardViewModel : ObservableObject
         Accent,
         _source.PaletteStart,
         _source.PaletteEnd,
-        _source.Duration);
+        _source.Duration)
+    {
+        PersonalImage = ReadPhoto(style, thumbnail),
+    };
 
     private void Change(Action<LyricCardOptions> change, bool thumbnails = true)
     {
@@ -402,6 +427,7 @@ public sealed class LyricCardViewModel : ObservableObject
     private void Apply(LyricCardOptions options)
     {
         _options = options;
+        UpdateFields();
         _customColor = ParseHex(options.Color) is null ? "" : options.Color!;
         _settings.Update(s => s.LyricCard = Remembered());
         OnPropertyChanged(nameof(CustomColor));
@@ -414,7 +440,7 @@ public sealed class LyricCardViewModel : ObservableObject
         foreach (var name in new[]
         {
             nameof(SelectedStyle), nameof(SelectedFormat), nameof(SelectedFont), nameof(SelectedAlign), nameof(SelectedMark), nameof(FontPercent),
-            nameof(ShowCover), nameof(ShowTimestamp), nameof(SelectedSwatch), nameof(PreviewWidth), nameof(PreviewHeight),
+            nameof(ShowCover), nameof(ShowTimestamp), nameof(SelectedSwatch), nameof(PreviewWidth), nameof(PreviewHeight), nameof(SelectedImage),
         })
             OnPropertyChanged(name);
     }
@@ -461,37 +487,18 @@ public sealed class LyricCardViewModel : ObservableObject
             Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Render, () =>
             {
                 _previewQueued = false;
-                Preview = Render();
+                if (!_closed)
+                    Preview = Render();
             });
         }
         if (thumbnails)
         {
-            _thumbnailTimer.Stop();
-            _thumbnailTimer.Start();
+            _tilesDirty = true;
+            QueueThumbnails();
         }
     }
 
-    /// <summary>Every style with the chosen lines, square and small, for the gallery.</summary>
-    private void RenderThumbnails()
-    {
-        var content = Content();
-        foreach (var item in StyleItems)
-        {
-            var options = _options.Clone();
-            options.Style = item.Style;
-            options.Format = LyricCardFormat.Square;
-            try
-            {
-                item.Thumbnail = LyricCardRenderer.Render(content, options, scale: 0.16);
-            }
-            catch (Exception ex) when (ex is not OutOfMemoryException)
-            {
-                Log.Debug($"Lyric card thumbnail failed: {ex.GetType().Name}");
-            }
-        }
-    }
-
-    private BitmapSource Render() => LyricCardRenderer.Render(Content(), _options);
+    private BitmapSource Render() => LyricCardRenderer.Render(Content(_options.Style), _options);
 
     private void Copy()
     {
@@ -534,12 +541,27 @@ public sealed class LyricCardViewModel : ObservableObject
         }
     }
 
+    private void ApplyPreset(LyricCardPreset preset)
+    {
+        var options = preset.Options.Clone();
+        var variants = _options.Clone().Variants;
+        if (options.Variants.TryGetValue(options.Style, out var variant))
+            variants[options.Style] = variant;
+        else
+            variants.Remove(options.Style);
+        options.Variants = variants;
+        Apply(options);
+    }
+
     private void SavePreset()
     {
         var name = PresetName.Trim();
         if (name.Length == 0)
             return;
-        var preset = new LyricCardPreset { Name = name[..Math.Min(name.Length, 40)], Options = _options.Clone() };
+        var options = _options.Clone();
+        foreach (var style in options.Variants.Keys.Where(style => style != options.Style).ToArray())
+            options.Variants.Remove(style);
+        var preset = new LyricCardPreset { Name = name[..Math.Min(name.Length, 40)], Options = options };
         if (SavedPresets.FirstOrDefault(p => string.Equals(p.Name, preset.Name, StringComparison.CurrentCultureIgnoreCase)) is { } existing)
             SavedPresets.Remove(existing);
         else if (SavedPresets.Count >= MaxPresets)
@@ -608,8 +630,11 @@ public sealed class LyricCardViewModel : ObservableObject
             image.StreamSource = new MemoryStream(bytes);
             image.EndInit();
             image.Freeze();
-            _cover = image;
-            Rebuild(thumbnails: true);
+            if (!_closed)
+            {
+                _cover = image;
+                Rebuild(thumbnails: true);
+            }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {

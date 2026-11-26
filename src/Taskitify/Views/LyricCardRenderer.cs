@@ -23,14 +23,17 @@ public sealed record LyricCardContent(
     Color Accent,
     Color GradientStart,
     Color GradientEnd,
-    TimeSpan? Duration = null);
+    TimeSpan? Duration = null)
+{
+    public BitmapSource? PersonalImage { get; init; }
+}
 
 /// <summary>
 /// Draws a lyric card at its real pixel size (1080 or 1920 wide, whatever the window). The same
 /// element is shown scaled in the card window and rendered to the PNG, so the preview is the
 /// exported image. Lines that would not fit are set smaller until they do, never cut.
 /// </summary>
-public static class LyricCardRenderer
+public static partial class LyricCardRenderer
 {
     private static readonly Uri FontFolder = new("pack://application:,,,/Taskitify;component/Resources/Fonts/");
     internal static readonly FontFamily Figtree = new(FontFolder, "./#Figtree");
@@ -58,13 +61,7 @@ public static class LyricCardRenderer
     };
 
     /// <summary>The font a style uses for its lines when the user keeps "Auto".</summary>
-    public static LyricCardFont DefaultFont(LyricCardStyle style) => style switch
-    {
-        LyricCardStyle.Polaroid => LyricCardFont.Handwritten,
-        LyricCardStyle.Minimal or LyricCardStyle.Editorial => LyricCardFont.Serif,
-        LyricCardStyle.Retro => LyricCardFont.Mono,
-        _ => LyricCardFont.Modern,
-    };
+    public static LyricCardFont DefaultFont(LyricCardStyle style) => LyricStudioCatalog.Get(style).Font;
 
     public static FrameworkElement Build(LyricCardContent content, LyricCardOptions options)
     {
@@ -133,7 +130,8 @@ public static class LyricCardRenderer
         LyricCardStyle.Vinyl => Vinyl(ctx),
         LyricCardStyle.Karaoke => Karaoke(ctx),
         LyricCardStyle.Retro => Retro(ctx),
-        _ => Classic(ctx),
+        LyricCardStyle.Classic => Classic(ctx),
+        _ => ComposeStudio(ctx),
     };
 
     // ======================= Styles =======================
@@ -1099,14 +1097,21 @@ public static class LyricCardRenderer
             return large * U * format * Math.Clamp(O.FontScale, 0.6, 1.5);
         }
 
-        public StackPanel Lines(LyricCardFont styleDefault, double large, Color color, TextAlignment align, double width)
+        public StackPanel Lines(LyricCardFont styleDefault, double large, Color color, TextAlignment align, double width, Face? fixedFace = null, bool dropInitial = false)
         {
-            var face = Face(styleDefault);
+            var face = fixedFace ?? Face(styleDefault);
             var size = LyricSize(large) * face.SizeFactor;
             var panel = new StackPanel { Width = width };
             foreach (var line in C.Lines)
             {
-                var block = LineBlock(line.Text, face, size, color, align, width);
+                var text = line.Text;
+                if (dropInitial && !string.IsNullOrWhiteSpace(text))
+                {
+                    text = text.TrimStart();
+                    text = text[StringInfo.GetNextTextElement(text).Length..];
+                    dropInitial = false;
+                }
+                var block = LineBlock(text, face, size, color, align, width);
                 if (panel.Children.Count > 0)
                     block.Margin = new Thickness(0, size * 0.14, 0, 0);
                 panel.Children.Add(block);

@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Windows.Data;
 using System.Windows;
 using System.Windows.Input;
 using Taskitify.Infrastructure;
@@ -14,7 +16,11 @@ public partial class LyricCardWindow : Window
         DataContext = vm;
         // Blurs, shadows and a full-size card redraw on every change: on the GPU while open.
         GpuRendering.Acquire();
-        Closed += (_, _) => GpuRendering.Release();
+        Closed += (_, _) =>
+        {
+            vm.Dispose();
+            GpuRendering.Release();
+        };
         PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.Escape)
@@ -37,4 +43,12 @@ public partial class LyricCardWindow : Window
         var offset = LinesScroll.ExtentHeight * line.Index / Math.Max(1, vm.Lines.Count);
         LinesScroll.ScrollToVerticalOffset(Math.Max(0, offset - (LinesScroll.ViewportHeight / 3)));
     }
+}
+
+public sealed class StudioColumnCountConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is double width ? Math.Clamp((int)(width / 114), 3, 5) : 3;
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
 }

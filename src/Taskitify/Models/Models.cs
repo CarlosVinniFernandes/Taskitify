@@ -274,6 +274,38 @@ public enum LyricCardStyle
     Vinyl,
     Karaoke,
     Retro,
+    PhotoBooth,
+    Letter,
+    FilmNegative,
+    Telegram,
+    MuseumExhibit,
+    MsnMessenger,
+    WindowsXpError,
+    FloppyDisk,
+    Terminal,
+    BlueScreen,
+    AimAway,
+    Calculator,
+    Paint98,
+    Orkut,
+    IpodClassic,
+    CassetteTape,
+    ConcertTicket,
+    LyricReceipt,
+    BoardingPass,
+    LibraryCard,
+    MusicPassport,
+    ClassifiedDocument,
+    Dictionary,
+    BookPage,
+    PeriodicTable,
+    Crossword,
+    GameBoy,
+    NintendoDs,
+    PokemonEncounter,
+    RpgInventory,
+    MagicCard,
+    Chess,
 }
 
 public enum LyricCardFormat
@@ -341,7 +373,35 @@ public sealed class LyricCardOptions
     /// <summary>The time of the first chosen line, as in the song.</summary>
     public bool ShowTimestamp { get; set; }
 
-    public LyricCardOptions Clone() => (LyricCardOptions)MemberwiseClone();
+    public Dictionary<LyricCardStyle, LyricCardVariant> Variants { get; set; } = [];
+
+    public LyricCardOptions Clone()
+    {
+        var copy = (LyricCardOptions)MemberwiseClone();
+        copy.Variants = Variants?.ToDictionary(pair => pair.Key, pair => pair.Value.Clone()) ?? [];
+        return copy;
+    }
+}
+
+public enum StudioImageSource
+{
+    Album,
+    Personal,
+    None,
+}
+
+public sealed class LyricCardVariant
+{
+    public Dictionary<string, string> Fields { get; set; } = new(StringComparer.Ordinal);
+    public StudioImageSource ImageSource { get; set; }
+    public string? PhotoPath { get; set; }
+
+    public LyricCardVariant Clone() => new()
+    {
+        Fields = new Dictionary<string, string>(Fields ?? [], StringComparer.Ordinal),
+        ImageSource = ImageSource,
+        PhotoPath = PhotoPath,
+    };
 }
 
 public sealed class LyricCardPreset
