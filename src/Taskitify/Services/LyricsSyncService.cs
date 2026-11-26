@@ -38,7 +38,7 @@ public sealed class LyricsSyncService : IDisposable
         _lyrics = lyrics;
         _settings = settings;
         _lineTimer = new DispatcherTimer(DispatcherPriority.Render);
-        _lineTimer.Tick += (_, _) => Reschedule();
+        _lineTimer.Tick += (_, _) => Reschedule(fromBoundaryTimer: true);
         _retryTimer = new DispatcherTimer();
         _retryTimer.Tick += (_, _) =>
         {
@@ -240,7 +240,7 @@ public sealed class LyricsSyncService : IDisposable
         Log.Info($"Retrying lyrics in {seconds:0} s");
     }
 
-    private void Reschedule()
+    private void Reschedule(bool fromBoundaryTimer = false)
     {
         _lineTimer.Stop();
         if (Timeline is not { Count: > 0 } timeline)
@@ -248,7 +248,7 @@ public sealed class LyricsSyncService : IDisposable
 
         var position = LyricsPosition;
         var index = timeline.IndexAt(position);
-        ChangedAtLineBoundary = _monitor.IsPlaying && index == CurrentIndex + 1 && CurrentIndex >= 0
+        ChangedAtLineBoundary = fromBoundaryTimer && _monitor.IsPlaying && index == CurrentIndex + 1 && CurrentIndex >= 0
             && position - timeline.Lines[index].Time <= TimeSpan.FromMilliseconds(125 * PlaybackRate);
         SetIndex(index);
 

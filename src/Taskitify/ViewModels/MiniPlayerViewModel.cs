@@ -3,6 +3,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Taskitify.Models;
+using Taskitify.Core.Lyrics;
 using Taskitify.Services;
 
 namespace Taskitify.ViewModels;
@@ -31,6 +32,8 @@ public sealed class LyricLineViewModel : ObservableObject
 
     private System.Windows.Media.Effects.Effect? _soften;
     private double _emphasis = 1;
+    private double _motionMilliseconds;
+    public double MotionMilliseconds { get => _motionMilliseconds; set => Set(ref _motionMilliseconds, value); }
     private double _scale = 1;
     private System.Windows.FontWeight _weight = System.Windows.FontWeights.Normal;
 
@@ -52,15 +55,37 @@ public sealed class LyricLineViewModel : ObservableObject
         return blur;
     })];
 
+    private static readonly System.Windows.Media.Effects.BlurEffect DistantBlur = CreateDistantBlur();
+
+    private static System.Windows.Media.Effects.BlurEffect CreateDistantBlur()
+    {
+        var blur = new System.Windows.Media.Effects.BlurEffect { Radius = 0.7 };
+        blur.Freeze();
+        return blur;
+    }
+
     /// <summary>
     /// The emphasis of a line <paramref name="distance"/> lines from the current one (0 = current,
     /// negative = past). With a display typeface (<paramref name="heavy"/>) every line is bold, as
     /// music apps set lyrics, and the current one stands out by brightness and size.
     /// </summary>
-    public void Emphasize(LyricsHighlight highlight, int distance, bool started, bool heavy)
+    public void Emphasize(LyricsHighlight highlight, int distance, bool started, bool heavy, LyricMotionMode motion = LyricMotionMode.Off)
     {
         var current = started && distance == 0;
         var away = Math.Abs(distance);
+        if (motion != LyricMotionMode.Off)
+        {
+            Weight = heavy ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.SemiBold;
+            Scale = current ? 1 : motion == LyricMotionMode.Expressive ? (away <= 1 ? .77 : .74) : .84;
+            Emphasis = current ? 1 : !started ? .5 : highlight switch
+            {
+                LyricsHighlight.Classic => distance < 0 ? .36 : .46,
+                LyricsHighlight.Progressive => away switch { 1 => .57, 2 => .36, _ => .23 },
+                _ => away switch { 1 => .52, 2 => .33, _ => .22 },
+            };
+            Soften = started && away >= 3 && highlight != LyricsHighlight.Classic ? DistantBlur : null;
+            return;
+        }
         var strong = heavy ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.SemiBold;
         var quiet = heavy ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.Normal;
         switch (highlight)
@@ -201,6 +226,13 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     public MiniPlayerStyle Look => _settings.Current.MiniPlayerLook;
 
+    public LyricFlowMode FlowMode => Look.Flow;
+    public LyricMotionMode MotionMode => Look.Motion;
+    public bool ExpressiveMotion => MotionMode == LyricMotionMode.Expressive;
+    public double ScrollMilliseconds { get; private set; }
+    public LyricFill CurrentFill => _sync.Fill(CurrentIndex, FlowMode);
+    public event EventHandler? LyricPositionChanged;
+
     public bool IsCinema => Look.Layout == MiniPlayerLayout.Cinema;
 
     /// <summary>From the right-click menus: vertical or cinema wide.</summary>
@@ -214,7 +246,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     public System.Windows.Point LyricsScaleOrigin => Look.Alignment == LyricsAlignment.Left ? new(0, 0.5) : new(0.5, 0.5);
 
     /// <summary>Room at the sides for a line drawn larger.</summary>
-    public System.Windows.Thickness LyricsLinePadding => Look.Highlight == LyricsHighlight.Expressive
+    public System.Windows.Thickness LyricsLinePadding => MotionMode != LyricMotionMode.Off ? new(4, 7, 5, 7) : Look.Highlight == LyricsHighlight.Expressive
         ? new(Look.Alignment == LyricsAlignment.Left ? 4 : 18, 7, 18, 7) : new(4, DisplayType ? 6 : 5, 4, DisplayType ? 6 : 5);
 
     public FontFamily LyricsFont => Look.Typeface switch
@@ -228,7 +260,11 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     /// <summary>Display typefaces read as lyrics should: larger, heavier; the system font stays as it was.</summary>
     private bool DisplayType => Look.Typeface != LyricsTypeface.System;
 
-    public double LyricsFontSize => Math.Round((DisplayType ? 17 : 14) * Math.Clamp(Look.LyricsScale, 0.8, 1.4) * (IsCinema ? 1.28 : 1)
+    public double MotionLineHeight => MotionMode == LyricMotionMode.Off ? double.NaN : LyricsFontSize * 1.12;
+
+    public double LyricsFontSize => MotionMode != LyricMotionMode.Off
+        ? (IsCinema ? 28 : 23) * Math.Clamp(Look.LyricsScale, .8, 1.4) * (DisplayType ? 1 : .86)
+        : Math.Round((DisplayType ? 17 : 14) * Math.Clamp(Look.LyricsScale, 0.8, 1.4) * (IsCinema ? 1.28 : 1)
         * (Look.Typeface == LyricsTypeface.Serif ? 1.06 : 1), 1);
 
     /// <summary>The song's title in the same type as the lyrics.</summary>
@@ -366,13 +402,14 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
             nameof(ShowCover), nameof(ShowTitle), nameof(ShowArtist), nameof(ShowHeader), nameof(ShowShuffle), nameof(ShowPrevious),
             nameof(ShowPlayPause), nameof(ShowNext), nameof(ShowRepeat), nameof(ShowVolume), nameof(ShowLike), nameof(ShowControls), nameof(ShowProgress),
             nameof(ShowTransport), nameof(Look), nameof(IsCinema), nameof(LyricsTextAlignment), nameof(LyricsScaleOrigin), nameof(LyricsLinePadding),
-            nameof(LyricsFont), nameof(LyricsFontSize), nameof(TitleFont), nameof(TitleFontSize), nameof(TitleWeight),
+            nameof(LyricsFont), nameof(LyricsFontSize), nameof(MotionLineHeight), nameof(ExpressiveMotion), nameof(TitleFont), nameof(TitleFontSize), nameof(TitleWeight),
             nameof(WindowWidth), nameof(IsShuffleActive), nameof(IsRepeatActive), nameof(RepeatGlyph),
         })
             OnPropertyChanged(name);
         if (ShowVolume)
             Volume.Refresh();
         UpdateCurrentLine();
+        LyricPositionChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnPlaybackChanged(object? sender, EventArgs e)
@@ -387,9 +424,16 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CanSeek));
         CommandManager.InvalidateRequerySuggested();
         UpdateProgress();
+        if (!IsPlaying)
+            UpdateCurrentLine();
+        LyricPositionChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private void OnTimelineChanged(object? sender, EventArgs e) => UpdateProgress();
+    private void OnTimelineChanged(object? sender, EventArgs e)
+    {
+        UpdateProgress();
+        LyricPositionChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     private void OnThumbnailChanged(object? sender, EventArgs e)
     {
@@ -399,7 +443,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     private void OnLyricsChanged(object? sender, EventArgs e) => RebuildLines();
 
-    private void OnCurrentLineChanged(object? sender, EventArgs e) => UpdateCurrentLine();
+    private void OnCurrentLineChanged(object? sender, EventArgs e) => UpdateCurrentLine(_sync.ChangedAtLineBoundary);
 
     private void RefreshAll()
     {
@@ -436,15 +480,23 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         UpdateCurrentLine();
     }
 
-    private void UpdateCurrentLine()
+    private void UpdateCurrentLine(bool natural = false)
     {
         var index = _sync.CurrentIndex;
         var highlight = Look.Highlight;
+        var mode = MotionMode;
+        var maximum = mode == LyricMotionMode.Expressive ? 410 : 330;
+        var remaining = (_sync.NextChangeAfterCurrent - _sync.LyricsPosition)?.TotalMilliseconds / _sync.PlaybackRate;
+        ScrollMilliseconds = natural && index != CurrentIndex && _settings.Current.EnableAnimations && System.Windows.SystemParameters.ClientAreaAnimation
+            ? mode == LyricMotionMode.Off ? 320 : Math.Clamp((remaining ?? maximum * 1.35) * .74, 32, maximum)
+            : 0;
         for (var i = 0; i < Lines.Count; i++)
         {
+            var animateLine = mode != LyricMotionMode.Off && Math.Abs(i - index) <= 3;
+            Lines[i].MotionMilliseconds = animateLine ? ScrollMilliseconds : 0;
             Lines[i].IsCurrent = i == index;
             Lines[i].IsPast = i < index;
-            Lines[i].Emphasize(highlight, i - Math.Max(index, 0), started: index >= 0, heavy: DisplayType);
+            Lines[i].Emphasize(highlight, i - Math.Max(index, 0), started: index >= 0, heavy: DisplayType, motion: mode);
         }
         CurrentIndex = index;
         CurrentLineChanged?.Invoke(this, EventArgs.Empty);

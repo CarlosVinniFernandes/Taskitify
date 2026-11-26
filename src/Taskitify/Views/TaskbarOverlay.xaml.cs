@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Taskitify.Infrastructure;
+using Taskitify.Core.Lyrics;
 using Taskitify.ViewModels;
 
 namespace Taskitify.Views;
@@ -24,6 +25,8 @@ public partial class TaskbarOverlay : Window
     private readonly OutsideClickWatcher _outsideClicks;
     private TextBlock _front;
     private TextBlock _back;
+    private readonly LyricInkDriver _lyricInk;
+    private bool _inkQueued;
     private double _textLift;
     private int _resizeEdge; // -1 left, 1 right, 0 no side drag
     private int _resizeStartX; // physical pixels
@@ -36,6 +39,12 @@ public partial class TaskbarOverlay : Window
         _front = LineA;
         _back = LineB;
         _front.Text = vm.MainText;
+        _lyricInk = new LyricInkDriver(TimeSpan.FromMilliseconds(50), () =>
+            IsVisible && LineHost.IsVisible && _vm.UsesLyricFlow
+                ? (_front, _vm.CurrentFill, _vm.IsPlaying)
+                : (null, LyricFill.Full, false));
+        vm.LyricPositionChanged += OnLyricPositionChanged;
+        LineHost.IsVisibleChanged += (_, _) => QueueLyricInk();
         vm.PropertyChanged += OnViewModelChanged;
         // The wheel over the button (or the open slider) changes the volume without opening anything.
         MouseWheelEventHandler wheel = (_, e) =>
@@ -52,7 +61,12 @@ public partial class TaskbarOverlay : Window
         // flyouts stay open until a click outside both them and their button, seen by a
         // low-level mouse hook that only runs while one is open.
         _outsideClicks = new OutsideClickWatcher((x, y) => Dispatcher.BeginInvoke(() => CloseFlyoutsOutside(x, y)));
-        Closed += (_, _) => _outsideClicks.Dispose();
+        Closed += (_, _) =>
+        {
+            _outsideClicks.Dispose();
+            vm.LyricPositionChanged -= OnLyricPositionChanged;
+            _lyricInk.Invalidate();
+        };
         _vm.Volume.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName != nameof(VolumeControl.IsOpen)) return;
@@ -68,9 +82,39 @@ public partial class TaskbarOverlay : Window
         };
         LineHost.SizeChanged += (_, _) => UpdateMarquee();
         TextHost.SizeChanged += (_, _) => UpdateTextLift();
-        IsVisibleChanged += (_, _) => UpdateMarquee();
+        IsVisibleChanged += (_, _) =>
+        {
+            UpdateMarquee();
+            QueueLyricInk();
+        };
         ApplyBackground(animate: false);
         UpdateLineLayout();
+    }
+
+    private void OnLyricPositionChanged(object? sender, EventArgs e) => QueueLyricInk();
+
+    private void QueueLyricInk()
+    {
+        if (!IsVisible || !LineHost.IsVisible || !_vm.UsesLyricFlow)
+        {
+            _lyricInk.Invalidate();
+            return;
+        }
+        if (_inkQueued)
+            return;
+        _inkQueued = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+        {
+            _inkQueued = false;
+            _lyricInk.Refresh();
+        });
+    }
+
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        _lyricInk.Invalidate();
+        QueueLyricInk();
     }
 
     private void UpdateFlyoutWatch()
@@ -233,7 +277,9 @@ public partial class TaskbarOverlay : Window
         switch (e.PropertyName)
         {
             case nameof(TaskbarViewModel.MainText):
+                _lyricInk.Invalidate();
                 ShowLine(_vm.MainText);
+                QueueLyricInk();
                 break;
             case nameof(TaskbarViewModel.GradientStart):
             case nameof(TaskbarViewModel.GradientEnd):
@@ -255,7 +301,9 @@ public partial class TaskbarOverlay : Window
                 break;
             case "": // settings changed: everything may differ
                 ApplyBackground(animate: false);
+                _lyricInk.Invalidate();
                 UpdateLineLayout();
+                QueueLyricInk();
                 break;
         }
     }
@@ -330,7 +378,7 @@ public partial class TaskbarOverlay : Window
             return;
 
         StopMarquee(_front);
-        if (!_vm.EnableAnimations || !IsVisible)
+        if (!_vm.EnableAnimations || !SystemParameters.ClientAreaAnimation || !IsVisible)
         {
             _front.BeginAnimation(OpacityProperty, null);
             _back.BeginAnimation(OpacityProperty, null);

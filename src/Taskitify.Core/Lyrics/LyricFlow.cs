@@ -24,7 +24,7 @@ public sealed partial class LyricFlow
     private readonly Phrase[] _phrases;
 
     private readonly record struct Point(double Seconds, int Offset);
-    private readonly record struct Phrase(double Start, double LinearEnd, double AdaptiveEnd, Point[] Estimated,
+    private readonly record struct Phrase(double Start, double LinearEnd, Point[] Estimated,
         Point[]? Actual, bool CanEstimate);
 
     [GeneratedRegex(@"\S+")]
@@ -67,7 +67,7 @@ public sealed partial class LyricFlow
             if (adaptive > Math.Max(4, expected * 2.2))
                 adaptive = expected;
 
-            _phrases[i] = new Phrase(start, start + linear, start + adaptive, Estimate(words[i], units[i], adaptive),
+            _phrases[i] = new Phrase(start, start + linear, Estimate(words[i], units[i], adaptive),
                 ReadAnchors(line, window), units[i] > 0 && (window > 0 || typical is not null));
         }
     }
@@ -92,20 +92,6 @@ public sealed partial class LyricFlow
             return new LyricFill(Math.Clamp(elapsed / (phrase.LinearEnd - phrase.Start), 0, 1), false, false);
         }
         return Interpolate(phrase.Estimated, elapsed);
-    }
-
-    public TimeSpan? End(int index, LyricFlowMode mode)
-    {
-        if ((uint)index >= (uint)_phrases.Length)
-            return null;
-        var phrase = _phrases[index];
-        return mode switch
-        {
-            LyricFlowMode.Linear => TimeSpan.FromSeconds(phrase.LinearEnd),
-            LyricFlowMode.Automatic when phrase.Actual is { } actual => TimeSpan.FromSeconds(phrase.Start + actual[^1].Seconds),
-            LyricFlowMode.Adaptive or LyricFlowMode.Automatic => TimeSpan.FromSeconds(phrase.AdaptiveEnd),
-            _ => null,
-        };
     }
 
     private static LyricFill Interpolate(Point[] points, double elapsed)

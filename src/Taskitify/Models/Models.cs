@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Taskitify.Core.Lyrics;
 
 namespace Taskitify.Models;
 
@@ -163,6 +164,8 @@ public sealed class AppSettings
     public bool MarqueeLongText { get; set; }
 
     public bool EnableAnimations { get; set; } = true;
+
+    public LyricFlowMode TaskbarLyricFlow { get; set; }
 
     public double FontSize { get; set; } = 15;
 
@@ -369,6 +372,13 @@ public enum MiniPlayerBackground
     BlurredCover,
 }
 
+public enum LyricMotionMode
+{
+    Off,
+    Smooth,
+    Expressive,
+}
+
 public enum LyricsHighlight
 {
     /// <summary>Lines the same size, the current one brighter.</summary>
@@ -418,6 +428,10 @@ public sealed class MiniPlayerStyle
     public MiniPlayerBackground Background { get; set; } = MiniPlayerBackground.Default;
 
     public LyricsHighlight Highlight { get; set; } = LyricsHighlight.Classic;
+
+    public LyricFlowMode Flow { get; set; }
+
+    public LyricMotionMode Motion { get; set; }
 
     public LyricsTypeface Typeface { get; set; } = LyricsTypeface.Modern;
 

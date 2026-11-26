@@ -113,18 +113,19 @@
                                         <DataTemplate>
                                             <!-- The emphasis (opacity, scale, weight) comes from the highlight style; scaling is a render
                                                  transform, so a growing line never moves the others or resizes the window. -->
-                                            <TextBlock Text="{Binding Text}" TextWrapping="Wrap" Cursor="Hand"
+                                            <local:LyricMotionText Text="{Binding Text}" TextWrapping="Wrap" Cursor="Hand"
+                                                       LineStackingStrategy="BlockLineHeight"
+                                                       LineHeight="{Binding DataContext.MotionLineHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       Expressive="{Binding DataContext.ExpressiveMotion, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       TransitionMilliseconds="{Binding MotionMilliseconds}"
                                                        TextAlignment="{Binding DataContext.LyricsTextAlignment, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                        FontFamily="{Binding DataContext.LyricsFont, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                        FontSize="{Binding DataContext.LyricsFontSize, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                        Padding="{Binding DataContext.LyricsLinePadding, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                        RenderTransformOrigin="{Binding DataContext.LyricsScaleOrigin, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                       Foreground="{DynamicResource TextPrimaryBrush}" Opacity="{Binding Emphasis}"
-                                                       FontWeight="{Binding Weight}" Effect="{Binding Soften}" MouseLeftButtonUp="OnLyricLineClicked">
-                                                <TextBlock.RenderTransform>
-                                                    <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}" />
-                                                </TextBlock.RenderTransform>
-                                            </TextBlock>
+                                                       Foreground="{DynamicResource TextPrimaryBrush}" TargetOpacity="{Binding Emphasis}"
+                                                       FontWeight="{Binding Weight}" Effect="{Binding Soften}" TargetScale="{Binding Scale}"
+                                                       MouseLeftButtonUp="OnLyricLineClicked" />
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>

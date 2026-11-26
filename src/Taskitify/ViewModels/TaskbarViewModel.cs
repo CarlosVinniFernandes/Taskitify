@@ -3,6 +3,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Taskitify.Models;
+using Taskitify.Core.Lyrics;
 using Taskitify.Services;
 
 namespace Taskitify.ViewModels;
@@ -83,6 +84,12 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
     public ImageSource? Cover { get => _cover; private set => Set(ref _cover, value); }
 
     private AppSettings S => _settings.Current;
+
+    public bool UsesLyricFlow => S.TaskbarLyricFlow != LyricFlowMode.Off && !IsCompact && ShowMainText
+        && S.PrimaryText == PrimaryText.Lyrics && _sync.CurrentLine is { } line && !string.IsNullOrWhiteSpace(line.Text);
+
+    public LyricFill CurrentFill => _sync.Fill(_sync.CurrentIndex, S.TaskbarLyricFlow);
+    public event EventHandler? LyricPositionChanged;
 
     /// <summary>
     /// Paused with "minimize" chosen: a compact player (cover, title, play button) the size of
@@ -232,7 +239,11 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
         _settings.Changed -= OnSettingsChanged;
     }
 
-    private void OnChanged(object? sender, EventArgs e) => Refresh();
+    private void OnChanged(object? sender, EventArgs e)
+    {
+        Refresh();
+        LyricPositionChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     private void OnThumbnailChanged(object? sender, EventArgs e)
     {
@@ -262,9 +273,14 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowRepeat));
         UpdateProgress();
         UpdateProgressTimer();
+        LyricPositionChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private void OnTimelineChanged(object? sender, EventArgs e) => UpdateProgress();
+    private void OnTimelineChanged(object? sender, EventArgs e)
+    {
+        UpdateProgress();
+        LyricPositionChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     private void OnSettingsChanged(object? sender, EventArgs e)
     {
@@ -274,6 +290,7 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
         ApplyForeground();
         UpdateProgressTimer();
         Refresh();
+        LyricPositionChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void UpdateProgressTimer()

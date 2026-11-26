@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using Taskitify.Core.Imaging;
 using Taskitify.Core.Lyrics;
 using Taskitify.Infrastructure;
@@ -175,6 +176,7 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
     {
         _manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
         _manager.SessionsChanged += OnSessionsChanged;
+        SystemEvents.PowerModeChanged += OnPowerModeChanged;
         await RefreshSessionAsync();
     }
 
@@ -260,8 +262,30 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
         }
     }
 
+    private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
+    {
+        if (e.Mode is not (PowerModes.Resume or PowerModes.Suspend))
+            return;
+        _dispatcher.InvokeAsync(() =>
+        {
+            if (_session is null)
+                return;
+            if (e.Mode == PowerModes.Suspend)
+            {
+                _clock.SetPlaying(false);
+                return;
+            }
+
+            ReadPlaybackInfo();
+            _clock.SetPlaying(Status == PlaybackState.Playing);
+            ReadTimeline();
+            TimelineChanged?.Invoke(this, EventArgs.Empty);
+        });
+    }
+
     public void Dispose()
     {
+        SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         _correctionTimer.Stop();
         _coverRetry.Stop();
         if (_manager is not null)

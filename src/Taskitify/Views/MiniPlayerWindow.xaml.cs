@@ -8,6 +8,7 @@ using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Taskitify.Core.Layout;
+using Taskitify.Core.Lyrics;
 using Taskitify.Models;
 using Taskitify.Infrastructure;
 using Taskitify.ViewModels;
@@ -29,6 +30,11 @@ public partial class MiniPlayerWindow : Window
     private PixelRect _anchor;
     // The user scrolled the lyrics: they stay put until "sync", a line click, a new song or reopening.
     private bool _browsing;
+    private bool _lyricsUpdateQueued;
+    private bool _animateLyrics;
+    private bool _inkUpdateQueued;
+    private readonly LyricInkDriver _lyricInk;
+    private TextBlock? _activeText;
 
     public MiniPlayerWindow(MiniPlayerViewModel vm, Func<bool> animationsEnabled, Func<bool> useGradient)
     {
@@ -37,6 +43,9 @@ public partial class MiniPlayerWindow : Window
         _animationsEnabled = animationsEnabled;
         _useGradient = useGradient;
         DataContext = vm;
+        _lyricInk = new LyricInkDriver(TimeSpan.FromMilliseconds(1000d / 30), SampleLyricInk);
+        vm.LyricPositionChanged += (_, _) => QueueLyricInk();
+        LyricsViewport.SizeChanged += (_, _) => QueueLyrics(animate: false);
 
         _outsideClicks = new OutsideClickWatcher((x, y) =>
         {
@@ -50,12 +59,17 @@ public partial class MiniPlayerWindow : Window
         Closed += (_, _) => _outsideClicks.Dispose();
 
         vm.PropertyChanged += OnViewModelChanged;
-        vm.CurrentLineChanged += (_, _) => Dispatcher.InvokeAsync(() => ScrollToCurrent(animate: true), DispatcherPriority.Loaded);
-        vm.Lines.CollectionChanged += (_, _) => Dispatcher.InvokeAsync(() =>
+        vm.CurrentLineChanged += (_, _) => QueueLyrics(vm.ScrollMilliseconds > 0);
+        vm.Lines.CollectionChanged += (_, change) =>
         {
-            SetBrowsing(false);
-            ScrollToCurrent(animate: false);
-        }, DispatcherPriority.Loaded);
+            if (change.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+            {
+                _activeText = null;
+                _lyricInk.Invalidate();
+                SetBrowsing(false);
+            }
+            QueueLyrics(animate: false);
+        };
         LyricsViewport.PreviewMouseWheel += OnLyricsWheel;
         // The wheel over the button (or the open slider) changes the volume without opening anything.
         MouseWheelEventHandler wheel = (_, e) =>
@@ -88,8 +102,18 @@ public partial class MiniPlayerWindow : Window
         // until the app restarts: the saving only lasts until the mini player is first opened.
         IsVisibleChanged += (_, _) =>
         {
-            if (IsVisible) GpuRendering.Acquire();
-            else GpuRendering.Release();
+            if (IsVisible)
+            {
+                GpuRendering.Acquire();
+                QueueLyrics(animate: false);
+            }
+            else
+            {
+                _lyricInk.Invalidate();
+                _activeText = null;
+                LyricsOffset.BeginAnimation(TranslateTransform.YProperty, null);
+                GpuRendering.Release();
+            }
         };
     }
 
@@ -240,7 +264,7 @@ public partial class MiniPlayerWindow : Window
         if (wasVisible)
             return;
 
-        if (_animationsEnabled())
+        if (_animationsEnabled() && SystemParameters.ClientAreaAnimation)
         {
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
             BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(160)));
@@ -329,7 +353,8 @@ public partial class MiniPlayerWindow : Window
                 ApplyControlsStyle();
                 UpdatePlayGlyph();
                 ApplyBackground();
-                Dispatcher.InvokeAsync(() => ScrollToCurrent(animate: false), DispatcherPriority.Loaded);
+                _lyricInk.Invalidate();
+                QueueLyrics(animate: false);
                 break;
             case nameof(MiniPlayerViewModel.WindowWidth):
                 // Not a XAML binding: the window writes its HWND's size to Width, which drops one.
@@ -338,6 +363,7 @@ public partial class MiniPlayerWindow : Window
             case nameof(MiniPlayerViewModel.StatusMessage):
                 StatusText.Visibility = string.IsNullOrEmpty(_vm.StatusMessage) ? Visibility.Collapsed : Visibility.Visible;
                 LyricsList.Visibility = string.IsNullOrEmpty(_vm.StatusMessage) ? Visibility.Visible : Visibility.Collapsed;
+                QueueLyrics(animate: false);
                 break;
         }
     }
@@ -528,6 +554,7 @@ public partial class MiniPlayerWindow : Window
             // Jumping to a line follows the song again from there.
             SetBrowsing(false);
             _vm.SeekToLineCommand.Execute(line);
+            QueueLyrics(animate: false);
         }
     }
 
@@ -556,6 +583,50 @@ public partial class MiniPlayerWindow : Window
     {
         _browsing = browsing;
         ResyncButton.Visibility = browsing ? Visibility.Visible : Visibility.Collapsed;
+        if (browsing)
+            _lyricInk.Invalidate();
+    }
+
+    private void QueueLyrics(bool animate)
+    {
+        if (!IsVisible)
+            return;
+        _animateLyrics = animate;
+        if (_lyricsUpdateQueued)
+            return;
+        _lyricsUpdateQueued = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+        {
+            _lyricsUpdateQueued = false;
+            ScrollToCurrent(_animateLyrics);
+        });
+    }
+
+    private void QueueLyricInk()
+    {
+        if (!IsVisible || _vm.FlowMode == LyricFlowMode.Off || _inkUpdateQueued)
+            return;
+        _inkUpdateQueued = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+        {
+            _inkUpdateQueued = false;
+            _lyricInk.Refresh();
+        });
+    }
+
+    private (TextBlock?, LyricFill, bool) SampleLyricInk()
+    {
+        if (!IsVisible || _browsing || _vm.FlowMode == LyricFlowMode.Off
+            || _activeText?.DataContext is not LyricLineViewModel line || line.Index != _vm.CurrentIndex)
+            return (null, LyricFill.Full, false);
+        return (_activeText, _vm.CurrentFill, _vm.IsPlaying);
+    }
+
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        _lyricInk.Invalidate();
+        QueueLyrics(animate: false);
     }
 
     /// <summary>Translate the list so the current line is vertically centred in the viewport.</summary>
@@ -576,15 +647,15 @@ public partial class MiniPlayerWindow : Window
             ? (viewport / 2) - (container.ActualHeight / 2) + container.ActualHeight // first line just below centre
             : (viewport / 2) - top - (container.ActualHeight / 2);
 
-        if (animate && _animationsEnabled())
-        {
-            LyricsOffset.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty,
-                new DoubleAnimation(target, TimeSpan.FromMilliseconds(320)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-        }
+        var duration = animate && _animationsEnabled() && SystemParameters.ClientAreaAnimation
+            ? (_vm.ScrollMilliseconds > 0 ? _vm.ScrollMilliseconds : 240)
+            : 0;
+        LyricMotionText.Tween(LyricsOffset, TranslateTransform.YProperty, target, duration, _vm.ExpressiveMotion);
+        if (_vm.FlowMode != LyricFlowMode.Off && index >= 0 && container is ContentPresenter presenter
+            && VisualTreeHelper.GetChildrenCount(presenter) > 0)
+            _activeText = VisualTreeHelper.GetChild(presenter, 0) as TextBlock;
         else
-        {
-            LyricsOffset.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty, null);
-            LyricsOffset.Y = target;
-        }
+            _activeText = null;
+        _lyricInk.Refresh();
     }
 }
