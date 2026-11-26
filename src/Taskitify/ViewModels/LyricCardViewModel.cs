@@ -356,7 +356,14 @@ public sealed class LyricCardViewModel : ObservableObject
             // dark range reserved for backgrounds, preserving the hue and neutral covers.
             var end = _source.PaletteEnd;
             var (h, s, l) = AlbumPalette.ToHsl(new Rgb(end.R, end.G, end.B));
-            var selection = AlbumPalette.FromHsl(h, Math.Min(s, 0.78), Math.Max(s < 0.13 ? 0.32 : 0.41, l));
+            var lightness = Math.Max(s < 0.13 ? 0.32 : 0.41, l);
+            var saturation = Math.Min(s, 0.78);
+            var selection = AlbumPalette.FromHsl(h, saturation, lightness);
+            while (selection.ContrastWithWhite < 4.5 && lightness > 0.08)
+            {
+                lightness -= 0.02;
+                selection = AlbumPalette.FromHsl(h, saturation, lightness);
+            }
             return Color.FromRgb(selection.R, selection.G, selection.B);
         }
     }
