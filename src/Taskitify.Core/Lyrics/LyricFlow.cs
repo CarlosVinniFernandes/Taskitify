@@ -24,7 +24,7 @@ public sealed partial class LyricFlow
     private readonly Phrase[] _phrases;
 
     private readonly record struct Point(double Seconds, int Offset);
-    private readonly record struct Phrase(double Start, double LinearEnd, Point[] Estimated,
+    private readonly record struct Phrase(TimeSpan Start, double LinearDuration, Point[] Estimated,
         Point[]? Actual, bool CanEstimate);
 
     [GeneratedRegex(@"\S+")]
@@ -38,12 +38,12 @@ public sealed partial class LyricFlow
         var units = words.Select(parts => parts.Sum(word => word.Weight)).ToArray();
         var windows = new double[lines.Count];
         var rate = new double[lines.Count];
-        var next = duration?.TotalSeconds ?? 0;
+        var next = duration ?? TimeSpan.Zero;
         for (var i = lines.Count - 1; i >= 0; i--)
         {
-            var start = lines[i].Time.TotalSeconds;
+            var start = lines[i].Time;
             // Earlier copies at the same timestamp never become active.
-            windows[i] = next > start ? next - start : 0;
+            windows[i] = next > start ? (next - start).TotalSeconds : 0;
             var candidate = units[i] > 0 ? windows[i] / units[i] : 0;
             if (candidate is >= 0.13 and <= 0.95 && windows[i] <= 10 && i + 1 < lines.Count)
                 rate[i] = candidate;
@@ -53,7 +53,6 @@ public sealed partial class LyricFlow
         for (var i = 0; i < lines.Count; i++)
         {
             var line = lines[i];
-            var start = line.Time.TotalSeconds;
             // Leave the line's own duration out so a silence cannot establish its own expected tempo.
             var first = Math.Max(0, i - 4);
             var last = Math.Min(rate.Length, i + 5);
@@ -67,7 +66,7 @@ public sealed partial class LyricFlow
             if (adaptive > Math.Max(4, expected * 2.2))
                 adaptive = expected;
 
-            _phrases[i] = new Phrase(start, start + linear, Estimate(words[i], units[i], adaptive),
+            _phrases[i] = new Phrase(line.Time, linear, Estimate(words[i], units[i], adaptive),
                 ReadAnchors(line, window), units[i] > 0 && (window > 0 || typical is not null));
         }
     }
@@ -78,7 +77,7 @@ public sealed partial class LyricFlow
             return LyricFill.Full;
 
         var phrase = _phrases[index];
-        var elapsed = position.TotalSeconds - phrase.Start;
+        var elapsed = (position - phrase.Start).TotalSeconds;
         if (phrase.Estimated.Length == 0)
             return LyricFill.Full;
         if (mode == LyricFlowMode.Automatic && phrase.Actual is { } actual)
@@ -87,9 +86,9 @@ public sealed partial class LyricFlow
             return LyricFill.Full;
         if (mode == LyricFlowMode.Linear)
         {
-            if (position.TotalSeconds >= phrase.LinearEnd)
+            if (elapsed >= phrase.LinearDuration)
                 return LyricFill.Full;
-            return new LyricFill(Math.Clamp(elapsed / (phrase.LinearEnd - phrase.Start), 0, 1), false, false);
+            return new LyricFill(Math.Clamp(elapsed / phrase.LinearDuration, 0, 1), false, false);
         }
         return Interpolate(phrase.Estimated, elapsed);
     }

@@ -90,6 +90,24 @@ public class LyricFlowTests
     }
 
     [Fact]
+    public void Automatic_preserves_a_real_internal_syllable_anchor_and_estimates_missing_end()
+    {
+        var flow = Flow("[00:01]<00:01>rea<00:02.70>lly\n[00:09]following");
+        var anchor = flow.At(0, At(2.7), LyricFlowMode.Automatic);
+        Assert.True(anchor.ByText);
+        Assert.Equal(3, anchor.Value);
+        Assert.True(flow.At(0, At(5), LyricFlowMode.Automatic).IsComplete);
+        Assert.False(flow.At(0, At(5), LyricFlowMode.Linear).IsComplete);
+    }
+
+    [Fact]
+    public void Invalid_grapheme_boundary_cannot_be_used_as_a_real_anchor()
+    {
+        var flow = Flow("[00:01]<00:01>e<00:02>\u0301lan\n[00:09]Another line");
+        Assert.Equal(flow.At(0, At(3), LyricFlowMode.Adaptive), flow.At(0, At(3), LyricFlowMode.Automatic));
+    }
+
+    [Fact]
     public void Sampling_uses_the_same_clock_after_pause_rate_change_seek_and_offset()
     {
         var now = DateTimeOffset.UnixEpoch;

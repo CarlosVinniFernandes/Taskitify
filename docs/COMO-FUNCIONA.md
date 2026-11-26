@@ -140,3 +140,5 @@ Verificado na máquina de desenvolvimento (Windows 11 build 26200, 1920×1200 a 
 - Spotify da Microsoft Store
 - Reinício do Explorer com o app aberto
 - Jogos em tela cheia exclusiva
+
+Para as opções de preenchimento e transição entre versos, consulte [Lyric Flow e Lyric Motion](LYRIC-MOTION.pt-BR.md).

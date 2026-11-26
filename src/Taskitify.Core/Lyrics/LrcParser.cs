@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Taskitify.Core.Lyrics;
@@ -96,12 +97,38 @@ public static partial class LrcParser
             removed += match.Length;
             return string.Empty;
         });
-        var text = Whitespace().Replace(raw, " ").Trim();
         if (invalid || found.Count == 0)
-            return (text, null);
+            return (Whitespace().Replace(raw, " ").Trim(), null);
 
-        return (text, found.Select(anchor => new LyricAnchor(anchor.Time,
-            text.Length - Whitespace().Replace(raw[anchor.Offset..], " ").Trim().Length)).ToArray());
+        var text = new StringBuilder(raw.Length);
+        var anchors = new LyricAnchor[found.Count];
+        var cursor = 0;
+        var pendingSpace = false;
+        for (var i = 0; i < raw.Length; i++)
+        {
+            if (char.IsWhiteSpace(raw[i]))
+            {
+                pendingSpace = text.Length > 0;
+                continue;
+            }
+            if (pendingSpace)
+            {
+                text.Append(' ');
+                pendingSpace = false;
+            }
+            while (cursor < found.Count && found[cursor].Offset <= i)
+            {
+                anchors[cursor] = new LyricAnchor(found[cursor].Time, text.Length);
+                cursor++;
+            }
+            text.Append(raw[i]);
+        }
+        while (cursor < found.Count)
+        {
+            anchors[cursor] = new LyricAnchor(found[cursor].Time, text.Length);
+            cursor++;
+        }
+        return (text.ToString(), anchors);
     }
 
     private static TimeSpan ToTime(Match m)
