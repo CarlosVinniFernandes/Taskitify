@@ -44,8 +44,9 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
     // publishes a song to Windows without one, usually right when its lyrics are looked up.
     private readonly ConcurrentDictionary<string, string> _covers = new();
 
-    // The Spotify track each recent search matched, by query (liking a song needs its id).
-    private readonly ConcurrentDictionary<string, string> _trackIds = new();
+    // The Spotify tracks each recent search matched, best first, by query (liking a song needs
+    // its id; the same song is often on an album, a single and a compilation).
+    private readonly ConcurrentDictionary<string, IReadOnlyList<string>> _trackIds = new();
 
     // A captured search Spotify rejected; skipped until the web player captures another one.
     private SpotifySearchTemplate? _staleTemplate;
@@ -136,7 +137,7 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
         if (matching.Select(t => t.CoverUrl).FirstOrDefault(url => url is not null) is { } cover)
             RememberCover(LyricsCache.KeyFor(query), cover);
         if (matching.Count > 0)
-            RememberTrackId(LyricsCache.KeyFor(query), matching[0].Id);
+            RememberTrackIds(LyricsCache.KeyFor(query), matching.Select(t => t.Id));
 
         LrclibRecord? plain = null;
         var renewed = false;
@@ -211,39 +212,41 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
         }
     }
 
+    public const int MaxTrackIds = 5;
+
     /// <summary>
-    /// The Spotify track id of the song: the one a lookup of it already matched, else Spotify's
-    /// search. With <paramref name="wake"/> false the web player is never opened (only a still
-    /// valid token and the captured search are used); with it true, as for a click, it may be.
-    /// Null when signed out or when no Spotify track matches.
+    /// The Spotify tracks that are this song, best match first (up to <see cref="MaxTrackIds"/>):
+    /// the ones a lookup of it already matched, else Spotify's search. With <paramref name="wake"/>
+    /// false the web player is never opened (only a still valid token and the captured search are
+    /// used); with it true it may be. Empty when signed out or when no Spotify track matches.
     /// </summary>
-    public async Task<string?> FindTrackIdAsync(TrackQuery query, bool wake, CancellationToken ct)
+    public async Task<IReadOnlyList<string>> FindTrackIdsAsync(TrackQuery query, bool wake, CancellationToken ct)
     {
         var key = LyricsCache.KeyFor(query);
         if (_trackIds.TryGetValue(key, out var known))
             return known;
         var credentials = wake ? await session.GetCredentialsAsync(query, ct).ConfigureAwait(false) : session.ValidCredentials;
         if (credentials is null)
-            return null;
+            return [];
         var term = query.Title + " " + query.Artist;
         var (tracks, _) = await ReplaySearchAsync(term, credentials, null, ct).ConfigureAwait(false);
-        var found = Best(tracks ?? []);
-        if (found is null && wake)
+        var found = Matching(tracks ?? []);
+        if (found.Count == 0 && wake)
         {
-            var searched = await session.SearchAsync(query, ct).ConfigureAwait(false);
-            found = Best(searched);
-            if (found is null && await session.GetCredentialsAsync(null, ct).ConfigureAwait(false) is { } fresh)
-                found = Best((await ReplaySearchAsync(term, fresh, null, ct).ConfigureAwait(false)).Tracks ?? []);
+            found = Matching(await session.SearchAsync(query, ct).ConfigureAwait(false));
+            if (await session.GetCredentialsAsync(null, ct).ConfigureAwait(false) is { } fresh
+                && (await ReplaySearchAsync(term, fresh, null, ct).ConfigureAwait(false)).Tracks is { } again)
+                found = Matching(again.Concat(found));
         }
-        if (found is null)
-            return null;
-        RememberTrackId(key, found.Id);
-        if (found.CoverUrl is { } cover)
+        if (found.Count == 0)
+            return [];
+        RememberTrackIds(key, found.Select(t => t.Id));
+        if (found[0].CoverUrl is { } cover)
             RememberCover(key, cover);
-        return found.Id;
+        return _trackIds[key];
 
-        SpotifyTrack? Best(IEnumerable<SpotifyTrack> candidates) => candidates.Where(t => TrackMatcher.IsMatch(query, t.Metadata))
-            .OrderBy(t => TrackMatcher.DurationDistance(query, t.Metadata)).FirstOrDefault();
+        List<SpotifyTrack> Matching(IEnumerable<SpotifyTrack> candidates) => candidates.Where(t => TrackMatcher.IsMatch(query, t.Metadata))
+            .OrderBy(t => TrackMatcher.DurationDistance(query, t.Metadata)).DistinctBy(t => t.Id).ToList();
     }
 
     /// <summary>
@@ -275,11 +278,11 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
         return null;
     }
 
-    private void RememberTrackId(string key, string id)
+    private void RememberTrackIds(string key, IEnumerable<string> ids)
     {
         if (_trackIds.Count >= MaxCovers)
             _trackIds.Clear();
-        _trackIds[key] = id;
+        _trackIds[key] = ids.Distinct().Take(MaxTrackIds).ToList();
     }
 
     private void RememberCover(string key, string url)

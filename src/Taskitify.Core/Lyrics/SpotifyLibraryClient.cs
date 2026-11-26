@@ -41,22 +41,35 @@ public sealed partial class SpotifyLibraryClient(HttpClient http, Action<string>
     }
 
     /// <summary>Whether the track is in Liked Songs.</summary>
-    public async Task<bool> IsSavedAsync(string trackId, SpotifyCredentials credentials, CancellationToken ct)
+    public async Task<bool> IsSavedAsync(string trackId, SpotifyCredentials credentials, CancellationToken ct) =>
+        (await SavedAsync([trackId], credentials, ct).ConfigureAwait(false))[0];
+
+    /// <summary>Which of the tracks are in Liked Songs, in their order (one request).</summary>
+    public async Task<IReadOnlyList<bool>> SavedAsync(IReadOnlyList<string> trackIds, SpotifyCredentials credentials, CancellationToken ct)
     {
-        using var json = await SendAsync(ContainsOperation, new JsonObject { ["uris"] = Uris(trackId) }, credentials, ct).ConfigureAwait(false);
-        return ReadSaved(json.RootElement) ?? throw new HttpRequestException("Spotify gave no library state");
+        using var json = await SendAsync(ContainsOperation, new JsonObject { ["uris"] = Uris(trackIds) }, credentials, ct).ConfigureAwait(false);
+        var saved = ReadAllSaved(json.RootElement);
+        return saved.Count == trackIds.Count ? saved : throw new HttpRequestException("Spotify gave no library state");
     }
 
     /// <summary>Add the track to Liked Songs, or remove it.</summary>
-    public async Task SetSavedAsync(string trackId, bool saved, SpotifyCredentials credentials, CancellationToken ct)
+    public Task SetSavedAsync(string trackId, bool saved, SpotifyCredentials credentials, CancellationToken ct) =>
+        SetSavedAsync([trackId], saved, credentials, ct);
+
+    /// <summary>Add the tracks to Liked Songs, or remove them (one request).</summary>
+    public async Task SetSavedAsync(IReadOnlyList<string> trackIds, bool saved, SpotifyCredentials credentials, CancellationToken ct)
     {
-        var variables = new JsonObject { ["libraryItemUris"] = Uris(trackId) };
+        var variables = new JsonObject { ["libraryItemUris"] = Uris(trackIds) };
         if (saved) variables["interactionId"] = null;
         using var _ = await SendAsync(saved ? AddOperation : RemoveOperation, variables, credentials, ct).ConfigureAwait(false);
     }
 
-    private static JsonArray Uris(string trackId) =>
-        IsTrackId(trackId) ? [$"spotify:track:{trackId}"] : throw new ArgumentException("Not a Spotify track id", nameof(trackId));
+    private static JsonArray Uris(IReadOnlyList<string> trackIds)
+    {
+        if (trackIds.Count == 0 || !trackIds.All(IsTrackId))
+            throw new ArgumentException("Not a Spotify track id", nameof(trackIds));
+        return new JsonArray(trackIds.Select(id => (JsonNode?)JsonValue.Create($"spotify:track:{id}")).ToArray());
+    }
 
     private async Task<JsonDocument> SendAsync(string operation, JsonObject variables, SpotifyCredentials credentials, CancellationToken ct)
     {
@@ -111,18 +124,23 @@ public sealed partial class SpotifyLibraryClient(HttpClient http, Action<string>
         || body.Contains("PERSISTED_QUERY_NOT_FOUND", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The library state of the first entity in an "areEntitiesInLibrary" answer.</summary>
-    internal static bool? ReadSaved(JsonElement root)
+    internal static bool? ReadSaved(JsonElement root) => ReadAllSaved(root) is { Count: > 0 } all ? all[0] : null;
+
+    /// <summary>The library state of every entity in an "areEntitiesInLibrary" answer, in order; empty when any is missing.</summary>
+    internal static IReadOnlyList<bool> ReadAllSaved(JsonElement root)
     {
         if (!root.TryGetProperty("data", out var data) || !data.TryGetProperty("lookup", out var lookup)
             || lookup.ValueKind != JsonValueKind.Array)
-            return null;
+            return [];
+        var result = new List<bool>();
         foreach (var item in lookup.EnumerateArray())
         {
-            if (item.TryGetProperty("data", out var entity) && entity.ValueKind == JsonValueKind.Object
-                && entity.TryGetProperty("saved", out var saved) && saved.ValueKind is JsonValueKind.True or JsonValueKind.False)
-                return saved.GetBoolean();
+            if (!item.TryGetProperty("data", out var entity) || entity.ValueKind != JsonValueKind.Object
+                || !entity.TryGetProperty("saved", out var saved) || saved.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                return [];
+            result.Add(saved.GetBoolean());
         }
-        return null;
+        return result;
     }
 
     /// <summary>

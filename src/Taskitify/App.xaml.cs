@@ -273,7 +273,7 @@ public partial class App : Application
         if (_monitor?.Track is not { } track || _sync is null || _theme is null)
             return;
         _miniPlayer?.HidePopup();
-        var lines = new List<string>();
+        var lines = new List<LyricCardLine>();
         var current = 0;
         if (_sync.Timeline is { } timeline)
         {
@@ -283,12 +283,12 @@ public partial class App : Application
                     continue;
                 if (i <= _sync.CurrentIndex)
                     current = lines.Count;
-                lines.Add(timeline.Lines[i].Text.Trim());
+                lines.Add(new LyricCardLine(timeline.Lines[i].Text.Trim(), timeline.Lines[i].Time));
             }
         }
         else if (_sync.Result?.PlainText is { } plain)
         {
-            lines.AddRange(plain.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0));
+            lines.AddRange(plain.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).Select(l => new LyricCardLine(l, null)));
         }
 
         BitmapSource? cover = null;
@@ -311,11 +311,12 @@ public partial class App : Application
         }
         var query = new TrackQuery(track.Title, track.Artist, track.Album, _monitor.Duration);
         var provider = _spotifyProvider;
-        var source = new LyricCardSource(track.Title, track.Artist, lines, current, cover, _monitor.Palette.Start, _monitor.Palette.End,
+        var source = new LyricCardSource(track.Title, track.Artist, string.IsNullOrWhiteSpace(track.Album) ? null : track.Album, lines, current, cover,
+            _monitor.Palette.Start, _monitor.Palette.End, _monitor.Duration,
             provider is null ? null : () => provider.FindLargeCoverAsync(query, CancellationToken.None));
 
         _lyricCardWindow?.Close();
-        _lyricCardWindow = new LyricCardWindow(new LyricCardViewModel(source));
+        _lyricCardWindow = new LyricCardWindow(new LyricCardViewModel(source, _settings!));
         _lyricCardWindow.Closed += (_, _) => _lyricCardWindow = null;
         WindowInterop.SetDarkTitleBar(_lyricCardWindow, !_theme.AppsUseLightTheme);
         _lyricCardWindow.Show();

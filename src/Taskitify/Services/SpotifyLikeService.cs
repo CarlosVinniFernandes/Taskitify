@@ -8,14 +8,19 @@ namespace Taskitify.Services;
 
 /// <summary>
 /// Whether the playing song is in the user's Liked Songs, and liking or unliking it, through the
-/// connected Spotify web session. Shared by the taskbar player and the mini player. Checking a
-/// song never opens the web player (only a token still valid is used, so most songs are known
-/// right after their lyrics lookup); a click may open it.
+/// connected Spotify web session. Shared by the taskbar player and the mini player.
 /// </summary>
+/// <remarks>
+/// Windows does not say which Spotify track is playing, so the song is found with Spotify's
+/// search, and the same song is often on an album, a single and a compilation: every matching
+/// version is checked, and the song counts as liked when any of them is. Liking adds the best
+/// match; unliking removes every version that was liked. The check may need a token: it opens
+/// the hidden web player when none is valid (at most about once an hour, it closes again by itself).
+/// </remarks>
 public sealed class SpotifyLikeService : IDisposable
 {
     // Skipping through songs does not send one check per song.
-    private static readonly TimeSpan CheckDelay = TimeSpan.FromSeconds(1.5);
+    private static readonly TimeSpan CheckDelay = TimeSpan.FromSeconds(2);
 
     private readonly ISpotifyMonitor _monitor;
     private readonly LyricsSyncService _sync;
@@ -25,7 +30,11 @@ public sealed class SpotifyLikeService : IDisposable
     private readonly SpotifyLibraryClient _library;
     private readonly DispatcherTimer _checkTimer;
     private int _generation;
-    private bool _checking;
+    private Task? _check;
+    private bool _wasEnabled;
+    // The versions of the song and which of them are liked, from the last check.
+    private IReadOnlyList<string> _ids = [];
+    private IReadOnlyList<bool> _saved = [];
 
     public SpotifyLikeService(ISpotifyMonitor monitor, LyricsSyncService sync, SettingsService settings, ISpotifyLyricsSession session,
         SpotifyLyricsProvider provider, SpotifyLibraryClient library, Dispatcher dispatcher)
@@ -40,7 +49,7 @@ public sealed class SpotifyLikeService : IDisposable
         _checkTimer.Tick += (_, _) =>
         {
             _checkTimer.Stop();
-            _ = CheckAsync(wake: false);
+            _ = CheckAsync(_generation);
         };
         _monitor.TrackChanged += OnTrackChanged;
         _sync.LyricsChanged += OnLyricsChanged;
@@ -48,8 +57,6 @@ public sealed class SpotifyLikeService : IDisposable
         _wasEnabled = IsAvailable;
         OnTrackChanged(this, EventArgs.Empty);
     }
-
-    private bool _wasEnabled;
 
     /// <summary>Spotify is connected and a song is playing: the like button can be shown.</summary>
     public bool IsAvailable => _settings.Current.SpotifyLyricsEnabled && _monitor.Track is not null;
@@ -65,11 +72,11 @@ public sealed class SpotifyLikeService : IDisposable
 
     public event EventHandler? Changed;
 
-    /// <summary>Check again without opening the web player (the user may have liked it in Spotify).</summary>
+    /// <summary>Check again (the user may have liked it in Spotify meanwhile).</summary>
     public void Refresh()
     {
-        if (IsAvailable && !IsBusy)
-            _ = CheckAsync(wake: false);
+        if (IsAvailable && !IsBusy && !_checkTimer.IsEnabled)
+            _ = CheckAsync(_generation);
     }
 
     /// <summary>
@@ -78,7 +85,7 @@ public sealed class SpotifyLikeService : IDisposable
     /// </summary>
     public async Task ToggleAsync()
     {
-        if (!IsAvailable || IsBusy || _monitor.Track is null)
+        if (!IsAvailable || IsBusy)
             return;
         var generation = _generation;
         Failed = false;
@@ -88,7 +95,7 @@ public sealed class SpotifyLikeService : IDisposable
         {
             if (IsLiked is null)
             {
-                await CheckAsync(wake: true, generation);
+                await CheckAsync(generation);
                 if (generation != _generation)
                     return;
                 if (IsLiked is null)
@@ -99,28 +106,28 @@ public sealed class SpotifyLikeService : IDisposable
                 if (IsLiked == true)
                     return;
             }
-            var target = IsLiked != true;
-            var query = Query();
-            var id = await _provider.FindTrackIdAsync(query, wake: true, CancellationToken.None);
-            if (generation != _generation)
-                return;
-            if (id is null)
+            var like = IsLiked != true;
+            // Liking adds the best match; unliking removes every version that is liked.
+            var targets = like ? _ids.Take(1).ToList() : _ids.Where((_, i) => i < _saved.Count && _saved[i]).ToList();
+            if (targets.Count == 0)
             {
                 Failed = true;
                 return;
             }
             // Shown at once; put back if Spotify refuses.
-            IsLiked = target;
+            IsLiked = like;
             Raise();
-            var ok = await WithCredentialsAsync(c => _library.SetSavedAsync(id, target, c, CancellationToken.None));
+            var ok = await WithCredentialsAsync(c => _library.SetSavedAsync(targets, like, c, CancellationToken.None));
             if (generation != _generation)
                 return;
-            if (!ok)
+            if (ok)
+                _saved = _ids.Select((id, i) => like ? (i == 0 || (i < _saved.Count && _saved[i])) : (i < _saved.Count && _saved[i] && !targets.Contains(id))).ToList();
+            else
             {
-                IsLiked = !target;
+                IsLiked = !like;
                 Failed = true;
             }
-            Log.Debug($"Spotify like: {(target ? "liked" : "unliked")} {(ok ? "ok" : "failed")}");
+            Log.Debug($"Spotify like: {(like ? "liked" : "unliked")} {targets.Count} version(s) {(ok ? "ok" : "failed")}");
         }
         finally
         {
@@ -132,41 +139,36 @@ public sealed class SpotifyLikeService : IDisposable
         }
     }
 
-    private Task CheckAsync(bool wake) => CheckAsync(wake, _generation);
-
-    private async Task CheckAsync(bool wake, int generation)
+    /// <summary>The check running for this song, or a new one: a click during a check waits for it.</summary>
+    private Task CheckAsync(int generation)
     {
-        if (!IsAvailable || (_checking && !wake))
-            return;
-        _checking = true;
+        if (!IsAvailable)
+            return Task.CompletedTask;
+        if (_check is { IsCompleted: false } running)
+            return running;
+        return _check = RunCheckAsync(generation);
+    }
+
+    private async Task RunCheckAsync(int generation)
+    {
         try
         {
-            var query = Query();
-            var id = await _provider.FindTrackIdAsync(query, wake, CancellationToken.None);
-            if (id is null || generation != _generation)
+            var ids = await _provider.FindTrackIdsAsync(Query(), wake: true, CancellationToken.None);
+            if (ids.Count == 0 || generation != _generation)
                 return;
-            bool? saved = null;
-            if (wake)
-            {
-                if (!await WithCredentialsAsync(async c => saved = await _library.IsSavedAsync(id, c, CancellationToken.None)))
-                    saved = null;
-            }
-            else if (_session.ValidCredentials is { } credentials)
-            {
-                saved = await _library.IsSavedAsync(id, credentials, CancellationToken.None);
-            }
-            if (saved is null || generation != _generation)
+            IReadOnlyList<bool>? saved = null;
+            if (!await WithCredentialsAsync(async c => saved = await _library.SavedAsync(ids, c, CancellationToken.None)) || saved is null
+                || generation != _generation)
                 return;
-            IsLiked = saved;
+            _ids = ids;
+            _saved = saved;
+            IsLiked = saved.Any(s => s);
+            Log.Debug($"Spotify like state: {(IsLiked == true ? "liked" : "not liked")} ({saved.Count(s => s)}/{saved.Count} versions)");
             Raise();
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
         {
             Log.Debug($"Spotify like state unavailable: {ex.GetType().Name}");
-        }
-        finally
-        {
-            _checking = false;
         }
     }
 
@@ -208,17 +210,20 @@ public sealed class SpotifyLikeService : IDisposable
         IsLiked = null;
         IsBusy = false;
         Failed = false;
+        _ids = [];
+        _saved = [];
+        _check = null;
         _checkTimer.Stop();
         if (IsAvailable)
             _checkTimer.Start();
         Raise();
     }
 
-    // After a lookup the token is fresh and the song's Spotify id known: the check is free.
+    // A lookup that just ran has a fresh token and the song's versions: the check costs one request.
     private void OnLyricsChanged(object? sender, EventArgs e)
     {
         if (IsLiked is null && !IsBusy && !_checkTimer.IsEnabled)
-            _ = CheckAsync(wake: false);
+            _ = CheckAsync(_generation);
     }
 
     private void OnSettingsChanged(object? sender, EventArgs e)

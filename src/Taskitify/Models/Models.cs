@@ -187,6 +187,12 @@ public sealed class AppSettings
     /// <summary>The like button was added to the layouts saved by older versions (once).</summary>
     public bool LikeButtonAdded { get; set; }
 
+    /// <summary>The lyric card as it was last made (style, format, typography...).</summary>
+    public LyricCardOptions LyricCard { get; set; } = new();
+
+    /// <summary>Card settings the user saved under a name.</summary>
+    public List<LyricCardPreset> LyricCardPresets { get; set; } = [];
+
     /// <summary>When true, ManualX/Y/Width/Height (physical pixels) replace automatic detection.</summary>
     public bool ManualPlacement { get; set; }
 
@@ -247,4 +253,94 @@ public sealed class AppSettings
         ShowRepeat = ShowVolume = ShowProgress = ShowControls = ShowExtraControls = null;
         OverlayWidth = null;
     }
+}
+
+/// <summary>A lyric card's composition; each one is laid out differently, not just recoloured.</summary>
+public enum LyricCardStyle
+{
+    Classic,
+    Gradient,
+    Blur,
+    Polaroid,
+    Minimal,
+    Editorial,
+    Player,
+    Vinyl,
+    Karaoke,
+    Retro,
+}
+
+public enum LyricCardFormat
+{
+    /// <summary>1080 × 1920, stories and reels.</summary>
+    Story,
+
+    /// <summary>1080 × 1080.</summary>
+    Square,
+
+    /// <summary>1080 × 1350 (4:5), feed posts.</summary>
+    Portrait,
+
+    /// <summary>1920 × 1080 (16:9), wallpapers, videos and X.</summary>
+    Landscape,
+}
+
+/// <summary>The lyrics' typeface; Auto lets each style use its own.</summary>
+public enum LyricCardFont
+{
+    Auto,
+    Modern,
+    Serif,
+    Handwritten,
+    Mono,
+    Condensed,
+}
+
+public enum LyricCardAlign
+{
+    Auto,
+    Left,
+    Center,
+    Right,
+}
+
+/// <summary>The signature in a corner of the card.</summary>
+public enum LyricCardMark
+{
+    Spotify,
+    Taskitify,
+    None,
+}
+
+public sealed class LyricCardOptions
+{
+    public LyricCardStyle Style { get; set; } = LyricCardStyle.Classic;
+
+    public LyricCardFormat Format { get; set; } = LyricCardFormat.Story;
+
+    public LyricCardFont Font { get; set; } = LyricCardFont.Auto;
+
+    /// <summary>The lyrics' size relative to the style's own (0.7 to 1.4); text that would not fit still shrinks.</summary>
+    public double FontScale { get; set; } = 1;
+
+    public LyricCardAlign Align { get; set; } = LyricCardAlign.Auto;
+
+    /// <summary>#RRGGBB; null for the album's own colour.</summary>
+    public string? Color { get; set; }
+
+    public bool ShowCover { get; set; } = true;
+
+    public LyricCardMark Mark { get; set; } = LyricCardMark.Spotify;
+
+    /// <summary>The time of the first chosen line, as in the song.</summary>
+    public bool ShowTimestamp { get; set; }
+
+    public LyricCardOptions Clone() => (LyricCardOptions)MemberwiseClone();
+}
+
+public sealed class LyricCardPreset
+{
+    public string Name { get; set; } = "";
+
+    public LyricCardOptions Options { get; set; } = new();
 }

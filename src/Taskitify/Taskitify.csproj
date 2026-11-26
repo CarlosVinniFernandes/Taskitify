@@ -37,6 +37,9 @@
   <ItemGroup>
     <!-- Window icons (pack URI) and the tray icon (embedded stream). -->
     <Resource Include="Resources\Taskitify.ico" />
+    <!-- Lyric card typefaces (SIL Open Font License, see the .txt next to them). -->
+    <Resource Include="Resources\Fonts\*.ttf" />
+    <None Include="Resources\Fonts\*.txt" CopyToOutputDirectory="PreserveNewest" LinkBase="Licenses" />
     <EmbeddedResource Include="Resources\Languages\*.json" LogicalName="Taskitify.Languages.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Resources\Taskitify.ico" LogicalName="Taskitify.ico" />
   </ItemGroup>

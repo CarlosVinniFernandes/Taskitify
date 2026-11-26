@@ -76,8 +76,11 @@ public partial class MiniPlayerWindow : Window
         // the GPU. So the process uses the GPU while it is open and software again once it is
         // hidden. The driver loaded by then stays (~12 MB after a full collection, measured)
         // until the app restarts: the saving only lasts until the mini player is first opened.
-        IsVisibleChanged += (_, _) => RenderOptions.ProcessRenderMode =
-            IsVisible ? System.Windows.Interop.RenderMode.Default : System.Windows.Interop.RenderMode.SoftwareOnly;
+        IsVisibleChanged += (_, _) =>
+        {
+            if (IsVisible) GpuRendering.Acquire();
+            else GpuRendering.Release();
+        };
     }
 
     /// <summary>When the popup last hid; lets the overlay click that caused it not re-open it.</summary>

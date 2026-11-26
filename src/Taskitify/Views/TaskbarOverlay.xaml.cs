@@ -21,6 +21,7 @@ public partial class TaskbarOverlay : Window
     private const double ResizeGrip = 8; // DIP at each side that resize while calibrating
 
     private readonly TaskbarViewModel _vm;
+    private readonly OutsideClickWatcher _outsideClicks;
     private TextBlock _front;
     private TextBlock _back;
     private double _textLift;
@@ -45,11 +46,59 @@ public partial class TaskbarOverlay : Window
         VolumeButton.PreviewMouseWheel += wheel;
         VolumeSlider.PreviewMouseWheel += wheel;
         VolumeButton.MouseEnter += (_, _) => _vm.Volume.Refresh();
+
+        // The overlay never takes activation, so WPF's own "close on a click outside" misses
+        // clicks on other apps and turns a click on the button into close-then-reopen. The
+        // flyouts stay open until a click outside both them and their button, seen by a
+        // low-level mouse hook that only runs while one is open.
+        _outsideClicks = new OutsideClickWatcher((x, y) => Dispatcher.BeginInvoke(() => CloseFlyoutsOutside(x, y)));
+        Closed += (_, _) => _outsideClicks.Dispose();
+        _vm.Volume.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(VolumeControl.IsOpen)) return;
+            if (_vm.Volume.IsOpen) _vm.Like.IsConfirming = false;
+            UpdateFlyoutWatch();
+        };
+        _vm.Like.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is not (nameof(LikeControl.IsConfirming) or "")) return;
+            if (_vm.Like.IsConfirming) _vm.Volume.IsOpen = false;
+            UpdateFlyoutWatch();
+        };
         LineHost.SizeChanged += (_, _) => UpdateMarquee();
         TextHost.SizeChanged += (_, _) => UpdateTextLift();
         IsVisibleChanged += (_, _) => UpdateMarquee();
         ApplyBackground(animate: false);
         UpdateLineLayout();
+    }
+
+    private void UpdateFlyoutWatch()
+    {
+        if (_vm.Volume.IsOpen || _vm.Like.IsConfirming)
+            _outsideClicks.Start();
+        else
+            _outsideClicks.Stop();
+    }
+
+    /// <summary>A click (physical pixels) outside an open flyout and its button closes it.</summary>
+    private void CloseFlyoutsOutside(int x, int y)
+    {
+        if (_vm.Volume.IsOpen && !Hits(VolumePopup, x, y) && !Hits(VolumeButton, x, y))
+            _vm.Volume.IsOpen = false;
+        if (_vm.Like.IsConfirming && !Hits(UnlikePopup, x, y) && !Hits(LikeButton, x, y))
+            _vm.Like.IsConfirming = false;
+    }
+
+    private static bool Hits(System.Windows.Controls.Primitives.Popup popup, int x, int y) =>
+        popup.Child is FrameworkElement child && Hits(child, x, y);
+
+    private static bool Hits(FrameworkElement element, int x, int y)
+    {
+        if (!element.IsVisible || PresentationSource.FromVisual(element) is null)
+            return false;
+        var topLeft = element.PointToScreen(new Point(0, 0));
+        var bottomRight = element.PointToScreen(new Point(element.ActualWidth, element.ActualHeight));
+        return x >= topLeft.X && x < bottomRight.X && y >= topLeft.Y && y < bottomRight.Y;
     }
 
     /// <summary>Plain left click (not in calibration, not on a control).</summary>

@@ -181,7 +181,7 @@
 
         <!-- Volume slider, opened by the volume button; above (or below) the taskbar like Windows' own flyouts. -->
         <Popup x:Name="VolumePopup" PlacementTarget="{Binding ElementName=VolumeButton}" Placement="Top" VerticalOffset="-10"
-               StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
+               StaysOpen="True" AllowsTransparency="True" PopupAnimation="Fade"
                IsOpen="{Binding Volume.IsOpen, Mode=TwoWay}">
             <Border Style="{StaticResource FlyoutCard}">
                 <StackPanel Orientation="Horizontal">
@@ -198,7 +198,7 @@
 
         <!-- Unlike needs a confirmation: a stray click on the bar must not drop a song from Liked Songs. -->
         <Popup x:Name="UnlikePopup" PlacementTarget="{Binding ElementName=LikeButton}" Placement="Top" VerticalOffset="-10"
-               StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
+               StaysOpen="True" AllowsTransparency="True" PopupAnimation="Fade"
                IsOpen="{Binding Like.IsConfirming, Mode=TwoWay}">
             <Border Style="{StaticResource FlyoutCard}" MaxWidth="300">
                 <StackPanel>

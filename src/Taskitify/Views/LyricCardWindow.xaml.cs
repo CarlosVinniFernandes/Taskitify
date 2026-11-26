@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using Taskitify.Infrastructure;
 using Taskitify.ViewModels;
 
 namespace Taskitify.Views;
@@ -11,12 +12,19 @@ public partial class LyricCardWindow : Window
     {
         InitializeComponent();
         DataContext = vm;
-        KeyDown += (_, e) =>
+        // Blurs, shadows and a full-size card redraw on every change: on the GPU while open.
+        GpuRendering.Acquire();
+        Closed += (_, _) => GpuRendering.Release();
+        PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.Escape)
                 Close();
-            else if (e.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control && vm.CopyCommand.CanExecute(null))
+            else if (e.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control && Keyboard.FocusedElement is not System.Windows.Controls.TextBox
+                     && vm.CopyCommand.CanExecute(null))
+            {
                 vm.CopyCommand.Execute(null);
+                e.Handled = true;
+            }
         };
         Loaded += (_, _) => ScrollToSelection(vm);
     }
@@ -26,8 +34,7 @@ public partial class LyricCardWindow : Window
     {
         if (vm.Lines.FirstOrDefault(l => l.IsSelected) is not { } line)
             return;
-        var lineCount = Math.Max(1, vm.Lines.Count);
-        var offset = LinesScroll.ExtentHeight * line.Index / lineCount;
+        var offset = LinesScroll.ExtentHeight * line.Index / Math.Max(1, vm.Lines.Count);
         LinesScroll.ScrollToVerticalOffset(Math.Max(0, offset - (LinesScroll.ViewportHeight / 3)));
     }
 }

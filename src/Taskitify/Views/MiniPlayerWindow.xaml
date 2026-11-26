@@ -64,38 +64,56 @@
                             ToolTip="{DynamicResource Loc.LyricCardOpen}" AutomationProperties.Name="{DynamicResource Loc.LyricCardOpen}" />
                 </Grid>
 
-                <!-- Controls -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,4"
-                            Visibility="{Binding ShowControls, Converter={StaticResource BoolToVisibility}}">
-                    <StackPanel.Resources>
-                        <!-- Shuffle and repeat turn Spotify green while on, as on the taskbar. -->
-                        <Style x:Key="ModeButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+                <!-- Controls. Play always sits in the middle whatever else is chosen: previous and shuffle
+                     to its left, next and repeat to its right, the heart and the volume at the edges. -->
+                <Grid Margin="0,12,0,4" Visibility="{Binding ShowControls, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.Resources>
+                        <!-- Shuffle, repeat, an open volume and a liked song turn Spotify green, as on the taskbar. -->
+                        <!-- Every button fits the narrowest card (6 × 36 + play). -->
+                        <Style x:Key="RowButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+                            <Setter Property="Width" Value="36" />
+                            <Setter Property="Height" Value="36" />
+                        </Style>
+                        <Style x:Key="ModeButton" TargetType="Button" BasedOn="{StaticResource RowButton}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
                                     <Setter Property="Foreground" Value="#FF1ED760" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
-                    </StackPanel.Resources>
-                    <Button Style="{StaticResource ModeButton}" Command="{Binding ShuffleCommand}" Content="&#xE8B1;" Tag="{Binding IsShuffleActive}"
-                            ToolTip="{DynamicResource Loc.Shuffle}" Visibility="{Binding ShowShuffle, Converter={StaticResource BoolToVisibility}}" />
-                    <Button Style="{StaticResource IconButton}" Command="{Binding PreviousCommand}" Content="&#xE892;" ToolTip="{DynamicResource Loc.Previous}"
-                            Visibility="{Binding ShowPrevious, Converter={StaticResource BoolToVisibility}}" />
-                    <Button Style="{StaticResource PlayButton}" Command="{Binding PlayPauseCommand}" Margin="12,0" x:Name="PlayPauseButton"
+                    </Grid.Resources>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Button Style="{StaticResource ModeButton}" Command="{Binding Like.ClickCommand}" Content="{Binding Like.Glyph}" Tag="{Binding Like.IsLiked}"
+                            HorizontalAlignment="Left" ToolTip="{Binding Like.Tip}" AutomationProperties.Name="{Binding Like.Tip}"
+                            Visibility="{Binding ShowLike, Converter={StaticResource BoolToVisibility}}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Style="{StaticResource ModeButton}" Command="{Binding ShuffleCommand}" Content="&#xE8B1;" Tag="{Binding IsShuffleActive}"
+                                ToolTip="{DynamicResource Loc.Shuffle}" Visibility="{Binding ShowShuffle, Converter={StaticResource BoolToVisibility}}" />
+                        <Button Style="{StaticResource RowButton}" Command="{Binding PreviousCommand}" Content="&#xE892;" ToolTip="{DynamicResource Loc.Previous}"
+                                Visibility="{Binding ShowPrevious, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+
+                    <Button Grid.Column="1" Style="{StaticResource PlayButton}" Command="{Binding PlayPauseCommand}" Margin="8,0" x:Name="PlayPauseButton"
                             ToolTip="{DynamicResource Loc.PlayPause}" Visibility="{Binding ShowPlayPause, Converter={StaticResource BoolToVisibility}}">
                         <TextBlock x:Name="PlayPauseGlyph" Text="&#xE768;" FontFamily="{StaticResource IconFont}"
                                    Foreground="{DynamicResource WindowBackgroundBrush}" />
                     </Button>
-                    <Button Style="{StaticResource IconButton}" Command="{Binding NextCommand}" Content="&#xE893;" ToolTip="{DynamicResource Loc.Next}"
-                            Visibility="{Binding ShowNext, Converter={StaticResource BoolToVisibility}}" />
-                    <Button Style="{StaticResource ModeButton}" Command="{Binding RepeatCommand}" Content="{Binding RepeatGlyph}" Tag="{Binding IsRepeatActive}"
-                            ToolTip="{DynamicResource Loc.Repeat}" Visibility="{Binding ShowRepeat, Converter={StaticResource BoolToVisibility}}" />
-                    <Button x:Name="VolumeButton" Style="{StaticResource ModeButton}" Command="{Binding Volume.ToggleOpenCommand}" Content="{Binding Volume.Glyph}"
-                            Tag="{Binding Volume.IsOpen}" ToolTip="{Binding Volume.Tip}" Visibility="{Binding ShowVolume, Converter={StaticResource BoolToVisibility}}" />
-                    <Button Style="{StaticResource ModeButton}" Command="{Binding Like.ClickCommand}" Content="{Binding Like.Glyph}" Tag="{Binding Like.IsLiked}"
-                            ToolTip="{Binding Like.Tip}" AutomationProperties.Name="{Binding Like.Tip}"
-                            Visibility="{Binding ShowLike, Converter={StaticResource BoolToVisibility}}" />
-                </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Button Style="{StaticResource RowButton}" Command="{Binding NextCommand}" Content="&#xE893;" ToolTip="{DynamicResource Loc.Next}"
+                                Visibility="{Binding ShowNext, Converter={StaticResource BoolToVisibility}}" />
+                        <Button Style="{StaticResource ModeButton}" Command="{Binding RepeatCommand}" Content="{Binding RepeatGlyph}" Tag="{Binding IsRepeatActive}"
+                                ToolTip="{DynamicResource Loc.Repeat}" Visibility="{Binding ShowRepeat, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                    <Button x:Name="VolumeButton" Grid.Column="2" Style="{StaticResource ModeButton}" Command="{Binding Volume.ToggleOpenCommand}"
+                            Content="{Binding Volume.Glyph}" HorizontalAlignment="Right" Tag="{Binding Volume.IsOpen}" ToolTip="{Binding Volume.Tip}"
+                            Visibility="{Binding ShowVolume, Converter={StaticResource BoolToVisibility}}" />
+                </Grid>
 
                 <!-- Volume slider, opened by the volume button. Inline: a popup outside the card would count as a click outside. -->
                 <Grid Margin="8,6,8,0" Visibility="{Binding Volume.IsOpen, Converter={StaticResource BoolToVisibility}}">

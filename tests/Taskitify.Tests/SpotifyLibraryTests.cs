@@ -103,6 +103,18 @@ public sealed class SpotifyLibraryTests
     }
 
     [Fact]
+    public async Task Checks_every_version_of_a_song_in_one_request()
+    {
+        const string other = "abcdefghijklmnopqrstuv";
+        using var handler = new Handler((_, _) => Text("""{"data":{"lookup":[{"data":{"saved":false}},{"data":{"saved":true}}]}}"""));
+        using var http = new HttpClient(handler);
+        var saved = await new SpotifyLibraryClient(http).SavedAsync([Id, other], Credentials, default);
+        Assert.Equal([false, true], saved);
+        var uris = Assert.Single(handler.Requests).Body!["variables"]!["uris"]!.AsArray().Select(u => u!.GetValue<string>());
+        Assert.Equal([$"spotify:track:{Id}", $"spotify:track:{other}"], uris);
+    }
+
+    [Fact]
     public void Reads_the_saved_state_and_nothing_else()
     {
         Assert.True(SpotifyLibraryClient.ReadSaved(JsonDocument.Parse(Saved).RootElement));
