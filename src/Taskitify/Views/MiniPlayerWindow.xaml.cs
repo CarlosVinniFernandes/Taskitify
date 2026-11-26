@@ -52,12 +52,15 @@ public partial class MiniPlayerWindow : Window
             ScrollToCurrent(animate: false);
         }, DispatcherPriority.Loaded);
         LyricsViewport.PreviewMouseWheel += OnLyricsWheel;
-        VolumeButton.PreviewMouseWheel += (_, e) =>
+        // The wheel over the button (or the open slider) changes the volume without opening anything.
+        MouseWheelEventHandler wheel = (_, e) =>
         {
-            _vm.NudgeVolume(e.Delta > 0 ? 1 : -1);
+            _vm.Volume.Nudge(e.Delta > 0 ? 1 : -1);
             e.Handled = true;
         };
-        VolumeButton.MouseEnter += (_, _) => _vm.RefreshVolume();
+        VolumeButton.PreviewMouseWheel += wheel;
+        VolumeSlider.PreviewMouseWheel += wheel;
+        VolumeButton.MouseEnter += (_, _) => _vm.Volume.Refresh();
 
         Progress.Seek += _vm.SeekTo;
         Progress.Preview += _vm.PreviewPosition;

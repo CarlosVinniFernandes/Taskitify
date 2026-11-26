@@ -573,7 +573,7 @@ public sealed class TaskbarOverlayService : IDisposable
         // From what is on screen, as the window move does.
         _sideDragFrom ??= WindowInterop.GetBounds(_hwnd);
         // No narrower than the width setting allows, so nothing jumps on release.
-        var min = (int)Math.Round((BarLayout.WidthRange(_vm.IsCompact).Min + TaskbarPositionService.ControlsWidth(layout)) * (_placement?.Scale ?? 1));
+        var min = (int)Math.Round((BarLayout.WidthRange(_vm.IsCompact).Min + TaskbarPositionService.ControlsWidth(layout, _settings.Current.SpotifyLyricsEnabled)) * (_placement?.Scale ?? 1));
         _bounds = OverlayLayout.DragSide(_sideDragFrom.Value, edge, offset, min);
         ApplyBounds();
     }
@@ -582,7 +582,7 @@ public sealed class TaskbarOverlayService : IDisposable
     private int CalibratedLayoutWidth(PixelRect r)
     {
         var (min, max) = BarLayout.WidthRange(_vm.IsCompact);
-        var width = TaskbarPositionService.LayoutWidthFor(r.Width, _settings.Current.Layout(_vm.IsCompact), _placement?.Scale ?? 1);
+        var width = TaskbarPositionService.LayoutWidthFor(r.Width, _settings.Current.Layout(_vm.IsCompact), _placement?.Scale ?? 1, _settings.Current.SpotifyLyricsEnabled);
         return Math.Clamp(width, min, max);
     }
 }

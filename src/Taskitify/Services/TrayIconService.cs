@@ -9,10 +9,12 @@ public sealed class TrayIconService : IDisposable
     private readonly Forms.NotifyIcon _icon;
     private readonly Forms.ToolStripMenuItem _debugItem;
 
-    public TrayIconService(Action showSettings, Action showMiniPlayer, Action showDebug, Action exit)
+    public TrayIconService(Action showSettings, Action showMiniPlayer, Action showLyricCard, Action showDebug, Action exit)
     {
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add(LocalizationService.Get("ShowPlayer"), null, (_, _) => showMiniPlayer());
+        var cardItem = new Forms.ToolStripMenuItem(LocalizationService.Get("LyricCardOpen"), null, (_, _) => showLyricCard());
+        menu.Items.Add(cardItem);
         menu.Items.Add(LocalizationService.Get("Settings"), null, (_, _) => showSettings());
         _debugItem = new Forms.ToolStripMenuItem(LocalizationService.Get("Diagnostics"), null, (_, _) => showDebug());
         menu.Items.Add(_debugItem);
@@ -22,9 +24,11 @@ public sealed class TrayIconService : IDisposable
         menu.Opening += (_, _) =>
         {
             menu.Items[0].Text = LocalizationService.Get("ShowPlayer");
-            menu.Items[1].Text = LocalizationService.Get("Settings");
+            cardItem.Text = LocalizationService.Get("LyricCardOpen");
+            cardItem.Enabled = CanMakeLyricCard?.Invoke() ?? true;
+            menu.Items[2].Text = LocalizationService.Get("Settings");
             _debugItem.Text = LocalizationService.Get("Diagnostics");
-            menu.Items[4].Text = LocalizationService.Get("Exit");
+            menu.Items[5].Text = LocalizationService.Get("Exit");
         };
 
         _icon = new Forms.NotifyIcon
@@ -39,6 +43,9 @@ public sealed class TrayIconService : IDisposable
                 showSettings();
         };
     }
+
+    /// <summary>Whether a song is playing, so the lyric card item can be used.</summary>
+    public Func<bool>? CanMakeLyricCard { get; set; }
 
     public bool Visible
     {

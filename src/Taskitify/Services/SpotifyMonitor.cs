@@ -147,6 +147,9 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
     public TimeSpan Position => _clock.Position;
     public TimeSpan? Duration => _clock.Duration;
     public ImageSource? Thumbnail { get; private set; }
+
+    /// <summary>The encoded cover (as Windows or Spotify's CDN gave it), for the lyric card.</summary>
+    public byte[]? CoverData { get; private set; }
     public bool CanSeek { get; private set; }
     public bool CanGoNext { get; private set; }
     public bool CanGoPrevious { get; private set; }
@@ -349,6 +352,7 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
         var hadTrack = Track is not null;
         Track = null;
         Thumbnail = null;
+        CoverData = null;
         _thumbnailLoaded = false;
         if (Status != PlaybackState.NoSession)
         {
@@ -439,6 +443,7 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
             _coverRetries = 0;
             _coverRetry.Stop();
             Thumbnail = null;
+            CoverData = null;
             TrackChanged?.Invoke(this, EventArgs.Empty);
             ThumbnailChanged?.Invoke(this, EventArgs.Empty);
             ReadTimeline();
@@ -540,6 +545,7 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
 
         if (forTrack == Track)
         {
+            CoverData = encoded;
             Thumbnail = image;
             Palette = palette;
             ThumbnailChanged?.Invoke(this, EventArgs.Empty);

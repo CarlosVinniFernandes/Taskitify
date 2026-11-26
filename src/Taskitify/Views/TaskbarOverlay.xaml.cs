@@ -36,12 +36,15 @@ public partial class TaskbarOverlay : Window
         _back = LineB;
         _front.Text = vm.MainText;
         vm.PropertyChanged += OnViewModelChanged;
-        VolumeButton.PreviewMouseWheel += (_, e) =>
+        // The wheel over the button (or the open slider) changes the volume without opening anything.
+        MouseWheelEventHandler wheel = (_, e) =>
         {
-            _vm.NudgeVolume(e.Delta > 0 ? 1 : -1);
+            _vm.Volume.Nudge(e.Delta > 0 ? 1 : -1);
             e.Handled = true;
         };
-        VolumeButton.MouseEnter += (_, _) => _vm.RefreshVolume();
+        VolumeButton.PreviewMouseWheel += wheel;
+        VolumeSlider.PreviewMouseWheel += wheel;
+        VolumeButton.MouseEnter += (_, _) => _vm.Volume.Refresh();
         LineHost.SizeChanged += (_, _) => UpdateMarquee();
         TextHost.SizeChanged += (_, _) => UpdateTextLift();
         IsVisibleChanged += (_, _) => UpdateMarquee();

@@ -102,7 +102,7 @@ public sealed class TaskbarPositionService
         // any text the strip is just cover + buttons. Never narrower than the weather widget.
         var layout = s.Layout(compact);
         var content = layout.AnyText ? layout.Width : (layout.ShowCover ? 46 : 8);
-        var desired = (int)Math.Round((content + ControlsWidth(layout)) * p.Scale);
+        var desired = (int)Math.Round((content + ControlsWidth(layout, s.SpotifyLyricsEnabled)) * p.Scale);
 
         // Calibrated: the saved position, at the layout's width (calibration resizes through it).
         if (s.ManualPlacement && s.ManualWidth > 0 && s.ManualHeight > 0)
@@ -111,14 +111,15 @@ public sealed class TaskbarPositionService
     }
 
     /// <summary>The layout width (cover + text, DIP) that gives an overlay this many physical pixels wide; the inverse of the above.</summary>
-    public static int LayoutWidthFor(int overlayWidth, BarLayout layout, double scale) =>
-        (int)Math.Round(overlayWidth / scale) - ControlsWidth(layout);
+    public static int LayoutWidthFor(int overlayWidth, BarLayout layout, double scale, bool likeAvailable) =>
+        (int)Math.Round(overlayWidth / scale) - ControlsWidth(layout, likeAvailable);
 
     /// <summary>DIP width taken by the selected taskbar buttons (see TaskbarOverlay.xaml).</summary>
-    public static int ControlsWidth(BarLayout s)
+    /// <param name="likeAvailable">Spotify is connected, so a selected like button is shown.</param>
+    public static int ControlsWidth(BarLayout s, bool likeAvailable)
     {
         const int button = 28, play = 28 + 6, panelMargin = 8;
-        var count = new[] { s.ShowShuffle, s.ShowPrevious, s.ShowNext, s.ShowRepeat, s.ShowVolume }.Count(b => b);
+        var count = new[] { s.ShowShuffle, s.ShowPrevious, s.ShowNext, s.ShowRepeat, s.ShowVolume, s.ShowLike && likeAvailable }.Count(b => b);
         var width = (count * button) + (s.ShowPlayPause ? play : 0);
         return width == 0 ? 0 : width + panelMargin;
     }

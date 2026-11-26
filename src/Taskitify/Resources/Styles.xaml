@@ -153,6 +153,29 @@
         <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
 
+    <!-- A destructive confirmation (e.g. removing a song from Liked Songs). -->
+    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource FlatButton}">
+        <Setter Property="Background" Value="#FFD93A3A" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- Small popup card for the players' flyouts (volume slider, unlike confirmation). -->
+    <Style x:Key="FlyoutCard" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource PopupBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource PopupBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="Margin" Value="10" />
+        <Setter Property="TextElement.FontFamily" Value="{StaticResource UiFont}" />
+        <Setter Property="Effect">
+            <Setter.Value>
+                <DropShadowEffect BlurRadius="16" ShadowDepth="3" Direction="270" Opacity="0.35" Color="Black" />
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Themed combo box: the stock one stays light in the dark theme. -->
     <Style x:Key="SettingsComboBoxItem" TargetType="ComboBoxItem">
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />

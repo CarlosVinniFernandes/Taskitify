@@ -149,9 +149,22 @@
                 <Button Style="{StaticResource BarButton}" Command="{Binding RepeatCommand}" Content="{Binding RepeatGlyph}"
                         Foreground="{Binding RepeatBrush}" ToolTip="{DynamicResource Loc.Repeat}"
                         Visibility="{Binding ShowRepeat, Converter={StaticResource BoolToVisibility}}" />
-                <Button x:Name="VolumeButton" Style="{StaticResource BarButton}" Command="{Binding MuteCommand}" Content="{Binding VolumeGlyph}"
-                        Foreground="{Binding Foreground}" ToolTip="{Binding VolumeTip}"
+                <Button x:Name="VolumeButton" Style="{StaticResource BarButton}" Command="{Binding Volume.ToggleOpenCommand}" Content="{Binding Volume.Glyph}"
+                        Foreground="{Binding Foreground}" ToolTip="{Binding Volume.Tip}"
                         Visibility="{Binding ShowVolume, Converter={StaticResource BoolToVisibility}}" />
+                <Button x:Name="LikeButton" Command="{Binding Like.ClickCommand}" Content="{Binding Like.Glyph}" ToolTip="{Binding Like.Tip}"
+                        Visibility="{Binding ShowLike, Converter={StaticResource BoolToVisibility}}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource BarButton}">
+                            <Setter Property="Foreground" Value="{Binding Foreground}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Like.IsLiked}" Value="True">
+                                    <Setter Property="Foreground" Value="#FF1ED760" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
             </StackPanel>
         </Grid>
 
@@ -165,6 +178,41 @@
                 </Border.RenderTransform>
             </Border>
         </Grid>
+
+        <!-- Volume slider, opened by the volume button; above (or below) the taskbar like Windows' own flyouts. -->
+        <Popup x:Name="VolumePopup" PlacementTarget="{Binding ElementName=VolumeButton}" Placement="Top" VerticalOffset="-10"
+               StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
+               IsOpen="{Binding Volume.IsOpen, Mode=TwoWay}">
+            <Border Style="{StaticResource FlyoutCard}">
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource IconButton}" Command="{Binding Volume.MuteCommand}" Content="{Binding Volume.Glyph}"
+                            ToolTip="{DynamicResource Loc.MuteUnmute}" AutomationProperties.Name="{DynamicResource Loc.MuteUnmute}" />
+                    <Slider x:Name="VolumeSlider" Style="{StaticResource SettingsSlider}" Width="170" Minimum="0" Maximum="100" Margin="6,0,10,0"
+                            VerticalAlignment="Center" IsMoveToPointEnabled="True" SmallChange="1" LargeChange="10"
+                            Value="{Binding Volume.Percent, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Volume}" />
+                    <TextBlock Text="{Binding Volume.Percent, StringFormat={}{0:0}}" Width="26" TextAlignment="Right" VerticalAlignment="Center"
+                               FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" />
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- Unlike needs a confirmation: a stray click on the bar must not drop a song from Liked Songs. -->
+        <Popup x:Name="UnlikePopup" PlacementTarget="{Binding ElementName=LikeButton}" Placement="Top" VerticalOffset="-10"
+               StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade"
+               IsOpen="{Binding Like.IsConfirming, Mode=TwoWay}">
+            <Border Style="{StaticResource FlyoutCard}" MaxWidth="300">
+                <StackPanel>
+                    <TextBlock Text="{DynamicResource Loc.UnlikeQuestion}" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextPrimaryBrush}" Margin="2,0,2,10" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Style="{StaticResource FlatButton}" Command="{Binding Like.CancelCommand}" Content="{DynamicResource Loc.Cancel}"
+                                Padding="14,5" Margin="0,0,8,0" IsCancel="True" />
+                        <Button Style="{StaticResource DangerButton}" Command="{Binding Like.ConfirmCommand}" Content="{DynamicResource Loc.UnlikeConfirm}"
+                                Padding="14,5" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
 
         <!-- Calibration frame -->
         <Border x:Name="CalibrationFrame" BorderThickness="2" Visibility="Collapsed" IsHitTestVisible="False">

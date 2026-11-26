@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net.Http;
 using System.Windows;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Taskitify.Core.Lyrics;
 using Taskitify.Core.Net;
@@ -37,6 +38,9 @@ public partial class App : Application
     private SettingsWindow? _settingsWindow;
     private SettingsViewModel? _settingsVm;
     private DebugWindow? _debugWindow;
+    private LyricCardWindow? _lyricCardWindow;
+    private SpotifyLikeService? _likes;
+    private SpotifyLyricsProvider? _spotifyProvider;
 
     public bool IsShuttingDown { get; private set; }
 
@@ -159,17 +163,26 @@ public partial class App : Application
                 _spotifyLyrics.PrepareForNextSong();
         };
 
-        _taskbarVm = new TaskbarViewModel(_monitor, _sync, _settings, new AppVolumeService());
+        var library = new SpotifyLibraryClient(_spotifyHttp, Log.Debug);
+        _spotifyLyrics.LibraryQuerySeen = library.Learn;
+        _likes = new SpotifyLikeService(_monitor, _sync, _settings, _spotifyLyrics, spotifyProvider, library, Dispatcher);
+        _spotifyProvider = spotifyProvider;
+
+        _taskbarVm = new TaskbarViewModel(_monitor, _sync, _settings, new AppVolumeService(), _likes);
         _overlay = new TaskbarOverlayService(_monitor, _sync, _settings, new TaskbarPositionService(), _taskbarVm);
         _overlay.Initialize();
         _overlay.Clicked += (_, _) => ToggleMiniPlayer();
         _overlay.CalibrationChanged += (_, on) => _settingsVm?.SyncCalibrating(on);
 
-        _miniPlayerVm = new MiniPlayerViewModel(_monitor, _sync, _settings, new AppVolumeService());
+        _miniPlayerVm = new MiniPlayerViewModel(_monitor, _sync, _settings, new AppVolumeService(), _likes);
+        _miniPlayerVm.ShareRequested += (_, _) => ShowLyricCard();
         _miniPlayer = new MiniPlayerWindow(_miniPlayerVm, () => _settings.Current.EnableAnimations,
             () => _settings.Current.Background == Models.OverlayBackground.AlbumGradient);
 
-        _tray = new TrayIconService(ShowSettings, ShowMiniPlayerFromTray, ShowDebug, Shutdown);
+        _tray = new TrayIconService(ShowSettings, ShowMiniPlayerFromTray, ShowLyricCard, ShowDebug, Shutdown)
+        {
+            CanMakeLyricCard = () => _monitor?.Track is not null,
+        };
         ApplySettings();
         _settings.Changed += (_, _) => ApplySettings();
 
@@ -204,6 +217,7 @@ public partial class App : Application
         _overlay?.Dispose();
         _miniPlayerVm?.Dispose();
         _taskbarVm?.Dispose();
+        _likes?.Dispose();
         _sync?.Dispose();
         _monitor?.Dispose();
         _theme?.Dispose();
@@ -251,6 +265,61 @@ public partial class App : Application
         WindowInterop.SetDarkTitleBar(welcome, !_theme!.AppsUseLightTheme);
         welcome.Show();
         welcome.Activate();
+    }
+
+    /// <summary>The lyric card maker for the song playing (one window; reopening brings it back with the new song).</summary>
+    private void ShowLyricCard()
+    {
+        if (_monitor?.Track is not { } track || _sync is null || _theme is null)
+            return;
+        _miniPlayer?.HidePopup();
+        var lines = new List<string>();
+        var current = 0;
+        if (_sync.Timeline is { } timeline)
+        {
+            for (var i = 0; i < timeline.Count; i++)
+            {
+                if (string.IsNullOrWhiteSpace(timeline.Lines[i].Text))
+                    continue;
+                if (i <= _sync.CurrentIndex)
+                    current = lines.Count;
+                lines.Add(timeline.Lines[i].Text.Trim());
+            }
+        }
+        else if (_sync.Result?.PlainText is { } plain)
+        {
+            lines.AddRange(plain.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0));
+        }
+
+        BitmapSource? cover = null;
+        if (_monitor.CoverData is { } data)
+        {
+            try
+            {
+                var image = new BitmapImage();
+                image.BeginInit();
+                image.CacheOption = BitmapCacheOption.OnLoad;
+                image.StreamSource = new System.IO.MemoryStream(data);
+                image.EndInit();
+                image.Freeze();
+                cover = image;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                cover = _monitor.Thumbnail as BitmapSource;
+            }
+        }
+        var query = new TrackQuery(track.Title, track.Artist, track.Album, _monitor.Duration);
+        var provider = _spotifyProvider;
+        var source = new LyricCardSource(track.Title, track.Artist, lines, current, cover, _monitor.Palette.Start, _monitor.Palette.End,
+            provider is null ? null : () => provider.FindLargeCoverAsync(query, CancellationToken.None));
+
+        _lyricCardWindow?.Close();
+        _lyricCardWindow = new LyricCardWindow(new LyricCardViewModel(source));
+        _lyricCardWindow.Closed += (_, _) => _lyricCardWindow = null;
+        WindowInterop.SetDarkTitleBar(_lyricCardWindow, !_theme.AppsUseLightTheme);
+        _lyricCardWindow.Show();
+        _lyricCardWindow.Activate();
     }
 
     private void ShowDebug()

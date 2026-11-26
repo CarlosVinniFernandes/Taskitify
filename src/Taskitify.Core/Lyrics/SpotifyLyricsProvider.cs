@@ -44,6 +44,9 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
     // publishes a song to Windows without one, usually right when its lyrics are looked up.
     private readonly ConcurrentDictionary<string, string> _covers = new();
 
+    // The Spotify track each recent search matched, by query (liking a song needs its id).
+    private readonly ConcurrentDictionary<string, string> _trackIds = new();
+
     // A captured search Spotify rejected; skipped until the web player captures another one.
     private SpotifySearchTemplate? _staleTemplate;
 
@@ -132,6 +135,8 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
             .OrderBy(t => TrackMatcher.DurationDistance(query, t.Metadata)).ToList();
         if (matching.Select(t => t.CoverUrl).FirstOrDefault(url => url is not null) is { } cover)
             RememberCover(LyricsCache.KeyFor(query), cover);
+        if (matching.Count > 0)
+            RememberTrackId(LyricsCache.KeyFor(query), matching[0].Id);
 
         LrclibRecord? plain = null;
         var renewed = false;
@@ -204,6 +209,77 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// The Spotify track id of the song: the one a lookup of it already matched, else Spotify's
+    /// search. With <paramref name="wake"/> false the web player is never opened (only a still
+    /// valid token and the captured search are used); with it true, as for a click, it may be.
+    /// Null when signed out or when no Spotify track matches.
+    /// </summary>
+    public async Task<string?> FindTrackIdAsync(TrackQuery query, bool wake, CancellationToken ct)
+    {
+        var key = LyricsCache.KeyFor(query);
+        if (_trackIds.TryGetValue(key, out var known))
+            return known;
+        var credentials = wake ? await session.GetCredentialsAsync(query, ct).ConfigureAwait(false) : session.ValidCredentials;
+        if (credentials is null)
+            return null;
+        var term = query.Title + " " + query.Artist;
+        var (tracks, _) = await ReplaySearchAsync(term, credentials, null, ct).ConfigureAwait(false);
+        var found = Best(tracks ?? []);
+        if (found is null && wake)
+        {
+            var searched = await session.SearchAsync(query, ct).ConfigureAwait(false);
+            found = Best(searched);
+            if (found is null && await session.GetCredentialsAsync(null, ct).ConfigureAwait(false) is { } fresh)
+                found = Best((await ReplaySearchAsync(term, fresh, null, ct).ConfigureAwait(false)).Tracks ?? []);
+        }
+        if (found is null)
+            return null;
+        RememberTrackId(key, found.Id);
+        if (found.CoverUrl is { } cover)
+            RememberCover(key, cover);
+        return found.Id;
+
+        SpotifyTrack? Best(IEnumerable<SpotifyTrack> candidates) => candidates.Where(t => TrackMatcher.IsMatch(query, t.Metadata))
+            .OrderBy(t => TrackMatcher.DurationDistance(query, t.Metadata)).FirstOrDefault();
+    }
+
+    /// <summary>
+    /// The song's cover as large as Spotify's image CDN serves it (640 px), for the lyric card;
+    /// only when a lookup already saw its address. Null otherwise.
+    /// </summary>
+    public async Task<byte[]?> FindLargeCoverAsync(TrackQuery query, CancellationToken ct)
+    {
+        if (!_covers.TryGetValue(LyricsCache.KeyFor(query), out var url))
+            return null;
+        // Spotify's image ids carry their size: ab67616d0000b273 is the 640 px version of an album cover.
+        var large = url.Replace("ab67616d00001e02", "ab67616d0000b273", StringComparison.Ordinal)
+            .Replace("ab67616d00004851", "ab67616d0000b273", StringComparison.Ordinal);
+        foreach (var candidate in large == url ? [url] : new[] { large, url })
+        {
+            try
+            {
+                using var response = await http.GetAsync(candidate, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode || response.Content.Headers.ContentLength > MaxCoverBytes)
+                    continue;
+                var bytes = await response.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+                if (bytes.Length is > 0 and <= MaxCoverBytes)
+                    return bytes;
+            }
+            catch (HttpRequestException)
+            {
+            }
+        }
+        return null;
+    }
+
+    private void RememberTrackId(string key, string id)
+    {
+        if (_trackIds.Count >= MaxCovers)
+            _trackIds.Clear();
+        _trackIds[key] = id;
     }
 
     private void RememberCover(string key, string url)

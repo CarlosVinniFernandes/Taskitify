@@ -51,7 +51,8 @@ public sealed class SettingsService
         {
             Log.Error("Could not read settings, using defaults", ex);
         }
-        Current = new AppSettings();
+        // New settings already have every button they default to; only older files are migrated.
+        Current = new AppSettings { LikeButtonAdded = true };
     }
 
     /// <summary>Mutates the settings, notifies listeners and saves shortly after (debounced).</summary>

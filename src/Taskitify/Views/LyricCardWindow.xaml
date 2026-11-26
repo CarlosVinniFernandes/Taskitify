@@ -1,0 +1,220 @@
+<Window x:Class="Taskitify.Views.LyricCardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{DynamicResource Loc.LyricCardTitle}"
+        Width="1000" Height="760" MinWidth="820" MinHeight="560"
+        WindowStartupLocation="CenterScreen"
+        Icon="pack://application:,,,/Resources/Taskitify.ico"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}"
+        FontFamily="{StaticResource UiFont}" FontSize="14"
+        TextOptions.TextFormattingMode="Display"
+        UseLayoutRounding="True">
+    <Window.Resources>
+        <Style TargetType="ScrollBar" BasedOn="{StaticResource ThinScrollBar}" />
+
+        <Style x:Key="Group" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="Margin" Value="0,18,0,8" />
+        </Style>
+
+        <!-- A choice chip (style, format): icon and label, accent outline when chosen. -->
+        <Style x:Key="Chip" TargetType="ListBoxItem">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="0,0,6,6" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bg" CornerRadius="16" Padding="12,6" Background="{DynamicResource SubtleFillBrush}"
+                                BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="1">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Glyph}" FontFamily="{StaticResource IconFont}" FontSize="13" VerticalAlignment="Center" Margin="0,0,7,0" />
+                                <TextBlock Text="{Binding Label}" FontSize="13" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SubtleFillHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bg" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="Bg" Property="BorderThickness" Value="2" />
+                                <Setter TargetName="Bg" Property="Padding" Value="11,5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SwatchItem" TargetType="ListBoxItem">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="0,0,8,8" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Grid Width="34" Height="34">
+                            <Ellipse x:Name="Ring" Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="2" Opacity="0" />
+                            <Ellipse Margin="4" Fill="{Binding Brush}" Stroke="#33FFFFFF" StrokeThickness="1" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Ring" Property="Opacity" Value="0.4" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Ring" Property="Opacity" Value="1" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Choices" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBox">
+                        <ItemsPresenter />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="380" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Preview: the card itself, scaled to fit. -->
+        <Border Background="{DynamicResource ControlBackgroundBrush}">
+            <Viewbox Margin="28" Stretch="Uniform">
+                <Border CornerRadius="0" ClipToBounds="True">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="60" ShadowDepth="10" Direction="270" Opacity="0.4" Color="Black" />
+                    </Border.Effect>
+                    <ContentPresenter Content="{Binding Preview}" />
+                </Border>
+            </Viewbox>
+        </Border>
+
+        <!-- Options -->
+        <DockPanel Grid.Column="1" Margin="24,20,20,20">
+            <StackPanel DockPanel.Dock="Top">
+                <TextBlock Text="{DynamicResource Loc.LyricCardTitle}" FontFamily="{StaticResource UiDisplayFont}" FontSize="24" FontWeight="SemiBold" />
+                <TextBlock Margin="0,4,0,0" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis">
+                    <Run Text="{Binding Title, Mode=OneWay}" /> · <Run Text="{Binding Artist, Mode=OneWay}" />
+                </TextBlock>
+
+                <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardStyle}" />
+                <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Styles}"
+                         SelectedItem="{Binding SelectedStyle}" AutomationProperties.Name="{DynamicResource Loc.CardStyle}" />
+
+                <StackPanel Visibility="{Binding UsesColor, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardColor}" Margin="0,12,0,8" />
+                    <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource SwatchItem}" ItemsSource="{Binding Swatches}"
+                             SelectedItem="{Binding SelectedSwatch}" AutomationProperties.Name="{DynamicResource Loc.CardColor}" />
+                </StackPanel>
+
+                <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardFormat}" Margin="0,12,0,8" />
+                <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Formats}"
+                         SelectedItem="{Binding SelectedFormat}" AutomationProperties.Name="{DynamicResource Loc.CardFormat}" />
+
+                <TextBlock Style="{StaticResource Group}" Text="{Binding SelectionHint}" Margin="0,12,0,8" />
+            </StackPanel>
+
+            <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+                <TextBlock Text="{Binding Status}" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,8" MinHeight="16" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="10" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Style="{StaticResource FlatButton}" Command="{Binding SaveCommand}" Padding="12,8">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74E;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <TextBlock Text="{DynamicResource Loc.CardSave}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="2" Style="{StaticResource AccentButton}" Command="{Binding CopyCommand}" Padding="12,8">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8C8;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <TextBlock Text="{DynamicResource Loc.CardCopy}" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </StackPanel>
+
+            <!-- Lines: click to add to the card, again to remove. -->
+            <Border CornerRadius="6" Background="{DynamicResource SubtleFillBrush}" BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="1">
+                <Grid>
+                    <ScrollViewer x:Name="LinesScroll" VerticalScrollBarVisibility="Auto" Padding="4">
+                        <ItemsControl ItemsSource="{Binding Lines}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <ToggleButton IsChecked="{Binding IsSelected}" Cursor="Hand" Focusable="True" Margin="0,1">
+                                        <ToggleButton.Template>
+                                            <ControlTemplate TargetType="ToggleButton">
+                                                <Border x:Name="Bg" CornerRadius="4" Padding="10,6" Background="Transparent">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock x:Name="Text" Text="{Binding Text}" TextWrapping="Wrap" FontSize="13"
+                                                                   Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                        <TextBlock x:Name="Check" Grid.Column="1" Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="12"
+                                                                   Margin="8,2,0,0" Foreground="{DynamicResource AccentBrush}" Visibility="Collapsed" />
+                                                    </Grid>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SubtleFillHoverBrush}" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsChecked" Value="True">
+                                                        <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SubtleFillHoverBrush}" />
+                                                        <Setter TargetName="Text" Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                                                        <Setter TargetName="Text" Property="FontWeight" Value="SemiBold" />
+                                                        <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </ToggleButton.Template>
+                                    </ToggleButton>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <TextBlock Text="{DynamicResource Loc.CardNoLyrics}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center"
+                               Margin="16" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasLines}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+            </Border>
+        </DockPanel>
+    </Grid>
+</Window>

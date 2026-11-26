@@ -32,10 +32,11 @@
                 BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="1" Padding="16,16,16,12">
             <StackPanel>
                 <!-- Header: cover, title, artist. Every element below is optional (Settings), like on the taskbar. -->
-                <Grid Visibility="{Binding ShowHeader, Converter={StaticResource BoolToVisibility}}">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <Grid Width="64" Height="64" Margin="0,0,14,0" Visibility="{Binding ShowCover, Converter={StaticResource BoolToVisibility}}">
                         <Border CornerRadius="6" Background="{DynamicResource SubtleFillHoverBrush}">
@@ -57,6 +58,10 @@
                                    Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"
                                    Visibility="{Binding ShowArtist, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
+                    <!-- Lyric card: always there, in the corner, so a layout without a header still has it. -->
+                    <Button Grid.Column="2" Style="{StaticResource IconButton}" Width="34" Height="34" FontSize="15" VerticalAlignment="Top"
+                            Margin="8,0,-6,0" Command="{Binding ShareCommand}" Content="&#xE72D;"
+                            ToolTip="{DynamicResource Loc.LyricCardOpen}" AutomationProperties.Name="{DynamicResource Loc.LyricCardOpen}" />
                 </Grid>
 
                 <!-- Controls -->
@@ -85,9 +90,47 @@
                             Visibility="{Binding ShowNext, Converter={StaticResource BoolToVisibility}}" />
                     <Button Style="{StaticResource ModeButton}" Command="{Binding RepeatCommand}" Content="{Binding RepeatGlyph}" Tag="{Binding IsRepeatActive}"
                             ToolTip="{DynamicResource Loc.Repeat}" Visibility="{Binding ShowRepeat, Converter={StaticResource BoolToVisibility}}" />
-                    <Button x:Name="VolumeButton" Style="{StaticResource IconButton}" Command="{Binding MuteCommand}" Content="{Binding VolumeGlyph}"
-                            ToolTip="{Binding VolumeTip}" Visibility="{Binding ShowVolume, Converter={StaticResource BoolToVisibility}}" />
+                    <Button x:Name="VolumeButton" Style="{StaticResource ModeButton}" Command="{Binding Volume.ToggleOpenCommand}" Content="{Binding Volume.Glyph}"
+                            Tag="{Binding Volume.IsOpen}" ToolTip="{Binding Volume.Tip}" Visibility="{Binding ShowVolume, Converter={StaticResource BoolToVisibility}}" />
+                    <Button Style="{StaticResource ModeButton}" Command="{Binding Like.ClickCommand}" Content="{Binding Like.Glyph}" Tag="{Binding Like.IsLiked}"
+                            ToolTip="{Binding Like.Tip}" AutomationProperties.Name="{Binding Like.Tip}"
+                            Visibility="{Binding ShowLike, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
+
+                <!-- Volume slider, opened by the volume button. Inline: a popup outside the card would count as a click outside. -->
+                <Grid Margin="8,6,8,0" Visibility="{Binding Volume.IsOpen, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Button Style="{StaticResource IconButton}" Width="32" Height="32" FontSize="14" Command="{Binding Volume.MuteCommand}"
+                            Content="{Binding Volume.Glyph}" ToolTip="{DynamicResource Loc.MuteUnmute}" AutomationProperties.Name="{DynamicResource Loc.MuteUnmute}" />
+                    <Slider x:Name="VolumeSlider" Grid.Column="1" Style="{StaticResource SettingsSlider}" Minimum="0" Maximum="100" Margin="6,0,10,0"
+                            VerticalAlignment="Center" IsMoveToPointEnabled="True" SmallChange="1" LargeChange="10"
+                            Value="{Binding Volume.Percent, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Volume}" />
+                    <TextBlock Grid.Column="2" Text="{Binding Volume.Percent, StringFormat={}{0:0}}" Width="26" TextAlignment="Right"
+                               VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
+                </Grid>
+
+                <!-- Unlike needs a confirmation, so a stray click does not drop a song from Liked Songs. -->
+                <Border Margin="0,8,0,0" Padding="12,8" CornerRadius="6" Background="{DynamicResource SubtleFillHoverBrush}"
+                        Visibility="{Binding Like.IsConfirming, Converter={StaticResource BoolToVisibility}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{DynamicResource Loc.UnlikeQuestion}" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,10,0" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Style="{StaticResource FlatButton}" Command="{Binding Like.CancelCommand}" Content="{DynamicResource Loc.Cancel}"
+                                    Padding="10,4" Margin="0,0,6,0" FontSize="12" />
+                            <Button Style="{StaticResource DangerButton}" Command="{Binding Like.ConfirmCommand}" Content="{DynamicResource Loc.UnlikeConfirm}"
+                                    Padding="10,4" FontSize="12" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
 
                 <Grid Margin="0,8,0,8">
                 <!-- Lyrics: a fixed viewport; the list is translated so the current line sits in the middle.

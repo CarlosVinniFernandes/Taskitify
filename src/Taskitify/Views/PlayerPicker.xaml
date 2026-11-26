@@ -41,6 +41,8 @@
                 <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowRepeat}" Content="&#xE8EE;" ToolTip="{DynamicResource Loc.Repeat}" AutomationProperties.Name="{DynamicResource Loc.Repeat}" />
                 <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowVolume}" Content="&#xE995;"
                               ToolTip="{DynamicResource Loc.MixerVolume}" AutomationProperties.Name="{DynamicResource Loc.Volume}" />
+                <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding ShowLike}" Content="&#xEB51;"
+                              ToolTip="{DynamicResource Loc.LikeButton}" AutomationProperties.Name="{DynamicResource Loc.LikeButton}" />
             </StackPanel>
         </Grid>
         <ToggleButton Style="{StaticResource PickProgress}" IsChecked="{Binding ShowProgress}" VerticalAlignment="Bottom" Margin="{Binding PickerProgressMargin}"

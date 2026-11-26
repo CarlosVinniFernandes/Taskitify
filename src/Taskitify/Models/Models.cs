@@ -102,6 +102,9 @@ public sealed class BarLayout
 
     public bool ShowVolume { get; set; }
 
+    /// <summary>Heart that adds the song to Liked Songs (only while Spotify is connected).</summary>
+    public bool ShowLike { get; set; }
+
     public bool ShowProgress { get; set; }
 
     /// <summary>DIP width for cover + text; selected buttons add their own room.</summary>
@@ -111,7 +114,7 @@ public sealed class BarLayout
     public static (int Min, int Max) WidthRange(bool minimized) => minimized ? (60, 600) : (100, 900);
 
     [JsonIgnore]
-    public bool AnyControl => ShowShuffle || ShowPrevious || ShowPlayPause || ShowNext || ShowRepeat || ShowVolume;
+    public bool AnyControl => ShowShuffle || ShowPrevious || ShowPlayPause || ShowNext || ShowRepeat || ShowVolume || ShowLike;
 
     [JsonIgnore]
     public bool AnyText => ShowText || ShowCaption;
@@ -120,7 +123,7 @@ public sealed class BarLayout
     public static BarLayout DefaultNormal() => new()
     {
         ShowCover = true, ShowText = true, ShowPrevious = true, ShowPlayPause = true, ShowNext = true, ShowVolume = true,
-        ShowProgress = true, Width = 300,
+        ShowLike = true, ShowProgress = true, Width = 300,
     };
 
     /// <summary>Cover, track name, artist and a play button.</summary>
@@ -130,7 +133,7 @@ public sealed class BarLayout
     public static BarLayout DefaultMiniPlayer() => new()
     {
         ShowCover = true, ShowText = true, ShowCaption = true, ShowPrevious = true, ShowPlayPause = true, ShowNext = true,
-        ShowProgress = true, Width = 360,
+        ShowVolume = true, ShowLike = true, ShowProgress = true, Width = 360,
     };
 }
 
@@ -181,6 +184,9 @@ public sealed class AppSettings
 
     public bool SpotifyLyricsEnabled { get; set; }
 
+    /// <summary>The like button was added to the layouts saved by older versions (once).</summary>
+    public bool LikeButtonAdded { get; set; }
+
     /// <summary>When true, ManualX/Y/Width/Height (physical pixels) replace automatic detection.</summary>
     public bool ManualPlacement { get; set; }
 
@@ -210,6 +216,15 @@ public sealed class AppSettings
     /// <summary>Fold the flat switches of older versions into <see cref="Bar"/>.</summary>
     public void MigrateLegacy()
     {
+        // The like button came after these layouts were saved: it shows up once on the normal
+        // player and the mini player (it only appears while Spotify is connected), like for new users.
+        if (!LikeButtonAdded)
+        {
+            Bar.ShowLike = true;
+            MiniPlayer.ShowLike = true;
+            LikeButtonAdded = true;
+        }
+
         var b = Bar;
         if (ShowControls == true)
         {

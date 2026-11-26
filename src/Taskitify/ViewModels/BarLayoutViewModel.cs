@@ -55,6 +55,8 @@ public sealed class BarLayoutViewModel : ObservableObject
 
     public bool ShowVolume { get => L.ShowVolume; set => Update(l => l.ShowVolume = value); }
 
+    public bool ShowLike { get => L.ShowLike; set => Update(l => l.ShowLike = value); }
+
     public bool ShowProgress { get => L.ShowProgress; set => Update(l => l.ShowProgress = value); }
 
     public int Width { get => L.Width; set => Update(l => l.Width = Math.Clamp(value, MinWidth, MaxWidth)); }

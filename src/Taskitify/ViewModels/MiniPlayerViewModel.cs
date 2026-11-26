@@ -39,10 +39,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     private readonly ISpotifyMonitor _monitor;
     private readonly LyricsSyncService _sync;
     private readonly SettingsService _settings;
-    private readonly AppVolumeService _volume;
     private readonly DispatcherTimer _progressTimer;
-    private string _volumeGlyph = "";
-    private string _volumeTip = string.Empty;
 
     private bool _isActive;
     private string _title = string.Empty;
@@ -57,12 +54,19 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     private int _currentIndex = -1;
     private double? _previewSeconds;
 
-    public MiniPlayerViewModel(ISpotifyMonitor monitor, LyricsSyncService sync, SettingsService settings, AppVolumeService volume)
+    public MiniPlayerViewModel(ISpotifyMonitor monitor, LyricsSyncService sync, SettingsService settings, AppVolumeService volume, SpotifyLikeService likes)
     {
         _monitor = monitor;
         _sync = sync;
         _settings = settings;
-        _volume = volume;
+        Volume = new VolumeControl(volume);
+        Like = new LikeControl(likes);
+        Like.PropertyChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(ShowLike));
+            OnPropertyChanged(nameof(ShowControls));
+        };
+        ShareCommand = new RelayCommand(() => ShareRequested?.Invoke(this, EventArgs.Empty), () => _monitor.Track is not null);
         _progressTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _progressTimer.Tick += (_, _) => UpdateProgress();
 
@@ -71,11 +75,6 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         PreviousCommand = new RelayCommand(() => _ = _monitor.PreviousAsync(), () => _monitor.CanGoPrevious);
         ShuffleCommand = new RelayCommand(() => _ = _monitor.ToggleShuffleAsync());
         RepeatCommand = new RelayCommand(() => _ = _monitor.CycleRepeatAsync());
-        MuteCommand = new RelayCommand(() =>
-        {
-            _volume.ToggleMute();
-            RefreshVolume();
-        });
         SeekToLineCommand = new RelayCommand(p =>
         {
             if (p is LyricLineViewModel line && _monitor.CanSeek)
@@ -97,7 +96,14 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     public ICommand RepeatCommand { get; }
 
-    public ICommand MuteCommand { get; }
+    public VolumeControl Volume { get; }
+
+    /// <summary>Opens the lyric card maker for the song.</summary>
+    public ICommand ShareCommand { get; }
+
+    public event EventHandler? ShareRequested;
+
+    public LikeControl Like { get; }
 
     // What the popup shows, chosen in Settings like the taskbar players (the lyrics always).
     private BarLayout L => _settings.Current.MiniPlayer;
@@ -122,7 +128,10 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     public bool ShowVolume => L.ShowVolume;
 
-    public bool ShowControls => ShowShuffle || L.ShowPrevious || L.ShowPlayPause || L.ShowNext || ShowRepeat || L.ShowVolume;
+    /// <summary>The heart: chosen in Settings, and Spotify connected.</summary>
+    public bool ShowLike => L.ShowLike && Like.IsAvailable;
+
+    public bool ShowControls => ShowShuffle || L.ShowPrevious || L.ShowPlayPause || L.ShowNext || ShowRepeat || L.ShowVolume || ShowLike;
 
     public bool ShowProgress => L.ShowProgress;
 
@@ -134,35 +143,6 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     public bool IsRepeatActive => _monitor.RepeatMode != RepeatMode.None;
 
     public string RepeatGlyph => _monitor.RepeatMode == RepeatMode.Track ? "" : "";
-
-    public string VolumeGlyph { get => _volumeGlyph; private set => Set(ref _volumeGlyph, value); }
-
-    public string VolumeTip { get => _volumeTip; private set => Set(ref _volumeTip, value); }
-
-    /// <summary>Mouse wheel over the volume button: ±5 %.</summary>
-    public void NudgeVolume(int direction)
-    {
-        if (_volume.Get() is { } v)
-        {
-            _volume.SetVolume(v.Volume + (0.05f * direction));
-            RefreshVolume();
-        }
-    }
-
-    public void RefreshVolume()
-    {
-        if (_volume.Get() is not { } state)
-        {
-            VolumeGlyph = "";
-            VolumeTip = LocalizationService.Get("VolumeUnavailable");
-            return;
-        }
-        VolumeGlyph = state.Muted || state.Volume <= 0.001f ? ""
-            : state.Volume < 0.34f ? ""
-            : state.Volume < 0.67f ? ""
-            : "";
-        VolumeTip = state.Muted ? LocalizationService.Get("SpotifyMuted") : LocalizationService.Format("VolumeDetail", Math.Round(state.Volume * 100));
-    }
 
     public string Title { get => _title; private set => Set(ref _title, value); }
 
@@ -212,10 +192,13 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
                 _settings.Changed += OnSettingsChanged;
                 RefreshAll();
                 OnSettingsChanged(this, EventArgs.Empty);
+                Like.Refresh();
                 _progressTimer.Start();
             }
             else
             {
+                Volume.IsOpen = false;
+                Like.IsConfirming = false;
                 Unsubscribe();
                 _progressTimer.Stop();
             }
@@ -248,6 +231,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        Like.Dispose();
         Unsubscribe();
         _progressTimer.Stop();
     }
@@ -272,12 +256,12 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         foreach (var name in new[]
         {
             nameof(ShowCover), nameof(ShowTitle), nameof(ShowArtist), nameof(ShowHeader), nameof(ShowShuffle), nameof(ShowPrevious),
-            nameof(ShowPlayPause), nameof(ShowNext), nameof(ShowRepeat), nameof(ShowVolume), nameof(ShowControls), nameof(ShowProgress),
+            nameof(ShowPlayPause), nameof(ShowNext), nameof(ShowRepeat), nameof(ShowVolume), nameof(ShowLike), nameof(ShowControls), nameof(ShowProgress),
             nameof(WindowWidth), nameof(IsShuffleActive), nameof(IsRepeatActive), nameof(RepeatGlyph),
         })
             OnPropertyChanged(name);
         if (ShowVolume)
-            RefreshVolume();
+            Volume.Refresh();
     }
 
     private void OnPlaybackChanged(object? sender, EventArgs e)
