@@ -89,6 +89,9 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>The popup with the lyrics.</summary>
     public BarLayoutViewModel MiniPlayer { get; }
 
+    /// <summary>The mini player's appearance (set by the app, which knows the cover playing).</summary>
+    public MiniPlayerLookViewModel? MiniLook { get; set; }
+
     public bool IsMinimizeOnPause => S.PausedBehavior == PausedBehavior.Minimize;
 
     /// <summary>The minimized bar page explains why its settings are greyed out.</summary>

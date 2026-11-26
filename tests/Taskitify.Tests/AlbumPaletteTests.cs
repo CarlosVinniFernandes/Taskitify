@@ -77,4 +77,22 @@ public class AlbumPaletteTests
             Assert.InRange(Math.Abs(back.B - c.B), 0, 1);
         }
     }
+
+    [Fact]
+    public void Swatches_follow_the_cover_most_present_first()
+    {
+        // Two thirds blue, one third red.
+        var swatches = AlbumPalette.Swatches(Image(30, 30, (x, _) => x < 20 ? ((byte)30, (byte)60, (byte)200) : ((byte)210, (byte)40, (byte)40)), 30, 30, 120);
+        Assert.Equal(2, swatches.Count);
+        Assert.True(swatches[0].Color.B > swatches[0].Color.R);
+        Assert.True(swatches[1].Color.R > swatches[1].Color.B);
+        Assert.InRange(swatches[0].Share, 0.6, 0.7);
+    }
+
+    [Fact]
+    public void Swatches_of_a_grey_cover_are_grey()
+    {
+        var swatches = AlbumPalette.Swatches(Image(20, 20, (x, y) => (x + y) % 2 == 0 ? ((byte)235, (byte)235, (byte)235) : ((byte)90, (byte)90, (byte)90)), 20, 20, 80);
+        Assert.All(swatches, s => Assert.True(AlbumPalette.ToHsl(s.Color).S < 0.05));
+    }
 }

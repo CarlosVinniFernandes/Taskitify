@@ -28,6 +28,43 @@ public sealed class LyricLineViewModel : ObservableObject
     public bool IsCurrent { get => _isCurrent; set => Set(ref _isCurrent, value); }
 
     public bool IsPast { get => _isPast; set => Set(ref _isPast, value); }
+
+    private double _emphasis = 1;
+    private double _scale = 1;
+    private System.Windows.FontWeight _weight = System.Windows.FontWeights.Normal;
+
+    /// <summary>The line's opacity under the chosen highlight style.</summary>
+    public double Emphasis { get => _emphasis; set => Set(ref _emphasis, value); }
+
+    /// <summary>Drawn larger (render transform: the layout does not move).</summary>
+    public double Scale { get => _scale; set => Set(ref _scale, value); }
+
+    public System.Windows.FontWeight Weight { get => _weight; set => Set(ref _weight, value); }
+
+    /// <summary>The emphasis of a line <paramref name="distance"/> lines from the current one (0 = current, negative = past).</summary>
+    public void Emphasize(LyricsHighlight highlight, int distance, bool started)
+    {
+        var current = started && distance == 0;
+        var away = Math.Abs(distance);
+        switch (highlight)
+        {
+            case LyricsHighlight.Expressive:
+                Emphasis = current ? 1 : distance < 0 ? 0.32 : 0.42;
+                Scale = current ? 1.12 : 1;
+                Weight = current ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.Normal;
+                break;
+            case LyricsHighlight.Progressive:
+                Emphasis = !started ? 0.5 : away switch { 0 => 1, 1 => 0.62, 2 => 0.42, 3 => 0.3, _ => 0.22 };
+                Scale = current ? 1.05 : 1;
+                Weight = current ? System.Windows.FontWeights.SemiBold : System.Windows.FontWeights.Normal;
+                break;
+            default:
+                Emphasis = current ? 1 : distance < 0 ? 0.36 : 0.48;
+                Scale = 1;
+                Weight = current ? System.Windows.FontWeights.SemiBold : System.Windows.FontWeights.Normal;
+                break;
+        }
+    }
 }
 
 /// <summary>
@@ -134,10 +171,40 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     public bool ShowControls => ShowShuffle || L.ShowPrevious || L.ShowPlayPause || L.ShowNext || ShowRepeat || L.ShowVolume || ShowLike;
 
+    /// <summary>The transport row at the bottom (the heart lives with the song, up top).</summary>
+    public bool ShowTransport => ShowShuffle || L.ShowPrevious || L.ShowPlayPause || L.ShowNext || ShowRepeat || L.ShowVolume;
+
+    /// <summary>The song's part is always there: it holds the share button.</summary>
+    public bool ShowHeaderPart => true;
+
+    // ---- Appearance (Settings > Mini player), each part independent of the others ----
+
+    public MiniPlayerStyle Look => _settings.Current.MiniPlayerLook;
+
+    public bool IsCinema => Look.Layout == MiniPlayerLayout.Cinema;
+
+    public System.Windows.TextAlignment LyricsTextAlignment =>
+        Look.Alignment == LyricsAlignment.Left ? System.Windows.TextAlignment.Left : System.Windows.TextAlignment.Center;
+
+    public System.Windows.Point LyricsScaleOrigin => Look.Alignment == LyricsAlignment.Left ? new(0, 0.5) : new(0.5, 0.5);
+
+    /// <summary>Room at the sides for a line drawn larger.</summary>
+    public System.Windows.Thickness LyricsLinePadding => Look.Highlight == LyricsHighlight.Expressive
+        ? new(Look.Alignment == LyricsAlignment.Left ? 4 : 18, 6, 18, 6) : new(4, 5, 4, 5);
+
+    public FontFamily LyricsFont => Look.Typeface switch
+    {
+        LyricsTypeface.Modern => Views.LyricCardRenderer.Figtree,
+        LyricsTypeface.Serif => Views.LyricCardRenderer.DmSerif,
+        _ => (FontFamily)System.Windows.Application.Current.FindResource("UiFont"),
+    };
+
+    public double LyricsFontSize => Math.Round(14 * Math.Clamp(Look.LyricsScale, 0.8, 1.4) * (IsCinema ? 1.12 : 1) * (Look.Typeface == LyricsTypeface.Serif ? 1.08 : 1), 1);
+
     public bool ShowProgress => L.ShowProgress;
 
     /// <summary>The window: the card (wide enough for every button) plus the 12 px each side its shadow needs.</summary>
-    public double WindowWidth => Math.Clamp(L.Width, 310, 640) + 24;
+    public double WindowWidth => (IsCinema ? Math.Clamp(L.Width + 200, 560, 720) : Math.Clamp(L.Width, 310, 640)) + 24;
 
     public bool IsShuffleActive => _monitor.IsShuffleActive;
 
@@ -261,11 +328,14 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         {
             nameof(ShowCover), nameof(ShowTitle), nameof(ShowArtist), nameof(ShowHeader), nameof(ShowShuffle), nameof(ShowPrevious),
             nameof(ShowPlayPause), nameof(ShowNext), nameof(ShowRepeat), nameof(ShowVolume), nameof(ShowLike), nameof(ShowControls), nameof(ShowProgress),
+            nameof(ShowTransport), nameof(Look), nameof(IsCinema), nameof(LyricsTextAlignment), nameof(LyricsScaleOrigin), nameof(LyricsLinePadding),
+            nameof(LyricsFont), nameof(LyricsFontSize),
             nameof(WindowWidth), nameof(IsShuffleActive), nameof(IsRepeatActive), nameof(RepeatGlyph),
         })
             OnPropertyChanged(name);
         if (ShowVolume)
             Volume.Refresh();
+        UpdateCurrentLine();
     }
 
     private void OnPlaybackChanged(object? sender, EventArgs e)
@@ -332,10 +402,12 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     private void UpdateCurrentLine()
     {
         var index = _sync.CurrentIndex;
+        var highlight = Look.Highlight;
         for (var i = 0; i < Lines.Count; i++)
         {
             Lines[i].IsCurrent = i == index;
             Lines[i].IsPast = i < index;
+            Lines[i].Emphasize(highlight, i - Math.Max(index, 0), started: index >= 0);
         }
         CurrentIndex = index;
         CurrentLineChanged?.Invoke(this, EventArgs.Empty);

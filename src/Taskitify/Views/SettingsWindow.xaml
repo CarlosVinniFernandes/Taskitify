@@ -418,6 +418,67 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Appearance: each part on its own, any layout with any background. -->
+                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookLayout}" />
+                    <Border Style="{StaticResource Group}" Padding="18,14,18,8">
+                        <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Layouts}"
+                                 SelectedItem="{Binding MiniLook.Layout}" AutomationProperties.Name="{DynamicResource Loc.LookLayout}" />
+                    </Border>
+
+                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookBackground}" />
+                    <Border Style="{StaticResource Group}" Padding="18,14,18,8">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SettingHint}" Margin="0,0,0,10" Text="{DynamicResource Loc.LookBackgroundHint}" />
+                            <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Backgrounds}"
+                                     SelectedItem="{Binding MiniLook.Background}" AutomationProperties.Name="{DynamicResource Loc.LookBackground}" />
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookLyrics}" />
+                    <Border Style="{StaticResource Group}">
+                        <StackPanel>
+                            <Border Style="{StaticResource FirstRow}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookHighlight}" />
+                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ChoiceChip}" ItemsSource="{Binding MiniLook.Highlights}"
+                                             SelectedItem="{Binding MiniLook.Highlight}" Margin="0,8,0,0" AutomationProperties.Name="{DynamicResource Loc.LookHighlight}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookAlignment}" />
+                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ChoiceChip}" ItemsSource="{Binding MiniLook.Alignments}"
+                                             SelectedItem="{Binding MiniLook.Alignment}" Margin="0,8,0,0" AutomationProperties.Name="{DynamicResource Loc.LookAlignment}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookTypeface}" />
+                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ChoiceChip}" ItemsSource="{Binding MiniLook.Typefaces}"
+                                             SelectedItem="{Binding MiniLook.Typeface}" Margin="0,8,0,0" AutomationProperties.Name="{DynamicResource Loc.LookTypeface}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <StackPanel>
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource ValueText}" Text="{Binding MiniLook.LyricsPercent, StringFormat={}{0:0}%}" />
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookLyricsSize}" />
+                                    </DockPanel>
+                                    <Slider Minimum="80" Maximum="140" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,8,0,0"
+                                            Value="{Binding MiniLook.LyricsPercent}" AutomationProperties.Name="{DynamicResource Loc.LookLyricsSize}" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookControls}" />
+                    <Border Style="{StaticResource Group}">
+                        <Border Style="{StaticResource FirstRow}">
+                            <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ChoiceChip}" ItemsSource="{Binding MiniLook.Controls}"
+                                     SelectedItem="{Binding MiniLook.ControlsStyle}" AutomationProperties.Name="{DynamicResource Loc.LookControls}" />
+                        </Border>
+                    </Border>
+
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.Size}" />
                     <Border Style="{StaticResource Group}">
                         <Border Style="{StaticResource FirstRow}">

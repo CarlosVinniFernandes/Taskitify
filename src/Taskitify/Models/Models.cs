@@ -190,6 +190,9 @@ public sealed class AppSettings
     /// <summary>The lyric card as it was last made (style, format, typography...).</summary>
     public LyricCardOptions LyricCard { get; set; } = new();
 
+    /// <summary>How the mini player looks: layout, background, lyrics and controls, each on its own.</summary>
+    public MiniPlayerStyle MiniPlayerLook { get; set; } = new();
+
     /// <summary>Card settings the user saved under a name.</summary>
     public List<LyricCardPreset> LyricCardPresets { get; set; } = [];
 
@@ -343,4 +346,78 @@ public sealed class LyricCardPreset
     public string Name { get; set; } = "";
 
     public LyricCardOptions Options { get; set; } = new();
+}
+
+public enum MiniPlayerLayout
+{
+    /// <summary>Cover and song on top, lyrics, then progress and controls at the bottom.</summary>
+    Vertical,
+
+    /// <summary>Wide: a large cover on the left, the lyrics on the right, controls across the bottom.</summary>
+    Cinema,
+}
+
+public enum MiniPlayerBackground
+{
+    /// <summary>Whatever the taskbar player uses (album gradient or the app theme), as before.</summary>
+    Default,
+    Theme,
+    AlbumGradient,
+    Aurora,
+    Atmosphere,
+    Velvet,
+    BlurredCover,
+}
+
+public enum LyricsHighlight
+{
+    /// <summary>Lines the same size, the current one brighter.</summary>
+    Classic,
+
+    /// <summary>The current line larger and bolder, the others quiet.</summary>
+    Expressive,
+
+    /// <summary>Lines fade the further they are from the current one.</summary>
+    Progressive,
+}
+
+public enum LyricsTypeface
+{
+    System,
+    Modern,
+    Serif,
+}
+
+public enum LyricsAlignment
+{
+    Center,
+    Left,
+}
+
+public enum ControlsLook
+{
+    /// <summary>Outline icons, play in a filled circle.</summary>
+    Classic,
+
+    /// <summary>Solid icons, a large play without a circle.</summary>
+    Solid,
+}
+
+/// <summary>The mini player's appearance. Every part is independent of the others.</summary>
+public sealed class MiniPlayerStyle
+{
+    public MiniPlayerLayout Layout { get; set; } = MiniPlayerLayout.Vertical;
+
+    public MiniPlayerBackground Background { get; set; } = MiniPlayerBackground.Default;
+
+    public LyricsHighlight Highlight { get; set; } = LyricsHighlight.Classic;
+
+    public LyricsTypeface Typeface { get; set; } = LyricsTypeface.System;
+
+    /// <summary>The lyrics' size: 0.85 to 1.3 of the usual 14 px.</summary>
+    public double LyricsScale { get; set; } = 1;
+
+    public LyricsAlignment Alignment { get; set; } = LyricsAlignment.Center;
+
+    public ControlsLook Controls { get; set; } = ControlsLook.Classic;
 }

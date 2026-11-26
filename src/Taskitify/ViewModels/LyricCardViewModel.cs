@@ -163,8 +163,8 @@ public sealed class LyricCardViewModel : ObservableObject
         foreach (var preset in settings.Current.LyricCardPresets)
             SavedPresets.Add(preset);
 
-        CopyCommand = new RelayCommand(Copy, () => HasSelection);
-        SaveCommand = new RelayCommand(Save, () => HasSelection);
+        CopyCommand = new RelayCommand(Copy);
+        SaveCommand = new RelayCommand(Save);
         ClearCommand = new RelayCommand(() => SetAll(false), () => HasSelection);
         SavePresetCommand = new RelayCommand(SavePreset, () => !string.IsNullOrWhiteSpace(PresetName));
         ApplyPresetCommand = new RelayCommand(p => { if (p is LyricCardPreset preset) Apply(preset.Options.Clone()); });

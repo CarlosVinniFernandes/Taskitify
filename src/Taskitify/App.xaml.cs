@@ -246,7 +246,10 @@ public partial class App : Application
             return;
         }
         _spotifyLyrics?.CheckSession();
-        _settingsVm = new SettingsViewModel(_settings, _cache, _sync, _overlay.IsCalibrating, _overlay.SetCalibrating);
+        _settingsVm = new SettingsViewModel(_settings, _cache, _sync, _overlay.IsCalibrating, _overlay.SetCalibrating)
+        {
+            MiniLook = new MiniPlayerLookViewModel(_settings, _monitor?.Thumbnail as BitmapSource, _monitor?.Palette ?? default),
+        };
         _settingsWindow = new SettingsWindow(_settingsVm, _spotifyLyrics!);
         _settingsWindow.Closed += (_, _) =>
         {

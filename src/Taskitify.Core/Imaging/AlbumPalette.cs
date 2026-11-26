@@ -95,6 +95,68 @@ public static class AlbumPalette
         return (start, end);
     }
 
+    /// <summary>
+    /// The album's main colours as they are (not toned down), most present first, each with its
+    /// share of the image: up to <paramref name="max"/> clearly different ones. A monochrome
+    /// cover gives only its greys; nothing colourful is invented.
+    /// </summary>
+    public static IReadOnlyList<(Rgb Color, double Share)> Swatches(ReadOnlySpan<byte> bgra, int width, int height, int stride, int max = 5)
+    {
+        // 3 bits per channel: coarse enough that one colour of the cover is one bucket.
+        var counts = new int[512];
+        var sums = new long[512 * 3];
+        var total = 0;
+        for (var y = 0; y < height; y++)
+        {
+            var row = y * stride;
+            for (var x = 0; x < width; x++)
+            {
+                var i = row + (x * 4);
+                if (i + 3 >= bgra.Length)
+                    break;
+                if (bgra[i + 3] < 128)
+                    continue;
+                byte b = bgra[i], g = bgra[i + 1], r = bgra[i + 2];
+                var bin = ((r >> 5) << 6) | ((g >> 5) << 3) | (b >> 5);
+                counts[bin]++;
+                sums[bin * 3] += r;
+                sums[(bin * 3) + 1] += g;
+                sums[(bin * 3) + 2] += b;
+                total++;
+            }
+        }
+        if (total == 0)
+            return [(Fallback.Start, 1)];
+
+        var result = new List<(Rgb Color, double Share)>();
+        foreach (var bin in Enumerable.Range(0, counts.Length).Where(b => counts[b] > 0).OrderByDescending(b => counts[b]))
+        {
+            var share = counts[bin] / (double)total;
+            if (share < 0.015 && result.Count > 0)
+                break;
+            var color = Average(sums, bin, counts[bin]);
+            // Near an already chosen colour: it adds to that one instead.
+            var near = result.FindIndex(r => Distance(r.Color, color) < 60);
+            if (near >= 0)
+            {
+                result[near] = (result[near].Color, result[near].Share + share);
+                continue;
+            }
+            result.Add((color, share));
+            if (result.Count == max)
+                break;
+        }
+        return result;
+    }
+
+    /// <summary>A rough perceptual distance between two colours (weighted RGB).</summary>
+    public static double Distance(Rgb a, Rgb b)
+    {
+        var mean = (a.R + b.R) / 2.0;
+        double dr = a.R - b.R, dg = a.G - b.G, db = a.B - b.B;
+        return Math.Sqrt(((2 + (mean / 256)) * dr * dr) + (4 * dg * dg) + ((2 + ((255 - mean) / 256)) * db * db));
+    }
+
     /// <summary>Clamp lightness (and tame saturation) so white text stays readable.</summary>
     internal static Rgb Tone(Rgb c, double maxLightness, double minLightness)
     {
@@ -113,7 +175,7 @@ public static class AlbumPalette
     private static Rgb Average(long[] sums, int bin, int n) =>
         new((byte)(sums[bin * 3] / n), (byte)(sums[(bin * 3) + 1] / n), (byte)(sums[(bin * 3) + 2] / n));
 
-    internal static (double H, double S, double L) ToHsl(Rgb c)
+    public static (double H, double S, double L) ToHsl(Rgb c)
     {
         double r = c.R / 255.0, g = c.G / 255.0, b = c.B / 255.0;
         var max = Math.Max(r, Math.Max(g, b));
@@ -133,7 +195,7 @@ public static class AlbumPalette
         return (h / 6, s, l);
     }
 
-    internal static Rgb FromHsl(double h, double s, double l)
+    public static Rgb FromHsl(double h, double s, double l)
     {
         if (s < 1e-9)
         {

@@ -4,8 +4,10 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Taskitify.Core.Layout;
+using Taskitify.Models;
 using Taskitify.Infrastructure;
 using Taskitify.ViewModels;
 
@@ -90,6 +92,8 @@ public partial class MiniPlayerWindow : Window
     public void ShowAt(PixelRect anchor, PixelRect workArea, double scale)
     {
         _vm.IsActive = true;
+        ApplyLayout();
+        ApplyControlsStyle();
         UpdatePlayGlyph();
         UpdateProgressValue();
         OnViewModelChanged(this, new PropertyChangedEventArgs(nameof(MiniPlayerViewModel.StatusMessage)));
@@ -205,6 +209,15 @@ public partial class MiniPlayerWindow : Window
             case nameof(MiniPlayerViewModel.Palette):
                 ApplyBackground();
                 break;
+            case nameof(MiniPlayerViewModel.Look):
+                if (!IsVisible)
+                    break;
+                ApplyLayout();
+                ApplyControlsStyle();
+                UpdatePlayGlyph();
+                ApplyBackground();
+                Dispatcher.InvokeAsync(() => ScrollToCurrent(animate: false), DispatcherPriority.Loaded);
+                break;
             case nameof(MiniPlayerViewModel.WindowWidth):
                 // Not a XAML binding: the window writes its HWND's size to Width, which drops one.
                 Width = _vm.WindowWidth;
@@ -223,7 +236,15 @@ public partial class MiniPlayerWindow : Window
     private void ApplyBackground()
     {
         var keys = new[] { "TextPrimaryBrush", "TextSecondaryBrush", "TextTertiaryBrush", "TrackBrush", "SubtleFillBrush", "SubtleFillHoverBrush", "WindowBackgroundBrush" };
-        if (!_useGradient())
+        var look = _vm.Look.Background;
+        var useGradient = look switch
+        {
+            MiniPlayerBackground.Theme => false,
+            MiniPlayerBackground.AlbumGradient => true,
+            MiniPlayerBackground.Default => _useGradient(),
+            _ => true,
+        };
+        if (!useGradient)
         {
             foreach (var key in keys)
                 Resources.Remove(key);
@@ -232,9 +253,22 @@ public partial class MiniPlayerWindow : Window
         }
 
         var (start, end) = _vm.Palette;
-        var gradient = new LinearGradientBrush(end, start, new Point(0, 0), new Point(1, 1));
-        gradient.Freeze();
-        ContentCard.Background = gradient;
+        if (MiniPlayerBackdrop.IsAtmospheric(look))
+        {
+            // A small image made once per cover and style, stretched: it is all soft gradients.
+            var (w, h) = _vm.IsCinema ? (192, 112) : (128, 176);
+            var image = MiniPlayerBackdrop.Render(_vm.Cover as BitmapSource, look, w, h);
+            var brush = new ImageBrush(image) { Stretch = Stretch.Fill };
+            RenderOptions.SetBitmapScalingMode(brush, BitmapScalingMode.HighQuality);
+            brush.Freeze();
+            ContentCard.Background = brush;
+        }
+        else
+        {
+            var gradient = new LinearGradientBrush(end, start, new Point(0, 0), new Point(1, 1));
+            gradient.Freeze();
+            ContentCard.Background = gradient;
+        }
         Resources["TextPrimaryBrush"] = Frozen(Colors.White);
         Resources["TextSecondaryBrush"] = Frozen(Color.FromArgb(0xB3, 0xFF, 0xFF, 0xFF));
         Resources["TextTertiaryBrush"] = Frozen(Color.FromArgb(0x73, 0xFF, 0xFF, 0xFF));
@@ -253,7 +287,120 @@ public partial class MiniPlayerWindow : Window
 
     private static bool Contains(PixelRect r, int x, int y) => x >= r.Left && x < r.Right && y >= r.Top && y < r.Bottom;
 
-    private void UpdatePlayGlyph() => PlayPauseGlyph.Text = _vm.IsPlaying ? "" : "";
+    private static readonly Geometry SolidPlay = Geometry.Parse("M7,4.2 L19.6,12 L7,19.8 Z");
+    private static readonly Geometry SolidPause = Geometry.Parse("M6.2,4.5 L10.2,4.5 L10.2,19.5 L6.2,19.5 Z M13.8,4.5 L17.8,4.5 L17.8,19.5 L13.8,19.5 Z");
+    private static readonly Geometry SolidPrevious = Geometry.Parse("M5,5 L7.6,5 L7.6,19 L5,19 Z M19,5 L19,19 L8.6,12 Z");
+    private static readonly Geometry SolidNext = Geometry.Parse("M16.4,5 L19,5 L19,19 L16.4,19 Z M5,5 L15.4,12 L5,19 Z");
+
+    private void UpdatePlayGlyph()
+    {
+        if (_vm.Look.Controls == ControlsLook.Solid)
+        {
+            PlayPauseButton.Content = Solid(_vm.IsPlaying ? SolidPause : SolidPlay, 26);
+            return;
+        }
+        if (PlayPauseButton.Content != PlayPauseGlyph)
+            PlayPauseButton.Content = PlayPauseGlyph;
+        PlayPauseGlyph.Text = _vm.IsPlaying ? "" : "";
+    }
+
+    /// <summary>A solid vector icon in the text colour (it follows the background's).</summary>
+    private static FrameworkElement Solid(Geometry shape, double size)
+    {
+        var path = new System.Windows.Shapes.Path { Data = shape, Stretch = Stretch.Uniform };
+        path.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "TextPrimaryBrush");
+        return new Viewbox { Width = size, Height = size, Child = new Grid { Width = 24, Height = 24, Children = { path } } };
+    }
+
+    /// <summary>Outline icons with play in a circle, or solid ones with a large bare play.</summary>
+    private void ApplyControlsStyle()
+    {
+        var solid = _vm.Look.Controls == ControlsLook.Solid;
+        PlayPauseButton.Style = (Style)FindResource(solid ? "SolidPlayButton" : "PlayButton");
+        PreviousButton.Content = solid ? Solid(SolidPrevious, 18) : "";
+        NextButton.Content = solid ? Solid(SolidNext, 18) : "";
+    }
+
+    /// <summary>
+    /// Vertical: song, lyrics, progress, controls, one under the other. Cinema wide: a large
+    /// cover with the song on the left, the lyrics on the right, progress and controls across.
+    /// Same parts, other places.
+    /// </summary>
+    private void ApplyLayout()
+    {
+        var cinema = _vm.IsCinema;
+        LayoutRoot.RowDefinitions.Clear();
+        LayoutRoot.ColumnDefinitions.Clear();
+        HeaderPart.RowDefinitions.Clear();
+        HeaderPart.ColumnDefinitions.Clear();
+        var rows = cinema ? 5 : 6;
+        for (var i = 0; i < rows; i++)
+            LayoutRoot.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        if (cinema)
+        {
+            LayoutRoot.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(196) });
+            LayoutRoot.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Place(HeaderPart, 0, 0);
+            Place(LyricsPart, 0, 1);
+            Place(ProgressPart, 1, 0, span: 2);
+            Place(ControlsPart, 2, 0, span: 2);
+            Place(VolumePart, 3, 0, span: 2);
+            Place(ConfirmPart, 4, 0, span: 2);
+            // The song: cover on top, title, artist, then the actions.
+            for (var i = 0; i < 3; i++)
+                HeaderPart.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Place(CoverPart, 0, 0);
+            Place(TitlePart, 1, 0);
+            Place(ActionsPart, 2, 0);
+            CoverPart.Width = CoverPart.Height = 168;
+            CoverPart.Margin = new Thickness(0, 0, 0, 12);
+            CoverPart.HorizontalAlignment = HorizontalAlignment.Left;
+            TitlePart.Margin = new Thickness(0, 0, 12, 0);
+            ActionsPart.Margin = new Thickness(-8, 6, 0, 0);
+            ActionsPart.HorizontalAlignment = HorizontalAlignment.Left;
+            LyricsPart.Margin = new Thickness(18, 0, 0, 8);
+            SetLyricsHeight(_vm.ShowCover ? 268 : 200);
+            HeaderPart.VerticalAlignment = VerticalAlignment.Top;
+        }
+        else
+        {
+            LayoutRoot.ColumnDefinitions.Add(new ColumnDefinition());
+            Place(HeaderPart, 0, 0);
+            Place(LyricsPart, 1, 0);
+            Place(ProgressPart, 2, 0);
+            Place(ControlsPart, 3, 0);
+            Place(VolumePart, 4, 0);
+            Place(ConfirmPart, 5, 0);
+            HeaderPart.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            HeaderPart.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            HeaderPart.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            Place(CoverPart, 0, 0);
+            Place(TitlePart, 0, 1);
+            Place(ActionsPart, 0, 2);
+            CoverPart.Width = CoverPart.Height = 64;
+            CoverPart.Margin = new Thickness(0, 0, 14, 0);
+            TitlePart.Margin = new Thickness(0);
+            ActionsPart.Margin = new Thickness(8, 0, -6, 0);
+            ActionsPart.HorizontalAlignment = HorizontalAlignment.Right;
+            LyricsPart.Margin = new Thickness(0, 12, 0, 6);
+            SetLyricsHeight(176);
+        }
+        Width = _vm.WindowWidth;
+    }
+
+    private static void Place(UIElement element, int row, int column, int span = 1)
+    {
+        Grid.SetRow(element, row);
+        Grid.SetColumn(element, column);
+        Grid.SetColumnSpan(element, span);
+        Grid.SetRowSpan(element, 1);
+    }
+
+    private void SetLyricsHeight(double height)
+    {
+        LyricsViewport.Height = height;
+        LyricsFade.EndPoint = new Point(0, height);
+    }
 
     private void UpdateProgressValue()
     {
