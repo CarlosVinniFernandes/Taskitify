@@ -59,6 +59,8 @@ public sealed class LyricCardStyleItem(LyricCardStyle style, string label, strin
 
 public sealed record LyricCardChoice<T>(T Value, string Label, string Glyph = "");
 
+public sealed record LyricCardFontChoice(LyricCardFont Value, string Label, Typeface Typeface);
+
 public sealed class LyricCardSwatch(Color color, string? hex, string label)
 {
     public Color Color { get; } = color;
@@ -145,7 +147,12 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
             new(LyricCardFormat.Story, "9:16", ""), new(LyricCardFormat.Portrait, "4:5", ""),
             new(LyricCardFormat.Square, "1:1", ""), new(LyricCardFormat.Landscape, "16:9", ""),
         ];
-        Fonts = Enum.GetValues<LyricCardFont>().Select(f => new LyricCardChoice<LyricCardFont>(f, LocalizationService.Get("CardFont" + f))).ToList();
+        Fonts = Enum.GetValues<LyricCardFont>().Select(font =>
+        {
+            var face = LyricCardRenderer.FontFace(font);
+            return new LyricCardFontChoice(font, LocalizationService.Get("CardFont" + font),
+                new Typeface(face.Family, face.Style, face.Weight, face.Stretch));
+        }).ToList();
         Aligns =
         [
             new(LyricCardAlign.Auto, LocalizationService.Get("CardAlignAuto"), ""), new(LyricCardAlign.Left, LocalizationService.Get("CardAlignLeft"), ""),
@@ -199,7 +206,7 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
 
     public IReadOnlyList<LyricCardChoice<LyricCardFormat>> Formats { get; }
 
-    public IReadOnlyList<LyricCardChoice<LyricCardFont>> Fonts { get; }
+    public IReadOnlyList<LyricCardFontChoice> Fonts { get; }
 
     public IReadOnlyList<LyricCardChoice<LyricCardAlign>> Aligns { get; }
 
@@ -259,7 +266,7 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
         set { if (value is not null) Change(o => o.Format = value.Value); }
     }
 
-    public LyricCardChoice<LyricCardFont>? SelectedFont
+    public LyricCardFontChoice? SelectedFont
     {
         get => Fonts.FirstOrDefault(f => f.Value == _options.Font);
         set

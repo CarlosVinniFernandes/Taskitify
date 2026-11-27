@@ -1049,6 +1049,15 @@ public static partial class LyricCardRenderer
 
     internal readonly record struct Face(FontFamily Family, FontWeight Weight, FontStyle Style, FontStretch Stretch, double SizeFactor, double LineHeight);
 
+    internal static Face FontFace(LyricCardFont font) => font switch
+    {
+        LyricCardFont.Serif => new(DmSerif, FontWeights.Normal, FontStyles.Normal, FontStretches.Normal, 1.06, 1.1),
+        LyricCardFont.Handwritten => new(Hand, FontWeights.Normal, FontStyles.Normal, FontStretches.Normal, 0.98, 1.24),
+        LyricCardFont.Mono => new(Mono, FontWeights.SemiBold, FontStyles.Normal, FontStretches.Normal, 0.8, 1.32),
+        LyricCardFont.Condensed => new(Condensed, FontWeights.Bold, FontStyles.Normal, FontStretches.SemiCondensed, 1.08, 1.08),
+        _ => new(Figtree, FontWeights.ExtraBold, FontStyles.Normal, FontStretches.Normal, 1, 1.08),
+    };
+
     /// <summary>One build of a card: its size, options, and the parts that must fit.</summary>
     private sealed class Ctx(LyricCardContent content, LyricCardOptions options, double width, double height, double art)
     {
@@ -1081,14 +1090,7 @@ public static partial class LyricCardRenderer
             _ => styleDefault,
         };
 
-        public Face Face(LyricCardFont styleDefault) => (O.Font == LyricCardFont.Auto ? styleDefault : O.Font) switch
-        {
-            LyricCardFont.Serif => new(DmSerif, FontWeights.Normal, FontStyles.Normal, FontStretches.Normal, 1.06, 1.1),
-            LyricCardFont.Handwritten => new(Hand, FontWeights.Normal, FontStyles.Normal, FontStretches.Normal, 0.98, 1.24),
-            LyricCardFont.Mono => new(Mono, FontWeights.SemiBold, FontStyles.Normal, FontStretches.Normal, 0.8, 1.32),
-            LyricCardFont.Condensed => new(Condensed, FontWeights.Bold, FontStyles.Normal, FontStretches.SemiCondensed, 1.08, 1.08),
-            _ => new(Figtree, FontWeights.ExtraBold, FontStyles.Normal, FontStretches.Normal, 1, 1.08),
-        };
+        public Face Face(LyricCardFont styleDefault) => FontFace(O.Font == LyricCardFont.Auto ? styleDefault : O.Font);
 
         /// <summary>The style's preferred size before measuring the wrapped lines.</summary>
         public double LyricSize(double large)

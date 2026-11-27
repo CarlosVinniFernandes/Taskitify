@@ -28,18 +28,50 @@
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
 
+        <DataTemplate x:Key="FontChip">
+            <TextBlock Text="{Binding Label}" FontFamily="{Binding Typeface.FontFamily}"
+                       FontWeight="{Binding Typeface.Weight}" FontStyle="{Binding Typeface.Style}"
+                       FontStretch="{Binding Typeface.Stretch}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="AlignmentChip">
+            <StackPanel Orientation="Horizontal">
+                <Path x:Name="Diagram" Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"
+                      Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.3" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      Data="M8,1 L10,6 L15,8 L10,10 L8,15 L6,10 L1,8 L6,6 Z" />
+                <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+            </StackPanel>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Value}" Value="Left">
+                    <Setter TargetName="Diagram" Property="Data" Value="M1,3 H15 M1,8 H10 M1,13 H13" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Value}" Value="Center">
+                    <Setter TargetName="Diagram" Property="Data" Value="M1,3 H15 M4,8 H12 M2.5,13 H13.5" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Value}" Value="Right">
+                    <Setter TargetName="Diagram" Property="Data" Value="M1,3 H15 M6,8 H15 M3,13 H15" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
         <!-- Choice chip (format, font, alignment, signature), accent outline when chosen. -->
         <Style x:Key="Chip" TargetType="ListBoxItem">
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Margin" Value="0,0,6,6" />
             <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="FontSize" Value="13" />
             <Setter Property="AutomationProperties.Name" Value="{Binding Label}" />
+            <Setter Property="ContentTemplate">
+                <Setter.Value>
+                    <DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate>
+                </Setter.Value>
+            </Setter>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
                         <Border x:Name="Bg" CornerRadius="16" Padding="9,4" Background="{DynamicResource SubtleFillHoverBrush}"
                                 BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="1">
-                            <TextBlock Text="{Binding Label}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
+                            <ContentPresenter VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -220,16 +252,16 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="25*" MinWidth="210" />
-            <ColumnDefinition Width="37.5*" MinWidth="260" />
-            <ColumnDefinition Width="37.5*" MinWidth="290" />
+            <ColumnDefinition Width="30*" MinWidth="264" />
+            <ColumnDefinition Width="40*" MinWidth="260" />
+            <ColumnDefinition Width="30*" MinWidth="264" />
         </Grid.ColumnDefinitions>
 
         <Grid Margin="14,12,14,12">
             <Grid.RowDefinitions>
                 <RowDefinition Height="3*" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="2*" />
+                <RowDefinition Height="7*" />
             </Grid.RowDefinitions>
             <DockPanel>
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,7">
@@ -363,31 +395,30 @@
                             <Button Style="{StaticResource LinkButton}" Command="{Binding ChoosePhotoCommand}"
                                     Content="{DynamicResource Loc.StudioChoosePhoto}" HorizontalAlignment="Left" Margin="0,6,0,0" />
                         </StackPanel>
-                        <Expander Style="{StaticResource StudioSection}" Header="{DynamicResource Loc.StudioTypographyAndMark}">
-                            <StackPanel>
-                                <StackPanel Visibility="{Binding CanChooseTypeface, Converter={StaticResource BoolToVisibility}}">
-                                    <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardFont}" />
-                                    <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Fonts}"
-                                             SelectedItem="{Binding SelectedFont}" AutomationProperties.Name="{DynamicResource Loc.CardFont}" />
-                                </StackPanel>
+                        <TextBlock Text="{DynamicResource Loc.StudioTypographyAndMark}" FontWeight="SemiBold" Margin="0,16,0,8" />
+                        <StackPanel Visibility="{Binding CanChooseTypeface, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardFont}" Margin="0,0,0,6" />
+                            <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Fonts}"
+                                     ItemTemplate="{StaticResource FontChip}" SelectedItem="{Binding SelectedFont}"
+                                     AutomationProperties.Name="{DynamicResource Loc.CardFont}" />
+                        </StackPanel>
 
-                                <Grid Margin="0,12,0,0">
-                                    <TextBlock Text="{DynamicResource Loc.CardFontSize}" FontWeight="SemiBold" FontSize="13" />
-                                    <TextBlock Text="{Binding FontPercent, StringFormat={}{0:0}%}" HorizontalAlignment="Right" FontSize="13"
-                                               Foreground="{DynamicResource TextSecondaryBrush}" />
-                                </Grid>
-                                <Slider Minimum="60" Maximum="150" SmallChange="5" LargeChange="10" TickFrequency="5" IsSnapToTickEnabled="True"
-                                        Value="{Binding FontPercent}" Margin="0,6,0,0" AutomationProperties.Name="{DynamicResource Loc.CardFontSize}" />
+                        <Grid Margin="0,12,0,0">
+                            <TextBlock Text="{DynamicResource Loc.CardFontSize}" FontWeight="SemiBold" FontSize="13" />
+                            <TextBlock Text="{Binding FontPercent, StringFormat={}{0:0}%}" HorizontalAlignment="Right" FontSize="13"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </Grid>
+                        <Slider Minimum="60" Maximum="150" SmallChange="5" LargeChange="10" TickFrequency="5" IsSnapToTickEnabled="True"
+                                Value="{Binding FontPercent}" Margin="0,6,0,0" AutomationProperties.Name="{DynamicResource Loc.CardFontSize}" />
 
-                                <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardAlign}" />
-                                <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Aligns}"
-                                         SelectedItem="{Binding SelectedAlign}" AutomationProperties.Name="{DynamicResource Loc.CardAlign}" />
+                        <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardAlign}" />
+                        <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Aligns}"
+                                 ItemTemplate="{StaticResource AlignmentChip}" SelectedItem="{Binding SelectedAlign}"
+                                 AutomationProperties.Name="{DynamicResource Loc.CardAlign}" />
 
-                                <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardMark}" />
-                                <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Marks}"
-                                         SelectedItem="{Binding SelectedMark}" AutomationProperties.Name="{DynamicResource Loc.CardMark}" />
-                            </StackPanel>
-                        </Expander>
+                        <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardMark}" />
+                        <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Marks}"
+                                 SelectedItem="{Binding SelectedMark}" AutomationProperties.Name="{DynamicResource Loc.CardMark}" />
                         <CheckBox Style="{StaticResource StudioToggle}" IsChecked="{Binding ShowCover}" Margin="0,8,0,0"
                                   Visibility="{Binding CanShowCoverToggle, Converter={StaticResource BoolToVisibility}}"
                                   Content="{DynamicResource Loc.CardShowCover}" Foreground="{DynamicResource TextPrimaryBrush}" />
@@ -430,12 +461,8 @@
         <!-- Preview: the exported card itself, scaled to fit; nothing of the window is in it. -->
         <Border Grid.Column="1" Background="{DynamicResource ControlBackgroundBrush}">
             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
                 <!-- The shadow is its own layer: an effect over the image would re-rasterise it unsmoothed. -->
-                <Viewbox Margin="22,22,22,8" Stretch="Uniform">
+                <Viewbox Margin="22,52" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <Grid Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}">
                         <Border Background="Black">
                             <Border.Effect>
@@ -445,7 +472,7 @@
                         <Image Source="{Binding Preview}" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" />
                     </Grid>
                 </Viewbox>
-                <StackPanel Grid.Row="1" HorizontalAlignment="Center" Margin="0,0,0,12">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="8,0,8,10">
                     <TextBlock Text="{Binding PreviewDimensions}" FontSize="12" TextAlignment="Center"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
                     <TextBlock Text="{Binding Credit}" FontSize="12" TextAlignment="Center" Margin="0,4,0,0"
