@@ -106,6 +106,18 @@ internal static class WindowInterop
             (info.dwFlags & 1) != 0);
     }
 
+    public static IReadOnlyList<MonitorDetails> AllMonitors()
+    {
+        var monitors = new List<MonitorDetails>();
+        EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (hMonitor, _, _, _) =>
+        {
+            if (GetMonitor(hMonitor) is { } monitor)
+                monitors.Add(monitor);
+            return true;
+        }, IntPtr.Zero);
+        return monitors;
+    }
+
     public static MonitorDetails? MonitorForWindow(IntPtr hwnd) => GetMonitor(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST));
 
     public static MonitorDetails? MonitorForRect(PixelRect r)

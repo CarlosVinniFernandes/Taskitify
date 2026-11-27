@@ -136,13 +136,8 @@ public sealed class TaskbarPositionService
         return visible >= now.Height * 0.9;
     }
 
-    public static IReadOnlyList<MonitorDetails> GetMonitors() =>
-        System.Windows.Forms.Screen.AllScreens
-            .Select(s => new MonitorDetails(IntPtr.Zero, s.DeviceName,
-                new PixelRect(s.Bounds.X, s.Bounds.Y, s.Bounds.Width, s.Bounds.Height),
-                new PixelRect(s.WorkingArea.X, s.WorkingArea.Y, s.WorkingArea.Width, s.WorkingArea.Height),
-                s.Primary))
-            .ToList();
+    /// <summary>Every monitor, in the system's order (the order WinForms' Screen.AllScreens used).</summary>
+    public static IReadOnlyList<MonitorDetails> GetMonitors() => WindowInterop.AllMonitors();
 
     private static IntPtr FindTray(string? monitorDeviceName)
     {

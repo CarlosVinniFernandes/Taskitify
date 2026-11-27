@@ -6,8 +6,6 @@
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <UseWPF>true</UseWPF>
-    <!-- Only for NotifyIcon (tray) and Screen; both ship with the Windows Desktop runtime. -->
-    <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -22,17 +20,9 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <ApplicationIcon>Resources\Taskitify.ico</ApplicationIcon>
     <Platforms>AnyCPU;x64</Platforms>
-    <!-- WinForms analyzer wants Application.SetHighDpiMode; this is a WPF app, so the manifest is right. -->
-    <NoWarn>$(NoWarn);WFAC010</NoWarn>
     <!-- Framework messages only in the app's own languages: the other 8 cost ~10 MB of the exe. -->
     <SatelliteResourceLanguages>en;pt-BR;es;fr;de;it</SatelliteResourceLanguages>
   </PropertyGroup>
-
-  <ItemGroup>
-    <!-- WinForms and WPF share type names (Application, Color, MessageBox...). Keep WinForms explicit. -->
-    <Using Remove="System.Windows.Forms" />
-    <Using Remove="System.Drawing" />
-  </ItemGroup>
 
   <ItemGroup>
     <!-- Window icons (pack URI) and the tray icon (embedded stream). -->
@@ -63,7 +53,9 @@
        and the ones listed in TaskitifyUnusedFrameworkAssembly are left out when it agrees. Every
        assembly that ships is the original, ReadyToRun-compiled file, byte for byte: rewriting them
        would drop their precompiled code and slow startup. WPF themes, UI Automation proxies and the
-       facades WPF and XAML resolve by name are never on the list.
+       facades WPF and XAML resolve by name are never on the list. Neither are the assemblies that
+       declare WPF's XAML namespace (System.Windows.Controls.Ribbon, WindowsFormsIntegration):
+       WPF searches them when a type is given by name in XAML (AncestorType=ItemsControl).
   -->
   <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
     <PublishTrimmed>true</PublishTrimmed>
@@ -90,7 +82,6 @@
     <!-- Removed only if ILLink also finds no reference to them. Sizes are the uncompressed files. -->
     <TaskitifyUnusedFrameworkAssembly Include="System.Data.Common" />                 <!-- 2.7 MB -->
     <TaskitifyUnusedFrameworkAssembly Include="System.Private.DataContractSerialization" /> <!-- 2.0 MB -->
-    <TaskitifyUnusedFrameworkAssembly Include="System.Windows.Controls.Ribbon" />     <!-- 1.4 MB -->
     <TaskitifyUnusedFrameworkAssembly Include="Microsoft.VisualBasic.Core" />         <!-- 1.2 MB -->
     <TaskitifyUnusedFrameworkAssembly Include="Microsoft.VisualBasic.Forms" />
     <TaskitifyUnusedFrameworkAssembly Include="Microsoft.CSharp" />                   <!-- 1.0 MB -->
@@ -103,6 +94,18 @@
     <TaskitifyUnusedFrameworkAssembly Include="System.Formats.Tar" />
     <TaskitifyUnusedFrameworkAssembly Include="System.Linq.Queryable" />
     <TaskitifyUnusedFrameworkAssembly Include="Microsoft.Web.WebView2.WinForms" />
+    <!--
+      WinForms, ~23 MB: Taskitify is WPF only (its tray icon is plain Win32). These stay referenced,
+      but only from code Taskitify never runs: WPF's PresentationUI (DocumentViewer and XPS dialogs),
+      the System.Drawing / System.Design facades, PresentationFramework-SystemDrawing (loaded only
+      once System.Drawing is) and System.Windows.Extensions (SoundPlayer, certificate UI). Checked
+      in the running app: none of them is loaded. EvenIfReferenced skips the ILLink check.
+    -->
+    <TaskitifyUnusedFrameworkAssembly Include="System.Windows.Forms" EvenIfReferenced="true" />
+    <TaskitifyUnusedFrameworkAssembly Include="System.Windows.Forms.Primitives" EvenIfReferenced="true" />
+    <TaskitifyUnusedFrameworkAssembly Include="System.Windows.Forms.Design" EvenIfReferenced="true" />
+    <TaskitifyUnusedFrameworkAssembly Include="System.Windows.Forms.Design.Editors" EvenIfReferenced="true" />
+    <TaskitifyUnusedFrameworkAssembly Include="System.Drawing.Common" EvenIfReferenced="true" />
   </ItemGroup>
 
   <Target Name="ConfigureSdkProjectionOnlyTrim" AfterTargets="PrepareForILLink">
@@ -141,7 +144,7 @@
     <ItemGroup>
       <_TaskitifyUnreferencedName Include="@(ManagedAssemblyToLink->'%(Filename)')" Condition="!Exists('$(_TaskitifyOracleDir)%(Filename)%(Extension)')" />
       <!-- Listed and unreferenced. A listed assembly that something does use stays. -->
-      <_TaskitifyListedButUsed Include="@(TaskitifyUnusedFrameworkAssembly)" Exclude="@(_TaskitifyUnreferencedName)" />
+      <_TaskitifyListedButUsed Include="@(TaskitifyUnusedFrameworkAssembly)" Exclude="@(_TaskitifyUnreferencedName)" Condition="'%(TaskitifyUnusedFrameworkAssembly.EvenIfReferenced)' != 'true'" />
       <_TaskitifyLeaveOutName Include="@(TaskitifyUnusedFrameworkAssembly)" Exclude="@(_TaskitifyListedButUsed)" />
       <_TaskitifyLeaveOutName Include="@(_TaskitifyLeaveOutName->'%(Identity).resources')" />
     </ItemGroup>
