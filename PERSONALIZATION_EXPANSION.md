@@ -11,6 +11,8 @@ Branch `t3/personalization-expansion`, from `t3/release-candidate` (aca354f). No
 | Background intensity | Atmosphere, darken and blur for the existing mini player backgrounds |
 | Per-song sync | An adjustment for the song playing, added to the global one |
 | Settings > General / Advanced | "Taskitify on the web" as rows (site, Community Soundtrack with Listen + Add a song, community, tour); repository link in Advanced |
+| Minimal Mode extras | Global shortcut Ctrl + Alt + L (changeable, works in games), turn on by itself with chosen apps in front, what shows while paused, one-click quick positions |
+| Not that minimal | Own tab: the whole mini player floating and pinned (drag anywhere, place remembered), with every mini player look; exclusive with the floating lyrics |
 | Tour | Minimal Mode step shows the real feature; last card has two playlist buttons side by side |
 
 ### Minimal Mode
@@ -50,6 +52,8 @@ Branch `t3/personalization-expansion`, from `t3/release-candidate` (aca354f). No
 - Real app runs on a throwaway copy of the user's data (`TASKITIFY_DATA_DIR`, English for screenshots): Minimal Mode over the desktop with real songs (track changes, Lyric Flow ink, 1/3/5 verses, left/centre, album/soft/clear, outline), window ex-style checked (`TRANSPARENT|LAYERED|TOPMOST|NOACTIVATE|TOOLWINDOW`), placement on first run and after a lost position, taskbar player hidden, settings pages (Minimal, mini player templates with a personal look, background sliders, sync section), tour steps in en/pt/it.
 
 ## Known limitations
+- Auto apps match the process name of the app in front; leaving it (Alt+Tab) puts the lyrics away. Clicking the taskbar or Taskitify itself does not.
+- The global shortcut is unavailable when another app registered the same keys (Settings says so).
 - Ctrl + Alt is also AltGr on many layouts (pt-BR ABNT2 included): AltGr + click on the lyrics toggles too. Chosen over Shift + Alt, Windows' input-language switch.
 - Exclusive full-screen games (the game owns the display) show no other window; borderless/windowed full screen works.
 - Graduated sizes are a render scale: every verse keeps the same slot, so spacing is even rather than tight.

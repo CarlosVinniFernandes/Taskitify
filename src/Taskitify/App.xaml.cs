@@ -39,6 +39,15 @@ public partial class App : Application
     private MinimalLyricsWindow? _minimal;
     // Minimal Mode is off but its look is being changed in the settings: shown until they close.
     private bool _minimalPreview;
+    // An app chosen in the settings is in front (Minimal Mode shows); the shortcut hid it for now.
+    private bool _minimalAuto;
+    private bool _minimalSuppressed;
+    private ForegroundWatcher? _autoWatch;
+    private readonly Dictionary<uint, string> _processNames = [];
+    private GlobalHotkey? _hotkey;
+    private (bool, int, int)? _hotkeyApplied;
+    private bool _hotkeyTaken;
+    private bool _hotkeyPaused;
     private TrayIconService? _tray;
     private SettingsWindow? _settingsWindow;
     private SettingsViewModel? _settingsVm;
@@ -194,6 +203,8 @@ public partial class App : Application
                 _miniPlayer?.HidePopup();
         };
         _minimal = new MinimalLyricsWindow(_minimalVm, _settings, _monitor);
+        _hotkey = new GlobalHotkey(OnMinimalHotkey);
+        _overlay.MinimalActive = () => MinimalShown;
 
         _tray = new TrayIconService(ShowSettings, ShowMiniPlayerFromTray, ShowLyricCard, ShowDebug, Shutdown, ShowTour)
         {
@@ -237,6 +248,8 @@ public partial class App : Application
         IsShuttingDown = true;
         _settings?.Flush();
         _tray?.Dispose();
+        _hotkey?.Dispose();
+        _autoWatch?.Dispose();
         _minimal?.HideLyrics();
         _settings?.Flush();
         _minimalVm?.Dispose();
@@ -288,6 +301,14 @@ public partial class App : Application
             UpdateMinimal();
         };
         _settingsVm.MinimalLook.ResetPlacementRequested += (_, _) => _minimal?.ResetPlacement();
+        _settingsVm.MinimalLook.PlaceRequested += (_, spot) => _minimal?.PlaceAt(spot);
+        _settingsVm.MinimalLook.HotkeyTaken = () => _hotkeyTaken;
+        _settingsVm.MinimalLook.CapturingChanged += (_, _) =>
+        {
+            // The shortcut being typed must reach the settings, not toggle the lyrics.
+            _hotkeyPaused = _settingsVm?.MinimalLook?.IsCapturing == true;
+            ApplyHotkey();
+        };
         _settingsWindow = new SettingsWindow(_settingsVm, _spotifyLyrics!);
         _settingsVm.SetCurrentTrack(_monitor.Track);
         EventHandler followTrack = (_, _) => _settingsVm?.SetCurrentTrack(_monitor.Track);
@@ -533,7 +554,110 @@ public partial class App : Application
         Log.WriteToFile = _settings.Current.DebugMode;
         _tray.Visible = _settings.Current.ShowTrayIcon;
         _tray.DebugEnabled = _settings.Current.DebugMode;
+        ApplyHotkey();
+        UpdateAutoWatch();
         UpdateMinimal();
+    }
+
+    /// <summary>Minimal Mode shows: switched on, or an app chosen for it is in front (unless the shortcut hid it).</summary>
+    private bool MinimalShown => _settings?.Current.Minimal.Enabled == true || (_minimalAuto && !_minimalSuppressed);
+
+    /// <summary>The shortcut, from anywhere (games too): hides what shows, shows what is hidden.</summary>
+    private void OnMinimalHotkey()
+    {
+        if (_settings is null)
+            return;
+        if (MinimalShown)
+        {
+            if (_settings.Current.Minimal.Enabled)
+                _settings.Update(s => s.Minimal.Enabled = false);
+            if (_minimalAuto)
+                _minimalSuppressed = true;
+        }
+        else if (_minimalAuto)
+            _minimalSuppressed = false;
+        else
+            _settings.Update(s => s.Minimal.Enabled = true);
+        UpdateMinimal();
+        _overlay?.Reevaluate();
+    }
+
+    private void ApplyHotkey()
+    {
+        if (_hotkey is null || _settings is null)
+            return;
+        var m = _settings.Current.Minimal;
+        var wanted = (m.HotkeyEnabled && !_hotkeyPaused, m.HotkeyModifiers, m.HotkeyKey);
+        if (_hotkeyApplied == wanted)
+            return;
+        _hotkeyApplied = wanted;
+        if (wanted.Item1)
+        {
+            _hotkeyTaken = !_hotkey.Register(m.HotkeyModifiers, m.HotkeyKey);
+            if (_hotkeyTaken)
+                Log.Warn("Minimal Mode shortcut is taken by another app");
+        }
+        else
+        {
+            _hotkey.Unregister();
+            _hotkeyTaken = false;
+        }
+    }
+
+    /// <summary>The foreground is watched (an event, no polling) only while some app is chosen.</summary>
+    private void UpdateAutoWatch()
+    {
+        if (_settings is null)
+            return;
+        if (_settings.Current.Minimal.AutoApps.Count > 0)
+        {
+            _autoWatch ??= new ForegroundWatcher(OnForeground);
+            OnForeground(NativeMethods.GetForegroundWindow());
+        }
+        else if (_autoWatch is not null)
+        {
+            _autoWatch.Dispose();
+            _autoWatch = null;
+            SetMinimalAuto(false);
+        }
+    }
+
+    private void OnForeground(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero || _settings is null)
+            return;
+        NativeMethods.GetWindowThreadProcessId(hwnd, out var pid);
+        // Taskitify itself and the taskbar never change it: clicking the lyrics' tray icon mid-game must not.
+        if (pid == Environment.ProcessId || WindowInterop.GetClassName(hwnd) is "Shell_TrayWnd" or "Shell_SecondaryTrayWnd")
+            return;
+        if (!_processNames.TryGetValue(pid, out var name))
+        {
+            try
+            {
+                using var process = Process.GetProcessById((int)pid);
+                name = process.ProcessName;
+            }
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
+            {
+                name = "";
+            }
+            if (_processNames.Count > 256)
+                _processNames.Clear();
+            _processNames[pid] = name;
+        }
+        SetMinimalAuto(_settings.Current.Minimal.AutoApps.Contains(name, StringComparer.OrdinalIgnoreCase));
+    }
+
+    private void SetMinimalAuto(bool on)
+    {
+        if (on == _minimalAuto)
+            return;
+        _minimalAuto = on;
+        if (!on)
+            _minimalSuppressed = false;
+        Log.Info($"Minimal Mode {(on ? "brought up" : "put away")} by the app in front");
+        UpdateMinimal();
+        _overlay?.Reevaluate();
     }
 
     /// <summary>Minimal Mode's window follows its switch (and the settings' live preview).</summary>
@@ -541,7 +665,17 @@ public partial class App : Application
     {
         if (_minimal is null || _settings is null)
             return;
-        var on = _settings.Current.Minimal.Enabled;
+        var on = MinimalShown;
+        // Not that minimal: the mini player floats instead of the lyrics alone.
+        if (on && _settings.Current.Minimal.NotThatMinimal && _miniPlayer is not null)
+        {
+            _minimal.HideLyrics();
+            var m = _settings.Current.Minimal;
+            _miniPlayer.ShowPinned(new Core.Layout.PixelRect(m.PlayerX, m.PlayerY, m.PlayerWidth, m.PlayerWidth > 0 ? 1 : 0), m.Topmost,
+                r => _settings.Update(s => (s.Minimal.PlayerX, s.Minimal.PlayerY, s.Minimal.PlayerWidth) = (r.X, r.Y, r.Width)));
+            return;
+        }
+        _miniPlayer?.Unpin();
         if (on || _minimalPreview)
             _minimal.ShowLyrics(preview: !on);
         else

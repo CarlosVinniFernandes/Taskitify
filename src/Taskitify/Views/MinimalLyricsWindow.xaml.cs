@@ -119,7 +119,7 @@ public partial class MinimalLyricsWindow : Window
         vm.LookChanged += (_, _) => ApplyLook();
         vm.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName is nameof(MinimalLyricsViewModel.StatusMessage) or "")
+            if (e.PropertyName is nameof(MinimalLyricsViewModel.StatusMessage) or nameof(MinimalLyricsViewModel.LyricsHidden) or "")
                 UpdateStatus();
         };
         vm.Lines.CollectionChanged += (_, change) =>
@@ -222,6 +222,26 @@ public partial class MinimalLyricsWindow : Window
         SaveBounds();
         Hide();
         _vm.IsActive = false;
+    }
+
+    /// <summary>One click from Settings: the same size, moved to a spot of its screen.</summary>
+    public void PlaceAt(Core.Layout.FloatingSpot spot)
+    {
+        _hwnd = WindowInterop.EnsureHandle(this);
+        var s = _settings.Current.Minimal;
+        var current = new PixelRect(s.X, s.Y, s.Width, s.Height);
+        if (IsVisible)
+            current = WindowInterop.GetBounds(_hwnd);
+        var monitor = (current.IsEmpty ? null : WindowInterop.MonitorForRect(current)) ?? WindowInterop.MonitorForWindow(_hwnd);
+        if (monitor is null)
+            return;
+        var scale = WindowInterop.GetScale(_hwnd);
+        if (current.IsEmpty)
+            current = new PixelRect(0, 0, (int)Math.Round(720 * scale), (int)Math.Round(IdealHeight() * scale));
+        var place = FloatingPlacement.Snap(current, monitor.WorkArea, spot, (int)Math.Round(32 * scale));
+        if (IsVisible)
+            SetBounds(place);
+        SaveBounds(place);
     }
 
     /// <summary>Back to the default place and size (the settings' and the tray's "reset").</summary>
@@ -396,7 +416,7 @@ public partial class MinimalLyricsWindow : Window
     {
         var status = !string.IsNullOrEmpty(_vm.StatusMessage);
         StatusText.Visibility = status ? Visibility.Visible : Visibility.Collapsed;
-        LyricsLayer.Visibility = status ? Visibility.Collapsed : Visibility.Visible;
+        LyricsLayer.Visibility = status || _vm.LyricsHidden ? Visibility.Collapsed : Visibility.Visible;
     }
 
     /// <summary>The height the chosen verses need (DIPs): the lyrics, plus the song and the controls when shown.</summary>

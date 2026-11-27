@@ -33,6 +33,13 @@ public partial class SettingsWindow : Window
             _vm.MinimalLook?.SetActive(false);
         };
         OnSpotifyStatus(this, EventArgs.Empty);
+        // A new Minimal Mode shortcut is typed right here.
+        PreviewKeyDown += (_, e) =>
+        {
+            if (vm.MinimalLook?.Capture(e.Key == System.Windows.Input.Key.System ? e.SystemKey : e.Key, System.Windows.Input.Keyboard.Modifiers) == true)
+                e.Handled = true;
+        };
+        Deactivated += (_, _) => { if (vm.MinimalLook is { IsCapturing: true } look) look.IsCapturing = false; };
         // A saved look gets its name right away: the cursor waits in it, the default name selected.
         if (vm.MiniLook is { } look)
             look.LookSaved += (_, _) => Dispatcher.InvokeAsync(() =>
@@ -45,8 +52,8 @@ public partial class SettingsWindow : Window
     private void UpdatePlayerPreviews()
     {
         var page = (SettingsPage)Pages.SelectedIndex;
-        _vm.MiniLook?.SetPreviewActive(page is SettingsPage.Bar or SettingsPage.MinimizedBar or SettingsPage.MiniPlayer,
-            showLooks: page == SettingsPage.MiniPlayer);
+        _vm.MiniLook?.SetPreviewActive(page is SettingsPage.Bar or SettingsPage.MinimizedBar or SettingsPage.MiniPlayer or SettingsPage.NotMinimal,
+            showLooks: page is SettingsPage.MiniPlayer or SettingsPage.NotMinimal);
         _vm.MinimalLook?.SetActive(page == SettingsPage.Minimal);
     }
 
@@ -66,6 +73,8 @@ public partial class SettingsWindow : Window
         try { await _spotify.DisconnectAsync(); }
         finally { ConnectSpotifyButton.IsEnabled = DisconnectSpotifyButton.IsEnabled = true; }
     }
+
+    private void OnAutoAppsOpened(object? sender, EventArgs e) => _vm.MinimalLook?.RefreshRunningApps();
 
     private void OnOffsetMinus(object sender, RoutedEventArgs e) => _vm.NudgeOffset(-250);
 
@@ -88,6 +97,7 @@ public enum SettingsPage
     MinimizedBar,
     MiniPlayer,
     Minimal,
+    NotMinimal,
     Lyrics,
     Position,
     Advanced,

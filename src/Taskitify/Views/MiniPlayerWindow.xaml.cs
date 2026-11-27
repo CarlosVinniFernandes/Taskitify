@@ -95,6 +95,7 @@ public partial class MiniPlayerWindow : Window
 
         _vm.Like.JustLiked += (_, _) => LikeIcon.Pulse();
         ContentCard.ContextMenu = BuildMenu();
+        ContentCard.MouseLeftButtonDown += OnPinnedDrag;
         CoverPart.Cursor = Cursors.Hand;
         CoverPart.ToolTip = LocalizationService.Get("OpenInSpotify");
         CoverPart.MouseLeftButtonUp += (_, _) => OpenSpotify();
@@ -264,8 +265,81 @@ public partial class MiniPlayerWindow : Window
         QueueLyrics(animate: false);
     }
 
+    /// <summary>"Not that minimal": the player floats, pinned (it does not close on a click outside or Esc).</summary>
+    public bool IsPinned { get; private set; }
+
+    private Action<PixelRect>? _pinnedMoved;
+
+    /// <summary>Shows the player floating at a saved place (or bottom right of the main screen), until <see cref="Unpin"/>.</summary>
+    public void ShowPinned(PixelRect saved, bool topmost, Action<PixelRect> moved)
+    {
+        _pinnedMoved = moved;
+        if (!IsPinned && IsVisible)
+            HidePopup(force: true);
+        IsPinned = true;
+        IsPreview = false;
+        Topmost = topmost;
+        if (IsVisible)
+            return;
+        _vm.IsActive = true;
+        ApplyLayout();
+        ApplyControlsStyle();
+        UpdatePlayGlyph();
+        UpdateProgressValue();
+        OnViewModelChanged(this, new PropertyChangedEventArgs(nameof(MiniPlayerViewModel.StatusMessage)));
+        ApplyBackground();
+        BeginAnimation(OpacityProperty, null);
+        ChromeOffset.BeginAnimation(TranslateTransform.YProperty, null);
+        Opacity = 1;
+        Show();
+        UpdateLayout();
+        _hwnd = WindowInterop.EnsureHandle(this);
+        var bounds = WindowInterop.GetBounds(_hwnd);
+        var areas = TaskbarPositionService.GetMonitors().OrderByDescending(m => m.IsPrimary).Select(m => m.WorkArea).ToList();
+        var place = saved.IsEmpty || areas.Count == 0
+            ? areas.Count > 0 ? FloatingPlacement.Snap(bounds, areas[0], FloatingSpot.BottomRight, 24) : bounds
+            : FloatingPlacement.Resolve(new PixelRect(saved.X, saved.Y, bounds.Width, bounds.Height), areas, (bounds.Width, bounds.Height));
+        WindowInterop.SetPosition(_hwnd, place.X, place.Y);
+        if (!topmost)
+            NativeMethods.SetWindowPos(_hwnd, new IntPtr(-2), 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
+        SetBrowsing(false);
+        ScrollToCurrent(animate: false);
+        QueueLyrics(animate: false);
+    }
+
+    /// <summary>Back to a regular popup, hidden.</summary>
+    public void Unpin()
+    {
+        if (!IsPinned)
+            return;
+        IsPinned = false;
+        Topmost = true;
+        HidePopup(force: true);
+    }
+
+    /// <summary>Pinned: dragged by any part that is not a control (buttons, progress, lyrics).</summary>
+    private void OnPinnedDrag(object sender, MouseButtonEventArgs e)
+    {
+        if (!IsPinned || e.OriginalSource is not DependencyObject source)
+            return;
+        for (var node = source; node is not null && node != ContentCard; node = node is Visual ? VisualTreeHelper.GetParent(node) : null)
+        {
+            if (node is System.Windows.Controls.Primitives.ButtonBase or SeekBar or Slider or LyricMotionText || node == CoverPart)
+                return;
+        }
+        try { DragMove(); }
+        catch (InvalidOperationException) { return; }
+        _pinnedMoved?.Invoke(WindowInterop.GetBounds(_hwnd));
+    }
+
     public void ShowAt(PixelRect anchor, PixelRect workArea, double scale, bool preview = false)
     {
+        // Floating (not that minimal): it is already where the user put it.
+        if (IsPinned)
+        {
+            Activate();
+            return;
+        }
         // Opened by the user (a click): a regular popup again, even if it was a preview.
         var wasVisible = IsVisible;
         IsPreview = preview && (IsPreview || !wasVisible);
@@ -335,8 +409,13 @@ public partial class MiniPlayerWindow : Window
         }
     }
 
-    public void HidePopup()
+    public void HidePopup() => HidePopup(force: false);
+
+    /// <param name="force">Also when pinned (floating): only turning that mode off hides it.</param>
+    public void HidePopup(bool force)
     {
+        if (IsPinned && !force)
+            return;
         IsPreview = false;
         if (!IsVisible)
             return;
@@ -353,7 +432,7 @@ public partial class MiniPlayerWindow : Window
     {
         base.OnDeactivated(e);
         // A preview stays while the settings are used; a menu of its own does not close it either.
-        if (IsPreview || ContentCard.ContextMenu is { IsOpen: true } || VolumePopup.Child is { IsKeyboardFocusWithin: true })
+        if (IsPreview || IsPinned || ContentCard.ContextMenu is { IsOpen: true } || VolumePopup.Child is { IsKeyboardFocusWithin: true })
             return;
         HidePopup();
     }

@@ -11,6 +11,14 @@ internal static class NativeMethods
     public const int WS_EX_NOACTIVATE = 0x08000000;
     public const int WS_EX_APPWINDOW = 0x00040000;
     public const int WS_EX_TRANSPARENT = 0x00000020;
+    public const int WM_HOTKEY = 0x0312;
+    public const uint MOD_NOREPEAT = 0x4000;
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
+    public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
     public const int WS_EX_LAYERED = 0x00080000;
     public const int WM_NCHITTEST = 0x0084;
     public const int WM_EXITSIZEMOVE = 0x0232;

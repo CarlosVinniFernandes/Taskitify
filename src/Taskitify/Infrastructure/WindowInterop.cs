@@ -347,6 +347,58 @@ internal sealed class OutsideClickWatcher : IDisposable
     }
 }
 
+/// <summary>
+/// A system-wide keyboard shortcut (RegisterHotKey on a message-only window): Windows sends a
+/// message when it is pressed, in any app or game; nothing is hooked or polled.
+/// </summary>
+internal sealed class GlobalHotkey : IDisposable
+{
+    private const int Id = 0x7A11;
+    private readonly System.Windows.Interop.HwndSource _source;
+    private readonly Action _pressed;
+    private bool _registered;
+
+    public GlobalHotkey(Action pressed)
+    {
+        _pressed = pressed;
+        _source = new System.Windows.Interop.HwndSource(new System.Windows.Interop.HwndSourceParameters("Taskitify shortcut")
+        {
+            ParentWindow = new IntPtr(-3), // HWND_MESSAGE
+            WindowStyle = 0,
+        });
+        _source.AddHook((IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled) =>
+        {
+            if (msg == WM_HOTKEY && wParam.ToInt32() == Id)
+            {
+                handled = true;
+                _pressed();
+            }
+            return IntPtr.Zero;
+        });
+    }
+
+    /// <summary>False when another app already uses the combination.</summary>
+    public bool Register(int modifiers, int key)
+    {
+        Unregister();
+        _registered = RegisterHotKey(_source.Handle, Id, (uint)modifiers | MOD_NOREPEAT, (uint)key);
+        return _registered;
+    }
+
+    public void Unregister()
+    {
+        if (_registered)
+            UnregisterHotKey(_source.Handle, Id);
+        _registered = false;
+    }
+
+    public void Dispose()
+    {
+        Unregister();
+        _source.Dispose();
+    }
+}
+
 /// <summary>Out-of-context WinEvent hook for foreground changes. No code is injected anywhere.</summary>
 internal sealed class ForegroundWatcher : IDisposable
 {

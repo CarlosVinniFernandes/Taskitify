@@ -170,6 +170,7 @@ public sealed class MinimalLyricsViewModel : ObservableObject, IDisposable
 
     private void OnSettingsChanged(object? sender, EventArgs e)
     {
+        UpdateStatus();
         OnPropertyChanged(string.Empty);
         UpdateCurrentLine();
         LookChanged?.Invoke(this, EventArgs.Empty);
@@ -179,6 +180,7 @@ public sealed class MinimalLyricsViewModel : ObservableObject, IDisposable
     private void OnPlaybackChanged(object? sender, EventArgs e)
     {
         IsPlaying = _monitor.IsPlaying;
+        UpdateStatus();
         OnPropertyChanged(nameof(PlayGlyph));
         CommandManager.InvalidateRequerySuggested();
         if (!IsPlaying)
@@ -191,6 +193,34 @@ public sealed class MinimalLyricsViewModel : ObservableObject, IDisposable
     private void OnLyricsChanged(object? sender, EventArgs e) => RebuildLines();
 
     private void OnCurrentLineChanged(object? sender, EventArgs e) => UpdateCurrentLine(_sync.ChangedAtLineBoundary);
+
+    /// <summary>The lyrics are hidden for now (paused, as chosen), whatever else is shown.</summary>
+    public bool LyricsHidden { get; private set; }
+
+    private bool Paused => _monitor.Track is not null && _monitor.Status is PlaybackState.Paused or PlaybackState.Stopped;
+
+    /// <summary>
+    /// What replaces the lyrics: nothing while nothing plays or they load (over a game, silence is
+    /// the point), the song without synced lyrics, and while paused what was chosen.
+    /// </summary>
+    private void UpdateStatus()
+    {
+        var status = _monitor.Track is null ? null : _sync.State switch
+        {
+            LyricsState.Synced or LyricsState.Loading or LyricsState.None => null,
+            LyricsState.Instrumental => "\u266A  " + SongLine,
+            _ => SongLine,
+        };
+        var hidden = false;
+        if (Paused && S.WhenPaused != MinimalPaused.Keep)
+        {
+            hidden = true;
+            status = S.WhenPaused == MinimalPaused.Title ? "\u275A\u275A  " + SongLine : null;
+        }
+        LyricsHidden = hidden;
+        OnPropertyChanged(nameof(LyricsHidden));
+        StatusMessage = status;
+    }
 
     private void RefreshAll()
     {
@@ -212,14 +242,7 @@ public sealed class MinimalLyricsViewModel : ObservableObject, IDisposable
             for (var i = 0; i < timeline.Count; i++)
                 Lines.Add(new LyricLineViewModel(i, timeline.Lines[i].Time, timeline.Lines[i].Text));
         }
-        // Nothing at all while nothing plays or the lyrics load (over a game, silence is the point);
-        // without synced lyrics, the song itself, quietly.
-        StatusMessage = _monitor.Track is null ? null : _sync.State switch
-        {
-            LyricsState.Synced or LyricsState.Loading or LyricsState.None => null,
-            LyricsState.Instrumental => "♪  " + SongLine,
-            _ => SongLine,
-        };
+        UpdateStatus();
         UpdateCurrentLine();
     }
 

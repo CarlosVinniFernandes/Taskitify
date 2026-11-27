@@ -664,6 +664,19 @@ public enum MinimalLines
     Five,
 }
 
+/// <summary>What Minimal Mode shows while the music is paused.</summary>
+public enum MinimalPaused
+{
+    /// <summary>The lyrics, where they stopped.</summary>
+    Keep,
+
+    /// <summary>Only the song's title, quietly.</summary>
+    Title,
+
+    /// <summary>Nothing until the music plays again.</summary>
+    Hide,
+}
+
 /// <summary>What sits behind Minimal Mode's lyrics.</summary>
 public enum MinimalBackdrop
 {
@@ -713,6 +726,37 @@ public enum MinimalLegibility
 public sealed class MinimalModeSettings
 {
     public bool Enabled { get; set; }
+
+    /// <summary>Paused: nothing shown by default (over a game, a frozen verse is clutter).</summary>
+    public MinimalPaused WhenPaused { get; set; } = MinimalPaused.Hide;
+
+    /// <summary>A keyboard shortcut that turns the floating lyrics on and off from anywhere, games included.</summary>
+    public bool HotkeyEnabled { get; set; } = true;
+
+    /// <summary>Win32 MOD_* flags (Alt 1, Ctrl 2, Shift 4, Win 8); Ctrl + Alt by default.</summary>
+    public int HotkeyModifiers { get; set; } = 3;
+
+    /// <summary>The virtual key; L by default (Ctrl + Alt + L).</summary>
+    public int HotkeyKey { get; set; } = 0x4C;
+
+    /// <summary>
+    /// Apps (process names, e.g. "FortniteClient-Win64-Shipping") that show the floating lyrics on
+    /// their own while one of them is in front, and hide the taskbar player as Minimal Mode does.
+    /// </summary>
+    public List<string> AutoApps { get; set; } = [];
+
+    /// <summary>
+    /// "Not that minimal": instead of the lyrics alone, the mini player itself floats (its looks,
+    /// layouts and elements, from the Mini player page), pinned where the user puts it.
+    /// </summary>
+    public bool NotThatMinimal { get; set; }
+
+    /// <summary>Where the floating mini player was left (physical px; 0 width: not placed yet).</summary>
+    public int PlayerX { get; set; }
+
+    public int PlayerY { get; set; }
+
+    public int PlayerWidth { get; set; }
 
     /// <summary>Also keep the taskbar player while the floating lyrics are on (off: the lyrics alone).</summary>
     public bool KeepTaskbar { get; set; }

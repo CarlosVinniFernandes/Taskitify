@@ -103,6 +103,12 @@ public sealed class TaskbarOverlayService : IDisposable
 
     public bool IsShown => _isShown;
 
+    /// <summary>Whether Minimal Mode is showing (switched on, or brought up by an app in front).</summary>
+    public Func<bool>? MinimalActive { get; set; }
+
+    /// <summary>Something outside the settings changed whether the player should show.</summary>
+    public void Reevaluate() => Evaluate();
+
     public IntPtr Handle => _hwnd;
 
     /// <summary>Current overlay bounds in physical pixels (for anchoring the mini player).</summary>
@@ -397,7 +403,7 @@ public sealed class TaskbarOverlayService : IDisposable
         if (IsCalibrating)
             return null;
         // Minimal Mode alone, unless the user keeps the taskbar player too (its layout is untouched).
-        if (_settings.Current.Minimal is { Enabled: true, KeepTaskbar: false })
+        if ((MinimalActive?.Invoke() ?? _settings.Current.Minimal.Enabled) && !_settings.Current.Minimal.KeepTaskbar)
             return "minimal mode";
         if (_monitor.Track is null)
             return "no track";

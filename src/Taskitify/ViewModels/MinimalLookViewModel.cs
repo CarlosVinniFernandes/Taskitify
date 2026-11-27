@@ -38,6 +38,26 @@ public sealed class MinimalLookViewModel : ObservableObject
         TextColors = Options<MinimalTextColor>("MinimalText");
         Legibilities = Options<MinimalLegibility>("MinimalLegibility");
         ResetPlacementCommand = new RelayCommand(() => ResetPlacementRequested?.Invoke(this, EventArgs.Empty));
+        PausedOptions = Options<MinimalPaused>("MinimalPaused");
+        PlaceCommand = new RelayCommand(p =>
+        {
+            if (Enum.TryParse<Core.Layout.FloatingSpot>(p as string, out var spot))
+            {
+                PlaceRequested?.Invoke(this, spot);
+                PreviewRequested?.Invoke(this, EventArgs.Empty);
+            }
+        });
+        CaptureHotkeyCommand = new RelayCommand(() => IsCapturing = !IsCapturing);
+        RemoveAppCommand = new RelayCommand(p =>
+        {
+            if (p is string name)
+            {
+                AutoApps.Remove(name);
+                Change(s => s.AutoApps.RemoveAll(a => string.Equals(a, name, StringComparison.OrdinalIgnoreCase)), preview: false);
+            }
+        });
+        foreach (var app in _settings.Current.Minimal.AutoApps)
+            AutoApps.Add(app);
     }
 
     private static LookOption<T>[] Options<T>(string key) where T : struct, Enum =>
@@ -70,6 +90,152 @@ public sealed class MinimalLookViewModel : ObservableObject
     public bool ShowSong { get => S.ShowSong; set => Change(s => s.ShowSong = value); }
     public bool ShowControls { get => S.ShowControls; set => Change(s => s.ShowControls = value); }
     public bool GraduatedSizes { get => S.GraduatedSizes; set => Change(s => s.GraduatedSizes = value); }
+
+    /// <summary>The floating lyrics (Minimal Mode as such); turning them on leaves the floating player.</summary>
+    public bool LyricsOn
+    {
+        get => S.Enabled && !S.NotThatMinimal;
+        set => Change(s => (s.Enabled, s.NotThatMinimal) = (value, false), preview: false);
+    }
+
+    /// <summary>"Not that minimal": the whole mini player floats instead of the lyrics alone (one or the other).</summary>
+    public bool FloatingPlayerOn
+    {
+        get => S.Enabled && S.NotThatMinimal;
+        set => Change(s => (s.Enabled, s.NotThatMinimal) = (value, value), preview: false);
+    }
+
+    // ---- While paused ----
+
+    public IReadOnlyList<LookOption<MinimalPaused>> PausedOptions { get; }
+
+    public LookOption<MinimalPaused>? WhenPaused
+    {
+        get => PausedOptions.FirstOrDefault(o => o.Value == S.WhenPaused);
+        set { if (value is not null && value.Value != S.WhenPaused) Change(s => s.WhenPaused = value.Value, preview: false); }
+    }
+
+    // ---- One-click places ----
+
+    public ICommand PlaceCommand { get; }
+
+    public event EventHandler<Core.Layout.FloatingSpot>? PlaceRequested;
+
+    // ---- The shortcut that turns it on and off (works in games) ----
+
+    public bool HotkeyEnabled { get => S.HotkeyEnabled; set => Change(s => s.HotkeyEnabled = value, preview: false); }
+
+    /// <summary>Set by the app: the combination is taken by another app.</summary>
+    public Func<bool>? HotkeyTaken { get; set; }
+
+    public bool HotkeyFailed => S.HotkeyEnabled && !IsCapturing && HotkeyTaken?.Invoke() == true;
+
+    private bool _capturing;
+
+    /// <summary>Waiting for the new combination (the next keys pressed in Settings).</summary>
+    public bool IsCapturing
+    {
+        get => _capturing;
+        set
+        {
+            if (_capturing == value)
+                return;
+            _capturing = value;
+            OnPropertyChanged(nameof(IsCapturing));
+            OnPropertyChanged(nameof(HotkeyText));
+            OnPropertyChanged(nameof(HotkeyFailed));
+            CapturingChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>The app stops listening to the shortcut while a new one is typed.</summary>
+    public event EventHandler? CapturingChanged;
+
+    public ICommand CaptureHotkeyCommand { get; }
+
+    public string HotkeyText => IsCapturing ? LocalizationService.Get("MinimalHotkeyPress") : Describe(S.HotkeyModifiers, S.HotkeyKey);
+
+    public static string Describe(int modifiers, int key)
+    {
+        var parts = new List<string>();
+        if ((modifiers & 2) != 0) parts.Add(LocalizationService.Get("KeyCtrl"));
+        if ((modifiers & 1) != 0) parts.Add("Alt");
+        if ((modifiers & 4) != 0) parts.Add("Shift");
+        if ((modifiers & 8) != 0) parts.Add("Win");
+        var name = KeyInterop.KeyFromVirtualKey(key).ToString();
+        if (name.Length == 2 && name[0] == 'D' && char.IsDigit(name[1]))
+            name = name[1..];
+        parts.Add(name);
+        return string.Join(" + ", parts);
+    }
+
+    /// <summary>A key pressed while capturing: a combination with Ctrl, Alt or Win becomes the shortcut; Esc cancels.</summary>
+    public bool Capture(Key key, ModifierKeys modifiers)
+    {
+        if (!IsCapturing)
+            return false;
+        if (key == Key.Escape)
+        {
+            IsCapturing = false;
+            return true;
+        }
+        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
+            return true;
+        var mods = (modifiers.HasFlag(ModifierKeys.Alt) ? 1 : 0) | (modifiers.HasFlag(ModifierKeys.Control) ? 2 : 0)
+            | (modifiers.HasFlag(ModifierKeys.Shift) ? 4 : 0) | (modifiers.HasFlag(ModifierKeys.Windows) ? 8 : 0);
+        if ((mods & (1 | 2 | 8)) == 0)
+            return true; // a letter alone would be typed into games: wait for a real combination
+        _capturing = false;
+        Change(s => (s.HotkeyModifiers, s.HotkeyKey, s.HotkeyEnabled) = (mods, KeyInterop.VirtualKeyFromKey(key), true), preview: false);
+        OnPropertyChanged(nameof(IsCapturing));
+        CapturingChanged?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    // ---- Apps that bring it up on their own ----
+
+    public System.Collections.ObjectModel.ObservableCollection<string> AutoApps { get; } = [];
+
+    public ICommand RemoveAppCommand { get; }
+
+    private IReadOnlyList<string> _runningApps = [];
+
+    /// <summary>Apps with a window open now (read when the list opens, not before).</summary>
+    public IReadOnlyList<string> RunningApps { get => _runningApps; private set { _runningApps = value; OnPropertyChanged(nameof(RunningApps)); } }
+
+    public void RefreshRunningApps()
+    {
+        var self = Environment.ProcessId;
+        var names = new List<string>();
+        foreach (var process in System.Diagnostics.Process.GetProcesses())
+        {
+            try
+            {
+                if (process.Id != self && process.MainWindowHandle != IntPtr.Zero && !string.IsNullOrWhiteSpace(process.MainWindowTitle))
+                    names.Add(process.ProcessName);
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { }
+            finally { process.Dispose(); }
+        }
+        RunningApps = names.Where(n => !AutoApps.Contains(n, StringComparer.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    /// <summary>Picking an app in the list adds it at once (one click).</summary>
+    public string? AppToAdd
+    {
+        get => null;
+        set
+        {
+            if (string.IsNullOrWhiteSpace(value) || AutoApps.Contains(value, StringComparer.OrdinalIgnoreCase))
+                return;
+            AutoApps.Add(value);
+            Change(s => s.AutoApps.Add(value), preview: false);
+            OnPropertyChanged(nameof(AppToAdd));
+        }
+    }
+
+    public bool HasAutoApps => AutoApps.Count > 0;
     public bool AutoFit { get => S.AutoFit; set => Change(s => s.AutoFit = value); }
     public bool ShowMiniPlayerButton { get => S.ShowMiniPlayerButton; set => Change(s => s.ShowMiniPlayerButton = value); }
     public bool ShowSettingsButton { get => S.ShowSettingsButton; set => Change(s => s.ShowSettingsButton = value); }
@@ -216,6 +382,7 @@ public sealed class MinimalLookViewModel : ObservableObject
             foreach (var o in Motions) o.Thumbnail = MiniPlayerLookThumbnails.Motion(o.Value, text);
             foreach (var o in Alignments) o.Thumbnail = MiniPlayerLookThumbnails.Alignment(o.Value, text);
             foreach (var o in Typefaces) o.Thumbnail = MiniPlayerLookThumbnails.Typeface(o.Value, text);
+            foreach (var o in PausedOptions) o.Thumbnail = MiniPlayerLookThumbnails.MinimalPausedPicture(o.Value, text);
         }
 
         // The scenes use the song's cover and colours, and the other choices of the same group.

@@ -5,8 +5,35 @@ namespace Taskitify.Core.Layout;
 /// place is still on a screen, otherwise somewhere sensible, so it never ends up out of reach
 /// after a monitor is unplugged or the resolution changes.
 /// </summary>
+/// <summary>Where a floating window can be put in one click.</summary>
+public enum FloatingSpot
+{
+    Top,
+    Center,
+    Bottom,
+    BottomLeft,
+    BottomRight,
+}
+
 public static class FloatingPlacement
 {
+    /// <summary>The window, same size, moved to a spot of the work area, <paramref name="margin"/> px from its edges.</summary>
+    public static PixelRect Snap(PixelRect window, PixelRect workArea, FloatingSpot spot, int margin)
+    {
+        var w = Math.Min(window.Width, workArea.Width);
+        var h = Math.Min(window.Height, workArea.Height);
+        var centerX = workArea.X + ((workArea.Width - w) / 2);
+        var bottom = workArea.Bottom - h - margin;
+        return spot switch
+        {
+            FloatingSpot.Top => new PixelRect(centerX, workArea.Y + margin, w, h),
+            FloatingSpot.Center => new PixelRect(centerX, workArea.Y + ((workArea.Height - h) / 2), w, h),
+            FloatingSpot.BottomLeft => new PixelRect(workArea.X + margin, bottom, w, h),
+            FloatingSpot.BottomRight => new PixelRect(workArea.Right - w - margin, bottom, w, h),
+            _ => new PixelRect(centerX, bottom, w, h),
+        };
+    }
+
     /// <summary>How much of the window must stay on a screen for its saved place to count (px).</summary>
     public const int MinVisible = 48;
 

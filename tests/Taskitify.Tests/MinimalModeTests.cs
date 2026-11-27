@@ -82,4 +82,26 @@ public sealed class MinimalModeTests
         var narrow = s.FitFontSize(400, 300, 1200);
         Assert.True(narrow < 30 && narrow >= 10);
     }
+
+    [Theory]
+    [InlineData(FloatingSpot.Bottom, 600, 900)]
+    [InlineData(FloatingSpot.Top, 600, 32)]
+    [InlineData(FloatingSpot.Center, 600, 466)]
+    [InlineData(FloatingSpot.BottomLeft, 32, 900)]
+    [InlineData(FloatingSpot.BottomRight, 1168, 900)]
+    public void QuickPositionsKeepTheSizeOnTheSameScreen(FloatingSpot spot, int x, int y)
+    {
+        var r = FloatingPlacement.Snap(new PixelRect(5, 5, 720, 200), new PixelRect(0, 0, 1920, 1132), spot, 32);
+        Assert.Equal(new PixelRect(x, y, 720, 200), r);
+    }
+
+    [Fact]
+    public void ShortcutAndPauseDefaultsSuitGames()
+    {
+        var s = new MinimalModeSettings();
+        Assert.True(s.HotkeyEnabled);
+        Assert.Equal((3, 0x4C), (s.HotkeyModifiers, s.HotkeyKey)); // Ctrl + Alt + L
+        Assert.Equal(MinimalPaused.Hide, s.WhenPaused);
+        Assert.Empty(s.AutoApps);
+    }
 }

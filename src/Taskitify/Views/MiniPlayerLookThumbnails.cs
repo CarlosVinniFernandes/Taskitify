@@ -172,6 +172,29 @@ internal static class MiniPlayerLookThumbnails
         });
     }
 
+    /// <summary>While paused: the verses as they were, only the song with a pause sign, or nothing.</summary>
+    public static ImageSource MinimalPausedPicture(MinimalPaused kind, Color color) =>
+        Diagram((dc, bounds) =>
+        {
+            switch (kind)
+            {
+                case MinimalPaused.Keep:
+                    Line(dc, 14, 13, bounds.Width - 28, .62, TextAlignment.Center, color, 0x60, 3);
+                    Line(dc, 14, 21, bounds.Width - 28, .9, TextAlignment.Center, color, 0xFF, 4);
+                    Line(dc, 14, 30, bounds.Width - 28, .62, TextAlignment.Center, color, 0x60, 3);
+                    break;
+                case MinimalPaused.Title:
+                    dc.DrawRectangle(Ink(color, 0xC0), null, new Rect(26, 19, 2.5, 8));
+                    dc.DrawRectangle(Ink(color, 0xC0), null, new Rect(31, 19, 2.5, 8));
+                    Line(dc, 38, 21, 34, 1, TextAlignment.Left, color, 0xA0, 4);
+                    break;
+                default:
+                    var dash = new Pen(Ink(color, 0x50), 1) { DashStyle = new DashStyle([3, 3], 0) };
+                    dc.DrawRoundedRectangle(null, dash, new Rect(16, 10, bounds.Width - 32, bounds.Height - 20), 4, 4);
+                    break;
+            }
+        });
+
     /// <summary>How many verses show: the current one bright, the others quieter, the rest gone.</summary>
     public static ImageSource MinimalLines(MinimalLines lines, Color color) =>
         Diagram((dc, bounds) =>
