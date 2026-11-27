@@ -151,7 +151,18 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         };
         ShareCommand = new RelayCommand(() => ShareRequested?.Invoke(this, EventArgs.Empty), () => _monitor.Track is not null);
         _progressTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
-        _progressTimer.Tick += (_, _) => UpdateProgress();
+        _progressTimer.Tick += (_, _) =>
+        {
+            UpdateProgress();
+            // Self-correction: the highlighted line is always the one for the position now.
+            if (++_checkTicks % 2 == 0)
+            {
+                _sync.EnsureCurrent();
+                if (CurrentIndex != _sync.CurrentIndex)
+                    UpdateCurrentLine();
+                FollowCheck?.Invoke(this, EventArgs.Empty);
+            }
+        };
 
         PlayPauseCommand = new RelayCommand(() => _ = _monitor.PlayPauseAsync(), () => _monitor.HasSession);
         NextCommand = new RelayCommand(() => _ = _monitor.NextAsync(), () => _monitor.CanGoNext);
@@ -232,6 +243,11 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     public double ScrollMilliseconds { get; private set; }
     public LyricFill CurrentFill => _sync.Fill(CurrentIndex, FlowMode);
     public event EventHandler? LyricPositionChanged;
+
+    /// <summary>Twice a second while open: the view checks that the current line is still centred.</summary>
+    public event EventHandler? FollowCheck;
+
+    private int _checkTicks;
 
     public bool IsCinema => Look.Layout == MiniPlayerLayout.Cinema;
 

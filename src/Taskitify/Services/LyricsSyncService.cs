@@ -103,6 +103,19 @@ public sealed class LyricsSyncService : IDisposable
     /// <summary>Re-fetch the current track (after clearing the cache, for instance).</summary>
     public void Reload() => _ = LoadAsync(debounce: false);
 
+    /// <summary>
+    /// The line for the position now, if the current one is not it (a missed timer, a position
+    /// report that arrived late): self-correction while a view follows the lyrics closely.
+    /// </summary>
+    public void EnsureCurrent()
+    {
+        if (Timeline is { Count: > 0 } timeline && timeline.IndexAt(LyricsPosition) != CurrentIndex)
+        {
+            Log.Debug($"Lyrics line was {CurrentIndex}, position says {timeline.IndexAt(LyricsPosition)}: resynced");
+            Reschedule();
+        }
+    }
+
     /// <summary>Forget whatever is cached for the current song and look it up again.</summary>
     public async Task ForceReloadAsync()
     {

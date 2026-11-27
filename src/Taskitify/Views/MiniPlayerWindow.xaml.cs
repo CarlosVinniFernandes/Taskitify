@@ -60,6 +60,7 @@ public partial class MiniPlayerWindow : Window
 
         vm.PropertyChanged += OnViewModelChanged;
         vm.CurrentLineChanged += (_, _) => QueueLyrics(vm.ScrollMilliseconds > 0);
+        vm.FollowCheck += (_, _) => KeepCentred();
         vm.Lines.CollectionChanged += (_, change) =>
         {
             if (change.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
@@ -627,6 +628,31 @@ public partial class MiniPlayerWindow : Window
         base.OnDpiChanged(oldDpi, newDpi);
         _lyricInk.Invalidate();
         QueueLyrics(animate: false);
+    }
+
+    /// <summary>
+    /// The list drifted from the current line (an interrupted animation, a layout change after
+    /// the last scroll): slide back to it. Not while the user browses or a scroll is running.
+    /// </summary>
+    private void KeepCentred()
+    {
+        if (!IsVisible || _browsing || _lyricsUpdateQueued || _vm.Lines.Count == 0 || LyricsOffset.HasAnimatedProperties)
+            return;
+        if (CentreTarget() is { } target && Math.Abs(LyricsOffset.Y - target) > 2)
+            QueueLyrics(animate: true);
+    }
+
+    /// <summary>Where the list must sit for the current line to be in the middle; null before layout.</summary>
+    private double? CentreTarget()
+    {
+        var index = _vm.CurrentIndex;
+        if (LyricsList.ItemContainerGenerator.ContainerFromIndex(Math.Max(0, index)) is not FrameworkElement container || !container.IsArrangeValid)
+            return null;
+        var viewport = LyricsViewport.ActualHeight;
+        var top = container.TranslatePoint(new Point(0, 0), LyricsList).Y;
+        return index < 0
+            ? (viewport / 2) - (container.ActualHeight / 2) + container.ActualHeight
+            : (viewport / 2) - top - (container.ActualHeight / 2);
     }
 
     /// <summary>Translate the list so the current line is vertically centred in the viewport.</summary>
