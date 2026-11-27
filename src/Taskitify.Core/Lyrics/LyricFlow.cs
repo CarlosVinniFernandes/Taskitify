@@ -27,6 +27,14 @@ public sealed partial class LyricFlow
     private readonly record struct Phrase(TimeSpan Start, double LinearDuration, Point[] Estimated,
         Point[]? Actual, bool CanEstimate);
 
+    // Measured on JamendoLyrics (79 word-annotated songs in four languages; see tools/LyricFlowStudy):
+    // singers keep the pace of the surrounding lines and stretch the last word, then rest. Spreading a
+    // line evenly over the time until the next one filled ~0.4 s behind the voice on average.
+    private const double Pace = 0.95;          // words a little faster than the neighbours' line rate
+    private const double SungShare = 0.45;     // at least this much of the line's time carries words
+    private const double HoldShare = 0.3;      // the last word may be held this much longer than the rest
+    private const double FinalWeight = 2.4;    // extra syllables' worth of weight on the line's last word
+
     [GeneratedRegex(@"\S+")]
     private static partial Regex Tokens();
 
@@ -58,15 +66,22 @@ public sealed partial class LyricFlow
             var last = Math.Min(rate.Length, i + 5);
             var nearby = rate[first..last];
             nearby[i - first] = 0;
-            var secondsPerUnit = Median(nearby) ?? typical ?? 0.42;
+            var secondsPerUnit = (Median(nearby) ?? typical ?? 0.42) * Pace;
             var expected = Math.Clamp(secondsPerUnit * units[i] + 0.25, 0.65, 12);
             var window = windows[i];
             var linear = window > 0 ? window : expected;
             var adaptive = window <= 0 ? expected : window;
             if (adaptive > Math.Max(4, expected * 2.2))
                 adaptive = expected;
+            // Room left within the line: the words keep their pace, the last one is held, then silence.
+            var hold = 0.0;
+            if (window > expected && adaptive == window)
+            {
+                adaptive = Math.Max(expected, window * SungShare);
+                hold = Math.Min(window - adaptive, adaptive * HoldShare);
+            }
 
-            _phrases[i] = new Phrase(line.Time, linear, Estimate(words[i], units[i], adaptive),
+            _phrases[i] = new Phrase(line.Time, linear, Estimate(words[i], units[i], adaptive, hold),
                 ReadAnchors(line, window), units[i] > 0 && (window > 0 || typical is not null));
         }
     }
@@ -149,7 +164,7 @@ public sealed partial class LyricFlow
         return points.ToArray();
     }
 
-    private static Point[] Estimate((int End, double Weight)[] words, double total, double seconds)
+    private static Point[] Estimate((int End, double Weight)[] words, double total, double seconds, double hold)
     {
         if (words.Length == 0)
             return [];
@@ -157,7 +172,7 @@ public sealed partial class LyricFlow
         var elapsed = 0.0;
         for (var i = 0; i < words.Length; i++)
         {
-            elapsed += words[i].Weight / total * seconds;
+            elapsed += words[i].Weight / total * seconds + (i == words.Length - 1 ? hold : 0);
             points[i + 1] = new Point(elapsed, words[i].End);
         }
         return points;
@@ -187,7 +202,8 @@ public sealed partial class LyricFlow
             var syllables = vowelGroups > 0 ? vowelGroups : Math.Max(1, letters * 0.65);
             var pause = word[^1] switch { ',' or ';' or ':' => 0.25, '.' or '?' or '!' or '…' => 0.42, _ => 0 };
             var end = i + 1 < tokens.Count ? tokens[i + 1].Index : text.Length;
-            result[i] = (end, Math.Max(0.8, syllables * 0.78 + letters * 0.1) + pause);
+            var final = i == tokens.Count - 1 ? FinalWeight * 0.78 : 0;
+            result[i] = (end, Math.Max(0.8, syllables * 0.78 + letters * 0.1) + pause + final);
         }
         return result;
     }
