@@ -26,7 +26,8 @@ public sealed record LyricCardSource(
     Color PaletteEnd,
     TimeSpan? Duration,
     string? Credit,
-    Func<Task<byte[]?>>? LargeCover);
+    Func<Task<byte[]?>>? LargeCover,
+    string? SpotifyTrackId = null);
 
 public sealed class LyricCardLineItem(int index, LyricCardLine line) : ObservableObject
 {
@@ -175,6 +176,8 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
             SavedPresets.Add(preset);
 
         CopyCommand = new RelayCommand(Copy);
+        ToggleShareCommand = new RelayCommand(() => IsSharing = !IsSharing);
+        CopyLinkCommand = new RelayCommand(CopyLink, () => HasSelection);
         SaveCommand = new RelayCommand(Save);
         ClearCommand = new RelayCommand(() => SetAll(false), () => HasSelection);
         SavePresetCommand = new RelayCommand(SavePreset, () => !string.IsNullOrWhiteSpace(PresetName));
@@ -217,6 +220,48 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
     public ObservableCollection<LyricCardPreset> SavedPresets { get; } = [];
 
     public ICommand CopyCommand { get; }
+
+    // ---- Share as a link (experimental: hidden in production until the website renders links) ----
+
+    public bool ShareEnabled => LyricShareLink.Enabled;
+
+    private bool _isSharing;
+    public bool IsSharing { get => _isSharing; set => Set(ref _isSharing, value); }
+
+    private string _shareFrom = "", _shareTo = "", _shareMessage = "";
+    public string ShareFrom { get => _shareFrom; set { if (Set(ref _shareFrom, value)) ShareLink = null; } }
+    public string ShareTo { get => _shareTo; set { if (Set(ref _shareTo, value)) ShareLink = null; } }
+    public string ShareMessage { get => _shareMessage; set { if (Set(ref _shareMessage, value)) ShareLink = null; } }
+
+    private string? _shareLink;
+    /// <summary>The last link copied, shown so it can be checked before sending.</summary>
+    public string? ShareLink { get => _shareLink; private set => Set(ref _shareLink, value); }
+
+    public ICommand ToggleShareCommand { get; }
+
+    public ICommand CopyLinkCommand { get; }
+
+    private void CopyLink()
+    {
+        var payload = LyricShareLink.Create(Content(_options.Style), _options, _source.SpotifyTrackId, ShareFrom, ShareTo, ShareMessage);
+        var link = LyricShareLink.Link(payload);
+        if (link is null)
+        {
+            Status = LocalizationService.Get("CardShareTooLong");
+            return;
+        }
+        ShareLink = link;
+        try
+        {
+            Clipboard.SetText(link);
+            Status = LocalizationService.Get("CardShareCopied");
+        }
+        catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or System.Runtime.InteropServices.ExternalException)
+        {
+            Log.Warn($"Could not copy the share link: {ex.Message}");
+            Status = LocalizationService.Get("CardCopyFailed");
+        }
+    }
 
     public ICommand SaveCommand { get; }
 

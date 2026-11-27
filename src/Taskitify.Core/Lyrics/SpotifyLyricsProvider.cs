@@ -296,6 +296,10 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
         return null;
     }
 
+    /// <summary>A Spotify track id already found for this song, if any. Never goes online.</summary>
+    public string? KnownTrackId(TrackQuery query) =>
+        _trackIds.TryGetValue(LyricsCache.KeyFor(query), out var ids) && ids.Count > 0 ? ids[0] : null;
+
     private void RememberTrackIds(string key, IEnumerable<string> ids)
     {
         if (_trackIds.Count >= MaxCovers)

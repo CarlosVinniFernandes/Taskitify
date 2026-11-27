@@ -509,6 +509,45 @@
             </StackPanel>
             <!-- Export -->
             <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                <!-- Share as a link (experimental): optional dedication, then the link is copied. -->
+                <Border Visibility="{Binding IsSharing, Converter={StaticResource BoolToVisibility}}" Margin="0,0,0,10" Padding="12,10,12,12"
+                        CornerRadius="8" BorderThickness="1" BorderBrush="{DynamicResource PopupBorderBrush}" Background="{DynamicResource SubtleFillBrush}">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource Loc.CardShareTitle}" FontWeight="SemiBold" />
+                        <TextBlock Text="{DynamicResource Loc.CardShareHint}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,2,0,8" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Loc.CardShareFrom}" Style="{StaticResource Hint}" Margin="0,0,0,3" />
+                                <TextBox Style="{StaticResource Field}" Text="{Binding ShareFrom, UpdateSourceTrigger=PropertyChanged}" MaxLength="40"
+                                         AutomationProperties.Name="{DynamicResource Loc.CardShareFrom}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="{DynamicResource Loc.CardShareTo}" Style="{StaticResource Hint}" Margin="0,0,0,3" />
+                                <TextBox Style="{StaticResource Field}" Text="{Binding ShareTo, UpdateSourceTrigger=PropertyChanged}" MaxLength="40"
+                                         AutomationProperties.Name="{DynamicResource Loc.CardShareTo}" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="{DynamicResource Loc.CardShareMessage}" Style="{StaticResource Hint}" Margin="0,8,0,3" />
+                        <TextBox Style="{StaticResource Field}" Text="{Binding ShareMessage, UpdateSourceTrigger=PropertyChanged}" MaxLength="280"
+                                 TextWrapping="Wrap" AcceptsReturn="True" MinHeight="54" VerticalContentAlignment="Top"
+                                 AutomationProperties.Name="{DynamicResource Loc.CardShareMessage}" />
+                        <TextBlock Text="{DynamicResource Loc.CardSharePrivacy}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,8,0,8" />
+                        <Button Style="{StaticResource AccentButton}" Command="{Binding CopyLinkCommand}" Padding="8,8" FontSize="12" HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE71B;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                <TextBlock Text="{DynamicResource Loc.CardShareCopy}" />
+                            </StackPanel>
+                        </Button>
+                        <TextBox Text="{Binding ShareLink, Mode=OneWay}" IsReadOnly="True" Style="{StaticResource Field}" Margin="0,8,0,0" FontSize="11"
+                                 Visibility="{Binding ShareLink, Converter={StaticResource NullToCollapsed}}"
+                                 AutomationProperties.Name="{DynamicResource Loc.CardShareTitle}" />
+                    </StackPanel>
+                </Border>
                 <TextBlock Text="{Binding Status}" Style="{StaticResource Hint}" Margin="0,0,0,5" MinHeight="16" />
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -529,6 +568,13 @@
                         </StackPanel>
                     </Button>
                 </Grid>
+                <Button Style="{StaticResource FlatButton}" Command="{Binding ToggleShareCommand}" Padding="8,7" FontSize="12" Margin="0,8,0,0"
+                        Visibility="{Binding ShareEnabled, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE72D;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBlock Text="{DynamicResource Loc.CardShareLink}" />
+                    </StackPanel>
+                </Button>
             </StackPanel>
             <ScrollViewer x:Name="GalleryScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Margin="0,0,7,0">

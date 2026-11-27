@@ -346,7 +346,8 @@ public partial class App : Application
         var provider = _spotifyProvider;
         var source = new LyricCardSource(track.Title, track.Artist, string.IsNullOrWhiteSpace(track.Album) ? null : track.Album, lines, current, cover,
             _monitor.Palette.Start, _monitor.Palette.End, _monitor.Duration, LyricsCredit.For(_sync.Result),
-            provider is null ? null : () => provider.FindLargeCoverAsync(query, CancellationToken.None));
+            provider is null ? null : () => provider.FindLargeCoverAsync(query, CancellationToken.None),
+            provider?.KnownTrackId(query));
 
         _lyricCardWindow?.Close();
         _lyricCardWindow = new LyricCardWindow(new LyricCardViewModel(source, _settings!));

@@ -426,5 +426,15 @@
   "TourHomeEnjoy": "Merci d'être là, et bonne écoute !",
   "TourHomeSignature": "— Carlos, créateur de Taskitify",
   "TourHomeStart": "Commencer à écouter",
-  "TourHomeGitHub": "Mettre une étoile sur GitHub"
+  "TourHomeGitHub": "Mettre une étoile sur GitHub",
+  "CardShareLink": "Partager par lien (expérimental)",
+  "CardShareTitle": "Partager par lien",
+  "CardShareHint": "Ajoutez une dédicace si vous le souhaitez, ou laissez vide pour partager seulement la carte.",
+  "CardShareFrom": "De (facultatif)",
+  "CardShareTo": "Pour (facultatif)",
+  "CardShareMessage": "Message personnel (facultatif)",
+  "CardSharePrivacy": "Toute personne ayant le lien peut voir la carte, les paroles et votre message : le lien lui-même les contient, lisibles par tous (il n'est pas chiffré). Les images et pochettes ne sont pas incluses.",
+  "CardShareCopy": "Copier le lien",
+  "CardShareCopied": "Lien copié.",
+  "CardShareTooLong": "Trop de contenu pour un lien : choisissez moins de lignes ou un message plus court."
 }
