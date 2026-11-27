@@ -98,14 +98,14 @@ public static partial class LyricCardRenderer
             BorderBrush = new LinearGradientBrush(Alpha(Colors.Black, 70), Alpha(Colors.Black, 0), 45),
         });
         var face = d.UserFace;
-        var family = face?.Family ?? Mono;
-        var weight = face?.Weight ?? FontWeights.Bold;
-        var lyric = FitText(d.LyricText, family, weight, FontStyles.Normal, ink, 444, 282, 50 * d.TextScale, 18, d_Align(d, TextAlignment.Left), 1.22);
-        var copy = new DockPanel { Margin = new Thickness(32, 28, 32, 26) };
-        var note = Label("♪ " + d.Text("note").ToUpperInvariant(), Mono, 21, FontWeights.Bold, Alpha(ink, 200), TextAlignment.Left);
+        // A thin dot-matrix face, each lyric line kept whole when it can be (else wrapped evenly).
+        var lyric = LyricLines(d.LyricText, face?.Family ?? Vt323, face?.Weight ?? FontWeights.Normal, ink, 444, 290, 66 * d.TextScale, 42,
+            d.Align(TextAlignment.Left), 1.02, gap: 10);
+        var copy = new DockPanel { Margin = new Thickness(32, 24, 32, 22) };
+        var note = Label("\u266A " + d.Text("note").ToUpperInvariant(), Vt323, 28, FontWeights.Normal, Alpha(ink, 190), TextAlignment.Left);
         DockPanel.SetDock(note, Dock.Top);
         copy.Children.Add(note);
-        var song = Label("▶ " + (d.Title + "  " + d.Artist).ToUpperInvariant(), Mono, 18, FontWeights.Bold, Alpha(ink, 190), TextAlignment.Left);
+        var song = Label("\u25B6 " + (d.Title + " \u00B7 " + d.Artist).ToUpperInvariant(), Vt323, 24, FontWeights.Normal, Alpha(ink, 175), TextAlignment.Left);
         song.TextTrimming = TextTrimming.CharacterEllipsis;
         DockPanel.SetDock(song, Dock.Bottom);
         copy.Children.Add(song);
@@ -135,7 +135,7 @@ public static partial class LyricCardRenderer
                 Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 10, ShadowDepth = 5, Direction = 300, Opacity = .45 },
             });
         pad.Children.Add(new Ellipse { Width = 26, Height = 26, Fill = new RadialGradientBrush(C("#2A2B32"), C("#17181C")) });
-        foreach (var (glyph, x, y) in new[] { ("▲", 93.0, 12.0), ("▼", 93.0, 176.0), ("◀", 12.0, 92.0), ("▶", 178.0, 92.0) })
+        foreach (var (glyph, x, y) in new[] { ("▲", 93.0, 12.0), ("▼", 93.0, 176.0), ("◀", 12.0, 92.0), ("\u25B6", 178.0, 92.0) })
         {
             var arrow = Label(glyph, Symbols, 16, FontWeights.Normal, C("#55565F"), TextAlignment.Left);
             arrow.Margin = new Thickness(x, y, 0, 0);
@@ -276,7 +276,7 @@ public static partial class LyricCardRenderer
 
         // The entry.
         var entry = new StackPanel { Width = width, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
-        var headword = FitText(word, DmSerif, FontWeights.Normal, FontStyles.Normal, ink, width - 40 * u, 330 * u, 186 * u, 70 * u, TextAlignment.Left, 1.0);
+        var headword = FitText(word, DmSerif, FontWeights.Normal, FontStyles.Normal, ink, width - 40 * u, 250 * u, 136 * u, 64 * u, TextAlignment.Left, 1.0);
         var wordBox = new Grid();
         wordBox.Children.Add(headword);
         // A pencil underline, drawn quickly under the headword.
@@ -311,8 +311,9 @@ public static partial class LyricCardRenderer
         var number = Label(d.Text("number") + ".", Georgia, 40 * u, FontWeights.Bold, accent, TextAlignment.Left);
         definition.Children.Add(number);
         var face = d.UserFace;
-        var meaning = FitText(d.LyricText, face?.Family ?? Georgia, face?.Weight ?? FontWeights.Normal, FontStyles.Normal, ink,
-            width - 60 * u, (tall ? 440 : 260) * u, (tall ? 66 : 54) * u * d.TextScale, 24 * u, d.Align(TextAlignment.Left), 1.3);
+        // The definition is the point of the page: the largest reading text, each line whole when it can be.
+        var meaning = LyricLines(d.LyricText, face?.Family ?? Georgia, face?.Weight ?? FontWeights.Normal, ink,
+            width - 60 * u, (tall ? 640 : 340) * u, (tall ? 84 : 66) * u * d.TextScale, 34 * u, d.Align(TextAlignment.Left), 1.24, gap: 8 * u);
         Grid.SetColumn(meaning, 1);
         definition.Children.Add(meaning);
         entry.Children.Add(definition);
@@ -338,42 +339,22 @@ public static partial class LyricCardRenderer
         margin.Children.Add(Label(DateTime.Today.ToString("dd.MM", CultureInfo.InvariantCulture), HandFont, 34 * u, FontWeights.Normal, pencil, TextAlignment.Center));
         root.Children.Add(margin);
 
-        // The page goes on: the next entries in two tight columns with a rule between them.
-        if (!d.Wide && H > 1200)
+        // The reader's own notes, in pencil, when they wrote any (Personal note fields).
+        var memos = new[] { d.Text("memo"), d.Text("memo2") }.Where(m => !string.IsNullOrWhiteSpace(m)).ToList();
+        if (memos.Count > 0)
         {
-            var columns = new Grid { Width = width, Margin = new Thickness(0, 120 * u, 0, 0), Opacity = .62 };
-            columns.ColumnDefinitions.Add(new ColumnDefinition());
-            columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(44 * u) });
-            columns.ColumnDefinitions.Add(new ColumnDefinition());
-            TextBlock Neighbour(string word2, string body)
-            {
-                var t = new TextBlock { TextWrapping = TextWrapping.Wrap, FontFamily = Georgia, FontSize = 24 * u, Foreground = Brush(ink),
-                    LineHeight = 33 * u, LineStackingStrategy = LineStackingStrategy.BlockLineHeight, TextAlignment = TextAlignment.Left };
-                t.Inlines.Add(new System.Windows.Documents.Run(word2 + " ") { FontWeight = FontWeights.Bold, FontSize = 27 * u });
-                t.Inlines.Add(new System.Windows.Documents.Run("/" + Syllables(word2) + "/ ") { Foreground = Brush(grey) });
-                t.Inlines.Add(new System.Windows.Documents.Run("n. ") { FontStyle = FontStyles.Italic, Foreground = Brush(accent) });
-                t.Inlines.Add(new System.Windows.Documents.Run(body));
-                return t;
-            }
-            columns.Children.Add(new Border { Height = 1.2 * u, Background = Brush(Alpha(ink, 80)), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, -30 * u, 0, 0) });
-            Grid.SetColumnSpan(columns.Children[^1], 3);
-            var first = Neighbour(string.IsNullOrWhiteSpace(d.Artist) ? "song" : d.Artist,
-                "1. The voice behind “" + d.Title + "”. 2. Someone worth listening to again, often late at night.");
-            columns.Children.Add(first);
-            var second = Neighbour(string.IsNullOrWhiteSpace(d.Album) ? "refrain" : d.Album!,
-                "A record kept on repeat. — See " + word.ToLower(CultureInfo.CurrentCulture) + ".");
-            var lastWord = word.Trim().Split(' ').Last();
-            var stackRight = new StackPanel();
-            stackRight.Children.Add(second);
-            var third = Neighbour(lastWord.ToLower(CultureInfo.CurrentCulture), "1. What the song is about. 2. Fig. Anything played too loud, too often, with the windows down.");
-            third.Margin = new Thickness(0, 18 * u, 0, 0);
-            stackRight.Children.Add(third);
-            Grid.SetColumn(stackRight, 2);
-            columns.Children.Add(stackRight);
-            var rule = new Border { Width = 1, Background = Brush(Alpha(ink, 70)), HorizontalAlignment = HorizontalAlignment.Center };
-            Grid.SetColumn(rule, 1);
-            columns.Children.Add(rule);
-            entry.Children.Add(columns);
+            var notes = new Grid { Margin = new Thickness(40 * u, 56 * u, 0, 0), RenderTransformOrigin = new Point(0, 0), RenderTransform = new RotateTransform(-1.6) };
+            notes.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(34 * u) });
+            notes.ColumnDefinitions.Add(new ColumnDefinition());
+            var written = Handwriting(string.Join("\n", memos), HandFont, 44 * u, pencil, width - 110 * u, 31, TextAlignment.Left, 52 * u);
+            written.OpacityMask = Speckle(43, .55);
+            Grid.SetColumn(written, 1);
+            notes.Children.Add(written);
+            // A quick pencil bracket gathering the notes.
+            written.Measure(new Size(width - 110 * u, double.PositiveInfinity));
+            var hh = written.DesiredSize.Height;
+            notes.Children.Add(Pencil(Geometry.Parse(FormattableString.Invariant($"M{22 * u},{6 * u} C{8 * u},{6 * u} {10 * u},{hh * .5} {2 * u},{hh * .5} C{10 * u},{hh * .5} {8 * u},{hh - (6 * u)} {22 * u},{hh - (6 * u)}")), pencil, 2.6 * u));
+            entry.Children.Add(notes);
         }
 
         var foot = new Grid { Margin = new Thickness(left, 0, right, 70 * u), VerticalAlignment = VerticalAlignment.Bottom };
@@ -424,7 +405,7 @@ public static partial class LyricCardRenderer
     /// </summary>
     private static FrameworkElement PersonalLetter(Studio d)
     {
-        const double w = 860, h = 1120, rule = 72, top = 214, inner = 150;
+        const double w = 860, h = 1120, rule = 84, top = 230, inner = 150;
         var paper = C("#FBF6EA");
         var ink = C("#1E3772");
         var canvas = new Canvas { Width = w + 140, Height = h + 170 };
@@ -440,7 +421,7 @@ public static partial class LyricCardRenderer
             Child = new Border
             {
                 Background = new LinearGradientBrush(Lighten(d.Accent, .25), Darken(d.Accent, .7), 90),
-                Child = Label("♪", Symbols, 52, FontWeights.Normal, C("#FBF7EC"), TextAlignment.Center),
+                Child = Label("\u266A", Symbols, 52, FontWeights.Normal, C("#FBF7EC"), TextAlignment.Center),
             },
             RenderTransformOrigin = new Point(.5, .5), RenderTransform = new RotateTransform(3),
         };
@@ -493,25 +474,26 @@ public static partial class LyricCardRenderer
         // Writing, by hand.
         // Shifted so the writing's baselines rest on the rules.
         var writing = new Canvas { RenderTransform = new TranslateTransform(0, 12) };
-        var date = Handwriting(d.Text("date"), HandFont, 40, ink, 330, 11, TextAlignment.Right, rule);
+        var date = Handwriting(d.Text("date"), HandFont, 34, Alpha(ink, 210), 330, 11, TextAlignment.Right, rule);
         writing.Children.Add(At(date, w - 330 - 70, top - (rule * 2) + 8));
-        var hello = Handwriting(d.Text("hello"), HandFont, 62, ink, w - inner - 80, 12, TextAlignment.Left, rule);
+        var hello = Handwriting(d.Text("hello"), HandFont, 50, Alpha(ink, 225), w - inner - 80, 12, TextAlignment.Left, rule);
         writing.Children.Add(At(hello, inner - 6, top - rule + 6));
         var face = d.UserFace;
-        var body = Handwriting(d.LyricText, face?.Family ?? HandFont, 60 * d.TextScale, ink, w - inner - 70, 13, d.Align(TextAlignment.Left), rule,
-            maxHeight: rule * 7, weight: face?.Weight ?? FontWeights.Normal);
+        // The lines are what the letter is for: the largest hand on the page, pressed a little harder.
+        var body = Handwriting(d.LyricText, face?.Family ?? HandFont, 80 * d.TextScale, ink, w - inner - 66, 13, d.Align(TextAlignment.Left), rule,
+            maxHeight: rule * 6, weight: face?.Weight ?? FontWeights.SemiBold, preferWhole: true);
         writing.Children.Add(At(body, inner, top + 6));
         body.Measure(new Size(w - inner - 70, double.PositiveInfinity));
         var lines = Math.Max(1, (int)Math.Round(body.DesiredSize.Height / rule));
-        var bye = Handwriting(d.Text("bye"), HandFont, 54, ink, 400, 14, TextAlignment.Left, rule);
+        var bye = Handwriting(d.Text("bye"), HandFont, 42, Alpha(ink, 220), 400, 14, TextAlignment.Left, rule);
         writing.Children.Add(At(bye, w - 470, top + ((lines + 1) * rule) + 6));
-        var name = Handwriting(d.Text("sign"), HandFont, 84, ink, 440, 15, TextAlignment.Left, rule, weight: FontWeights.Bold);
-        writing.Children.Add(At(name, w - 450, top + ((lines + 2) * rule) - 4));
-        // The flourish under the name.
-        var y = top + ((lines + 3) * rule) + 4;
-        writing.Children.Add(Pen(Geometry.Parse(FormattableString.Invariant($"M{w - 440},{y} C{w - 360},{y + 22} {w - 230},{y - 26} {w - 120},{y - 4} S{w - 90},{y + 10} {w - 70},{y - 14}")), ink, 3.4));
+        var name = Handwriting(d.Text("sign"), HandFont, 56, Alpha(ink, 235), 400, 15, TextAlignment.Left, rule);
+        writing.Children.Add(At(name, w - 430, top + ((lines + 2) * rule) - 2));
+        // A small flourish under the name.
+        var y = top + ((lines + 3) * rule) - 10;
+        writing.Children.Add(Pen(Geometry.Parse(FormattableString.Invariant($"M{w - 424},{y} C{w - 370},{y + 12} {w - 270},{y - 14} {w - 200},{y - 2} S{w - 178},{y + 6} {w - 166},{y - 8}")), Alpha(ink, 210), 2.4));
         // A note squeezed into the margin, with its arrow.
-        var note = Handwriting("♪ " + d.Title, HandFont, 34, Alpha(ink, 225), 330, 16, TextAlignment.Left, 38, maxHeight: 40);
+        var note = Handwriting("\u266A " + d.Title, HandFont, 32, Alpha(ink, 200), 330, 16, TextAlignment.Left, 38, maxHeight: 40);
         note.RenderTransformOrigin = new Point(0, 0);
         note.RenderTransform = new RotateTransform(-7);
         var noteY = top + ((lines + 4) * rule) + 20;
@@ -705,6 +687,76 @@ public static partial class LyricCardRenderer
     // ======================= Human marks =======================
 
     private static readonly FontFamily HandFont = new(FontFolder, "./#Caveat");
+    private static readonly FontFamily Vt323 = new(FontFolder, "./#VT323");
+
+    /// <summary>
+    /// The lyric lines as a typographer would set them: the largest size (down to
+    /// <paramref name="min"/>) at which every line stays whole and the block fits; below that,
+    /// lines wrap, each one balanced so no word is left alone on its last line.
+    /// </summary>
+    private static FrameworkElement LyricLines(string text, FontFamily font, FontWeight weight, Color ink, double width, double maxHeight,
+        double start, double min, TextAlignment align, double lineFactor, double gap = 0)
+    {
+        var lines = text.Split('\n');
+        StackPanel Build(double size, bool wrap)
+        {
+            var stack = new StackPanel { Width = width };
+            for (var i = 0; i < lines.Length; i++)
+            {
+                var block = new TextBlock
+                {
+                    Text = lines[i], FontFamily = font, FontWeight = weight, FontSize = size, Foreground = Brush(ink), TextAlignment = align,
+                    TextWrapping = wrap ? TextWrapping.Wrap : TextWrapping.NoWrap, LineHeight = size * lineFactor,
+                    LineStackingStrategy = LineStackingStrategy.BlockLineHeight, Margin = new Thickness(0, i == 0 ? 0 : gap, 0, 0),
+                    HorizontalAlignment = align switch { TextAlignment.Center => HorizontalAlignment.Center, TextAlignment.Right => HorizontalAlignment.Right, _ => HorizontalAlignment.Left },
+                };
+                if (wrap)
+                    Balance(block, width);
+                stack.Children.Add(block);
+            }
+            stack.Measure(new Size(width, double.PositiveInfinity));
+            return stack;
+        }
+        // Whole lines first, but only a little smaller: a big, evenly broken line beats a small whole one.
+        for (var size = start; size >= Math.Max(min, start * .8); size *= .96)
+        {
+            if (lines.All(line => MeasureWidth(line, font, size, weight) <= width))
+            {
+                var whole = Build(size, wrap: false);
+                if (whole.DesiredSize.Height <= maxHeight)
+                    return whole;
+            }
+        }
+        // Then wrapped, evenly.
+        for (var size = start; ; size *= .94)
+        {
+            var wrapped = Build(size, wrap: true);
+            if (wrapped.DesiredSize.Height <= maxHeight || size * .94 < min * .7)
+                return wrapped;
+        }
+    }
+
+    /// <summary>The narrowest width that keeps a wrapped line's number of lines: the lines even out.</summary>
+    private static void Balance(TextBlock block, double width)
+    {
+        block.Width = width;
+        block.Measure(new Size(width, double.PositiveInfinity));
+        var height = block.DesiredSize.Height;
+        if (height <= block.LineHeight * 1.2)
+            return;
+        double low = width * .4, high = width;
+        for (var i = 0; i < 12; i++)
+        {
+            var mid = (low + high) / 2;
+            block.Width = mid;
+            block.Measure(new Size(mid, double.PositiveInfinity));
+            if (block.DesiredSize.Height > height + .5)
+                low = mid;
+            else
+                high = mid;
+        }
+        block.Width = Math.Ceiling(high) + 1;
+    }
     private static readonly FontFamily Courier = new(FontFolder, "./#Courier Prime");
 
     /// <summary>
@@ -713,9 +765,9 @@ public static partial class LyricCardRenderer
     /// Line boxes are exactly one rule tall, so the writing sits on ruled paper.
     /// </summary>
     private static FrameworkElement Handwriting(string text, FontFamily font, double size, Color ink, double width, int seed, TextAlignment align,
-        double rule, double maxHeight = double.PositiveInfinity, FontWeight? weight = null)
+        double rule, double maxHeight = double.PositiveInfinity, FontWeight? weight = null, bool preferWhole = false)
     {
-        for (var scale = 1.0; ; scale *= .93)
+        for (var scale = 1.0; ; scale *= .95)
         {
             var random = new Random(seed);
             var stack = new StackPanel { Width = width };
@@ -727,13 +779,21 @@ public static partial class LyricCardRenderer
                     FontSize = size * scale * (0.97 + (random.NextDouble() * .06)), Foreground = Brush(Alpha(ink, (byte)(226 + random.Next(29)))),
                     TextAlignment = align, LineHeight = rule, LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
                     Margin = new Thickness((random.NextDouble() * 12) - 2, 0, 0, 0),
+                    HorizontalAlignment = align switch { TextAlignment.Center => HorizontalAlignment.Center, TextAlignment.Right => HorizontalAlignment.Right, _ => HorizontalAlignment.Left },
                     RenderTransformOrigin = new Point(0, .5), RenderTransform = new RotateTransform((random.NextDouble() * 1.6) - .9),
                 };
                 stack.Children.Add(block);
             }
             stack.Measure(new Size(width, double.PositiveInfinity));
-            if (stack.DesiredSize.Height <= maxHeight || scale < .5)
+            // Whole lines when they can stay whole a little smaller (a line broken by hand looks like a mistake).
+            var whole = !preferWhole || scale < .72 || stack.Children.OfType<TextBlock>().All(b => b.DesiredSize.Height <= rule * 1.2);
+            if ((stack.DesiredSize.Height <= maxHeight && whole) || scale < .5)
+            {
+                if (preferWhole)
+                    foreach (var b in stack.Children.OfType<TextBlock>())
+                        Balance(b, width);
                 return stack;
+            }
         }
     }
 
@@ -854,9 +914,9 @@ public static partial class LyricCardRenderer
         return new Path { Data = geometry, Stroke = Brush(color), StrokeThickness = 1.1, Width = width, Height = height };
     }
 
-    private static double MeasureWidth(string text, FontFamily font, double size)
+    private static double MeasureWidth(string text, FontFamily font, double size, FontWeight? weight = null)
     {
-        var block = new TextBlock { Text = text, FontFamily = font, FontSize = size };
+        var block = new TextBlock { Text = text, FontFamily = font, FontSize = size, FontWeight = weight ?? FontWeights.Normal };
         block.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         return block.DesiredSize.Width;
     }

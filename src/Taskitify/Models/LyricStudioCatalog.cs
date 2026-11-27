@@ -92,7 +92,8 @@ public static class LyricStudioCatalog
 
         S(LyricCardStyle.Editorial, StudioCategory.Literary, font: LyricCardFont.Serif),
         S(LyricCardStyle.Dictionary, StudioCategory.Literary, "Dictionary", LyricCardFont.Serif, false,
-            F("word","Headword","{title}"), F("category","Category",""), F("class","Classification",""), F("number","Definition number","1"), F("note","Additional detail","{artist}")),
+            F("word","Headword","{title}"), F("category","Category",""), F("class","Classification",""), F("number","Definition number","1"), F("note","Additional detail","{artist}"),
+            F("memo","Personal note",""), F("memo2","Second personal note","")),
         S(LyricCardStyle.BookPage, StudioCategory.Literary, "Book Page", LyricCardFont.Serif, false,
             F("chapter","Chapter","Chapter VII"), F("page","Page","127"), F("initial","Drop cap","On","On","Off"), F("highlight","Highlight","Off","On","Off"), F("note","Page note","{artist}")),
         S(LyricCardStyle.PeriodicTable, StudioCategory.Literary, "Periodic Table", fields:
