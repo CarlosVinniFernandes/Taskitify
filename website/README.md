@@ -11,7 +11,7 @@ Use Node.js 24. Run `npm ci`, copy `.env.example` to `.env.local`, and start wit
 1. Import the GitHub repository into your personal Hobby account. Select **Next.js**, set **Root Directory** to `website`, and select the Git branch you want to deploy.
 2. In **Storage**, create a **private** Blob store and connect it to the project. Vercel injects `BLOB_READ_WRITE_TOKEN`. Use a separate store if you want to test suggestions in preview or development.
 3. Set `SUGGESTION_RATE_SECRET` for each environment. Generate a stable value with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`.
-4. Set `SITE_URL` to the canonical HTTPS origin once it is known. Set `SPOTIFY_PLAYLIST_URL` to the official playlist link and `CONTACT_EMAIL` to the confirmed public address. The site shows the playlist as upcoming and offers GitHub Issues for contact while these values are empty. Redeploy after changing these site settings.
+4. Set `SITE_URL` to the canonical HTTPS origin and `CONTACT_EMAIL` to the confirmed public address. The site offers GitHub Issues for contact while the address is empty. Redeploy after changing these settings. The official Community Soundtrack URL is set in `lib/site.ts`.
 
 The [Hobby plan](https://vercel.com/docs/plans/hobby) is for personal, noncommercial projects. The [Blob allowance](https://vercel.com/docs/vercel-blob/usage-and-pricing) includes 1 GB-month of storage, 10,000 simple operations, 2,000 advanced operations, and 10 GB of transfer per month. Stay on Hobby to use the included quotas without paid overages.
 

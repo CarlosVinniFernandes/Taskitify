@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Check, Github, Heart, Music2, ShieldCheck, Star, Grid2X2 } from "lucide-react";
 import { copy, type Locale } from "@/lib/copy";
-import { pathFor, playlistUrl, releases, repository, store } from "@/lib/site";
+import { pathFor, releases, repository, store } from "@/lib/site";
 import { ContactLink, PlaylistLink, RecordArt, SiteShell } from "./site";
 
 // The Windows welcome tour currently shows Minimal Mode as a concept.
@@ -64,7 +64,6 @@ export function Home({ locale }: { locale: Locale }) {
               <PlaylistLink locale={locale} />
               <Link className="button button-light" href={`${community}#suggest`}>{t.community.suggest}</Link>
             </div>
-            {!playlistUrl() && <p className="availability" id="playlist-status">{t.community.unavailable}</p>}
           </div>
         </div>
       </section>

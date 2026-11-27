@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Music2 } from "lucide-react";
 import { copy, type Locale } from "@/lib/copy";
-import { pathFor, playlistUrl } from "@/lib/site";
+import { pathFor } from "@/lib/site";
 import { prefill } from "@/lib/suggestion-fields";
 import { PlaylistLink, RecordArt, SiteShell } from "./site";
 import { SongForm } from "./song-form";
@@ -24,7 +24,6 @@ export async function Community({ locale, searchParams }: { locale: Locale; sear
               <PlaylistLink locale={locale} />
               <a className="button button-light" href="#suggest">{t.suggest}</a>
             </div>
-            {!playlistUrl() && <p className="availability" id="playlist-status">{t.unavailable}</p>}
           </div>
         </div>
       </section>
