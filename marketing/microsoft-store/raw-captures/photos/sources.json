@@ -1,0 +1,34 @@
+{
+ "matterhorn": {
+  "title": "File:Matterhorn sunset 2016 (Unsplash).jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Matterhorn_sunset_2016_(Unsplash).jpg",
+  "license": "CC0",
+  "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "author": "Sam Ferrara samferrara",
+  "credit": "http://unsplash.com/photos/IEHPDNk2-8w\nImage at the Wayback Machine\n\nGallery at the Wayback Machine"
+ },
+ "fuji": {
+  "title": "File:Mount Fuji at sunset, March 2025.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Mount_Fuji_at_sunset,_March_2025.jpg",
+  "license": "CC0",
+  "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "author": "Romain Guy from San Francisco, USA",
+  "credit": "富士山"
+ },
+ "budapest": {
+  "title": "File:Széchenyi Chain Bridge in Budapest at night.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Sz%C3%A9chenyi_Chain_Bridge_in_Budapest_at_night.jpg",
+  "license": "CC0",
+  "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "author": "Wilfredor",
+  "credit": "Own work"
+ },
+ "coast": {
+  "title": "File:Panoramic of Juan Griego 45.jpg",
+  "page": "https://commons.wikimedia.org/wiki/File:Panoramic_of_Juan_Griego_45.jpg",
+  "license": "CC0",
+  "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "author": "Wilfredor",
+  "credit": "Own work"
+ }
+}

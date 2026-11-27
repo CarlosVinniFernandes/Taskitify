@@ -3,6 +3,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Taskitify.Models;
+using Taskitify.Core.Lyrics;
 using Taskitify.Services;
 
 namespace Taskitify.ViewModels;
@@ -18,7 +19,6 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
     private readonly ISpotifyMonitor _monitor;
     private readonly LyricsSyncService _sync;
     private readonly SettingsService _settings;
-    private readonly AppVolumeService _volume;
     private readonly DispatcherTimer _progressTimer;
 
     private string _mainText = string.Empty;
@@ -35,15 +35,19 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
     private Brush _secondary = Frozen(Color.FromArgb(0xB0, 0xFF, 0xFF, 0xFF));
     private Brush _hover = Frozen(Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
     private double _progress;
-    private string _volumeGlyph = "";
-    private string _volumeTip = LocalizationService.Get("SpotifyVolume");
 
-    public TaskbarViewModel(ISpotifyMonitor monitor, LyricsSyncService sync, SettingsService settings, AppVolumeService volume)
+    public TaskbarViewModel(ISpotifyMonitor monitor, LyricsSyncService sync, SettingsService settings, AppVolumeService volume, SpotifyLikeService likes)
     {
         _monitor = monitor;
         _sync = sync;
         _settings = settings;
-        _volume = volume;
+        Volume = new VolumeControl(volume);
+        Like = new LikeControl(likes);
+        Like.PropertyChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(ShowLike));
+            OnPropertyChanged(nameof(ShowControls));
+        };
         _progressTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(1) };
         _progressTimer.Tick += (_, _) => UpdateProgress();
 
@@ -52,11 +56,6 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
         PreviousCommand = new RelayCommand(() => _ = _monitor.PreviousAsync());
         ShuffleCommand = new RelayCommand(() => _ = _monitor.ToggleShuffleAsync());
         RepeatCommand = new RelayCommand(() => _ = _monitor.CycleRepeatAsync());
-        MuteCommand = new RelayCommand(() =>
-        {
-            _volume.ToggleMute();
-            RefreshVolume();
-        });
 
         _monitor.TrackChanged += OnChanged;
         _monitor.ThumbnailChanged += OnThumbnailChanged;
@@ -74,7 +73,9 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
     public ICommand PreviousCommand { get; }
     public ICommand ShuffleCommand { get; }
     public ICommand RepeatCommand { get; }
-    public ICommand MuteCommand { get; }
+    public VolumeControl Volume { get; }
+
+    public LikeControl Like { get; }
 
     public string MainText { get => _mainText; private set => Set(ref _mainText, value); }
 
@@ -83,6 +84,12 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
     public ImageSource? Cover { get => _cover; private set => Set(ref _cover, value); }
 
     private AppSettings S => _settings.Current;
+
+    public bool UsesLyricFlow => S.TaskbarLyricFlow != LyricFlowMode.Off && !IsCompact && ShowMainText
+        && S.PrimaryText == PrimaryText.Lyrics && _sync.CurrentLine is { } line && !string.IsNullOrWhiteSpace(line.Text);
+
+    public LyricFill CurrentFill => _sync.Fill(_sync.CurrentIndex, S.TaskbarLyricFlow);
+    public event EventHandler? LyricPositionChanged;
 
     /// <summary>
     /// Paused with "minimize" chosen: a compact player (cover, title, play button) the size of
@@ -104,7 +111,7 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
 
     public bool ShowTextArea => L.AnyText;
 
-    public bool ShowControls => L.AnyControl;
+    public bool ShowControls => L.ShowShuffle || L.ShowPrevious || L.ShowPlayPause || L.ShowNext || L.ShowRepeat || L.ShowVolume || ShowLike;
 
     public bool ShowShuffle => L.ShowShuffle && _monitor.CanShuffle;
 
@@ -117,6 +124,9 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
     public bool ShowRepeat => L.ShowRepeat && _monitor.CanRepeat;
 
     public bool ShowVolume => L.ShowVolume;
+
+    /// <summary>The heart: chosen in Settings, and Spotify connected.</summary>
+    public bool ShowLike => L.ShowLike && Like.IsAvailable;
 
     public bool ShowProgress => L.ShowProgress;
 
@@ -167,10 +177,6 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
     private static readonly Brush DarkGlyph = Frozen(Color.FromRgb(0x12, 0x12, 0x12));
     private static readonly Brush WhiteBrush = Frozen(Colors.White);
 
-    public string VolumeGlyph { get => _volumeGlyph; private set => Set(ref _volumeGlyph, value); }
-
-    public string VolumeTip { get => _volumeTip; private set => Set(ref _volumeTip, value); }
-
     /// <summary>0..1 playback progress for the thin bottom line.</summary>
     public double Progress { get => _progress; private set => Set(ref _progress, value); }
 
@@ -203,7 +209,7 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
         {
             UpdateProgress();
             if (ShowVolume)
-                RefreshVolume();
+                Volume.Refresh();
         }
     }
 
@@ -220,36 +226,9 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
         ApplyForeground();
     }
 
-    /// <summary>Mouse wheel over the volume button: ±5 %.</summary>
-    public void NudgeVolume(int direction)
-    {
-        if (_volume.Get() is { } v)
-        {
-            _volume.SetVolume(v.Volume + (0.05f * direction));
-            RefreshVolume();
-        }
-    }
-
-    public void RefreshVolume()
-    {
-        var v = _volume.Get();
-        if (v is not { } state)
-        {
-            VolumeGlyph = "";
-            VolumeTip = LocalizationService.Get("VolumeUnavailable");
-            return;
-        }
-        VolumeGlyph = state.Muted || state.Volume <= 0.001f ? ""
-            : state.Volume < 0.34f ? ""
-            : state.Volume < 0.67f ? ""
-            : "";
-        VolumeTip = state.Muted
-            ? LocalizationService.Get("SpotifyMuted")
-            : LocalizationService.Format("VolumeDetail", Math.Round(state.Volume * 100));
-    }
-
     public void Dispose()
     {
+        Like.Dispose();
         _progressTimer.Stop();
         _monitor.TrackChanged -= OnChanged;
         _monitor.ThumbnailChanged -= OnThumbnailChanged;
@@ -260,7 +239,11 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
         _settings.Changed -= OnSettingsChanged;
     }
 
-    private void OnChanged(object? sender, EventArgs e) => Refresh();
+    private void OnChanged(object? sender, EventArgs e)
+    {
+        Refresh();
+        LyricPositionChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     private void OnThumbnailChanged(object? sender, EventArgs e)
     {
@@ -290,18 +273,24 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ShowRepeat));
         UpdateProgress();
         UpdateProgressTimer();
+        LyricPositionChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private void OnTimelineChanged(object? sender, EventArgs e) => UpdateProgress();
+    private void OnTimelineChanged(object? sender, EventArgs e)
+    {
+        UpdateProgress();
+        LyricPositionChanged?.Invoke(this, EventArgs.Empty);
+    }
 
     private void OnSettingsChanged(object? sender, EventArgs e)
     {
         _wasCompact = IsCompact;
-        RefreshVolume();
+        Volume.Refresh();
         OnPropertyChanged(string.Empty); // layout flags, fonts, colours
         ApplyForeground();
         UpdateProgressTimer();
         Refresh();
+        LyricPositionChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void UpdateProgressTimer()
@@ -345,27 +334,19 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var trackLine = string.IsNullOrEmpty(track.Artist) ? track.Title : $"{track.Title} · {track.Artist}";
-
-        if (IsCompact || S.PrimaryText == PrimaryText.Track)
-        {
-            // Media-widget style: title on top, artist below.
-            MainText = track.Title;
-            Caption = track.Artist;
-        }
-        else if (_sync.State == LyricsState.Synced && _sync.CurrentLine is { } line)
-        {
-            // Empty LRC lines are instrumental gaps.
-            MainText = string.IsNullOrWhiteSpace(line.Text) ? "♪ ♪ ♪" : line.Text;
-            Caption = trackLine;
-        }
-        else
-        {
-            // Before the first line, or no synced lyrics: show the song, never invented lines.
-            MainText = track.Title;
-            Caption = track.Artist;
-        }
+        var verse = !IsCompact && S.PrimaryText == PrimaryText.Lyrics && _sync.State == LyricsState.Synced
+            ? _sync.CurrentLine?.Text : null;
+        (MainText, Caption) = FormatTrackText(track, verse);
         OnPropertyChanged(nameof(ShowCaption));
+    }
+
+    internal static (string Main, string Caption) FormatTrackText(TrackInfo track, string? verse)
+    {
+        if (verse is null)
+            return (track.Title, track.Artist);
+        // Empty LRC lines are instrumental gaps.
+        var caption = string.IsNullOrEmpty(track.Artist) ? track.Title : $"{track.Title} · {track.Artist}";
+        return (string.IsNullOrWhiteSpace(verse) ? "♪ ♪ ♪" : verse, caption);
     }
 
     private static SolidColorBrush Frozen(Color c)

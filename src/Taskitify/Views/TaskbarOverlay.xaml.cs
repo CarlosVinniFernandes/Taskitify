@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Taskitify.Infrastructure;
+using Taskitify.Core.Lyrics;
 using Taskitify.ViewModels;
 
 namespace Taskitify.Views;
@@ -21,8 +22,11 @@ public partial class TaskbarOverlay : Window
     private const double ResizeGrip = 8; // DIP at each side that resize while calibrating
 
     private readonly TaskbarViewModel _vm;
+    private readonly OutsideClickWatcher _outsideClicks;
     private TextBlock _front;
     private TextBlock _back;
+    private readonly LyricInkDriver _lyricInk;
+    private bool _inkQueued;
     private double _textLift;
     private int _resizeEdge; // -1 left, 1 right, 0 no side drag
     private int _resizeStartX; // physical pixels
@@ -35,18 +39,111 @@ public partial class TaskbarOverlay : Window
         _front = LineA;
         _back = LineB;
         _front.Text = vm.MainText;
+        _lyricInk = new LyricInkDriver(TimeSpan.FromMilliseconds(50), () =>
+            IsVisible && LineHost.IsVisible && _vm.UsesLyricFlow
+                ? (_front, _vm.CurrentFill, _vm.IsPlaying)
+                : (null, LyricFill.Full, false));
+        vm.LyricPositionChanged += OnLyricPositionChanged;
+        LineHost.IsVisibleChanged += (_, _) => QueueLyricInk();
         vm.PropertyChanged += OnViewModelChanged;
-        VolumeButton.PreviewMouseWheel += (_, e) =>
+        // The wheel over the button (or the open slider) changes the volume without opening anything.
+        MouseWheelEventHandler wheel = (_, e) =>
         {
-            _vm.NudgeVolume(e.Delta > 0 ? 1 : -1);
+            _vm.Volume.Nudge(e.Delta > 0 ? 1 : -1);
             e.Handled = true;
         };
-        VolumeButton.MouseEnter += (_, _) => _vm.RefreshVolume();
+        VolumeButton.PreviewMouseWheel += wheel;
+        VolumeSlider.PreviewMouseWheel += wheel;
+        VolumeButton.MouseEnter += (_, _) => _vm.Volume.Refresh();
+
+        // The overlay never takes activation, so WPF's own "close on a click outside" misses
+        // clicks on other apps and turns a click on the button into close-then-reopen. The
+        // flyouts stay open until a click outside both them and their button, seen by a
+        // low-level mouse hook that only runs while one is open.
+        _outsideClicks = new OutsideClickWatcher((x, y) => Dispatcher.BeginInvoke(() => CloseFlyoutsOutside(x, y)));
+        Closed += (_, _) =>
+        {
+            _outsideClicks.Dispose();
+            vm.LyricPositionChanged -= OnLyricPositionChanged;
+            _lyricInk.Invalidate();
+        };
+        _vm.Volume.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(VolumeControl.IsOpen)) return;
+            if (_vm.Volume.IsOpen) _vm.Like.IsConfirming = false;
+            UpdateFlyoutWatch();
+        };
+        _vm.Like.JustLiked += (_, _) => LikeIcon.Pulse();
+        _vm.Like.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is not (nameof(LikeControl.IsConfirming) or "")) return;
+            if (_vm.Like.IsConfirming) _vm.Volume.IsOpen = false;
+            UpdateFlyoutWatch();
+        };
         LineHost.SizeChanged += (_, _) => UpdateMarquee();
         TextHost.SizeChanged += (_, _) => UpdateTextLift();
-        IsVisibleChanged += (_, _) => UpdateMarquee();
+        IsVisibleChanged += (_, _) =>
+        {
+            UpdateMarquee();
+            QueueLyricInk();
+        };
         ApplyBackground(animate: false);
         UpdateLineLayout();
+    }
+
+    private void OnLyricPositionChanged(object? sender, EventArgs e) => QueueLyricInk();
+
+    private void QueueLyricInk()
+    {
+        if (!IsVisible || !LineHost.IsVisible || !_vm.UsesLyricFlow)
+        {
+            _lyricInk.Invalidate();
+            return;
+        }
+        if (_inkQueued)
+            return;
+        _inkQueued = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+        {
+            _inkQueued = false;
+            _lyricInk.Refresh();
+        });
+    }
+
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        _lyricInk.Invalidate();
+        QueueLyricInk();
+    }
+
+    private void UpdateFlyoutWatch()
+    {
+        if (_vm.Volume.IsOpen || _vm.Like.IsConfirming)
+            _outsideClicks.Start();
+        else
+            _outsideClicks.Stop();
+    }
+
+    /// <summary>A click (physical pixels) outside an open flyout and its button closes it.</summary>
+    private void CloseFlyoutsOutside(int x, int y)
+    {
+        if (_vm.Volume.IsOpen && !Hits(VolumePopup, x, y) && !Hits(VolumeButton, x, y))
+            _vm.Volume.IsOpen = false;
+        if (_vm.Like.IsConfirming && !Hits(UnlikePopup, x, y) && !Hits(LikeButton, x, y))
+            _vm.Like.IsConfirming = false;
+    }
+
+    private static bool Hits(System.Windows.Controls.Primitives.Popup popup, int x, int y) =>
+        popup.Child is FrameworkElement child && Hits(child, x, y);
+
+    private static bool Hits(FrameworkElement element, int x, int y)
+    {
+        if (!element.IsVisible || PresentationSource.FromVisual(element) is null)
+            return false;
+        var topLeft = element.PointToScreen(new Point(0, 0));
+        var bottomRight = element.PointToScreen(new Point(element.ActualWidth, element.ActualHeight));
+        return x >= topLeft.X && x < bottomRight.X && y >= topLeft.Y && y < bottomRight.Y;
     }
 
     /// <summary>Plain left click (not in calibration, not on a control).</summary>
@@ -103,6 +200,17 @@ public partial class TaskbarOverlay : Window
         base.OnMouseWheel(e);
         if (_vm.IsCalibrating)
             CalibrationResize?.Invoke(this, e.Delta > 0 ? 1 : -1);
+        else if (!e.Handled)
+            // Anywhere on the bar, like over the volume button: Spotify's volume.
+            _vm.Volume.Nudge(e.Delta > 0 ? 1 : -1);
+    }
+
+    /// <summary>Middle click: play or pause, without aiming at the button.</summary>
+    protected override void OnMouseUp(MouseButtonEventArgs e)
+    {
+        base.OnMouseUp(e);
+        if (e.ChangedButton == MouseButton.Middle && !_vm.IsCalibrating)
+            _vm.PlayPauseCommand.Execute(null);
     }
 
     // Calibration: the sides resize like a window's borders, the middle moves (OnMouseLeftButtonDown).
@@ -169,7 +277,9 @@ public partial class TaskbarOverlay : Window
         switch (e.PropertyName)
         {
             case nameof(TaskbarViewModel.MainText):
+                _lyricInk.Invalidate();
                 ShowLine(_vm.MainText);
+                QueueLyricInk();
                 break;
             case nameof(TaskbarViewModel.GradientStart):
             case nameof(TaskbarViewModel.GradientEnd):
@@ -191,7 +301,9 @@ public partial class TaskbarOverlay : Window
                 break;
             case "": // settings changed: everything may differ
                 ApplyBackground(animate: false);
+                _lyricInk.Invalidate();
                 UpdateLineLayout();
+                QueueLyricInk();
                 break;
         }
     }
@@ -266,7 +378,7 @@ public partial class TaskbarOverlay : Window
             return;
 
         StopMarquee(_front);
-        if (!_vm.EnableAnimations || !IsVisible)
+        if (!_vm.EnableAnimations || !SystemParameters.ClientAreaAnimation || !IsVisible)
         {
             _front.BeginAnimation(OpacityProperty, null);
             _back.BeginAnimation(OpacityProperty, null);

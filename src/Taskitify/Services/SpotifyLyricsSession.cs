@@ -82,6 +82,9 @@ public sealed class SpotifyLyricsSession(SettingsService settings, Dispatcher di
         IsActive && _credentials is { } credentials && DateTimeOffset.UtcNow < ValidUntil ? credentials : null;
     public event EventHandler? StatusChanged;
 
+    /// <summary>A Liked Songs query the web player sent (operation name, persisted query hash).</summary>
+    public Action<string, string>? LibraryQuerySeen { get; set; }
+
     private bool IsActive => !_disposed && !_disconnecting && settings.Current.SpotifyLyricsEnabled;
 
     /// <summary>The token's own expiry when the web player reported it, else a safe guess.</summary>
@@ -574,6 +577,8 @@ public sealed class SpotifyLyricsSession(SettingsService settings, Dispatcher di
             var uri = new Uri(e.Request.Uri);
             // Request bodies are streams: read once.
             var body = uri.Host == "api-partner.spotify.com" && e.Request.Method == "POST" ? ReadBody(e.Request) : null;
+            if (body?.Contains("Library\"", StringComparison.Ordinal) == true && LibraryQuerySeen is { } seen)
+                ReportLibraryQuery(body, seen);
             if (uri.Scheme == "https" && uri.Host == "open.spotify.com" && uri.AbsolutePath == "/api/token"
                 && e.Response.StatusCode is >= 200 and < 300)
             {
@@ -642,6 +647,22 @@ public sealed class SpotifyLyricsSession(SettingsService settings, Dispatcher di
         {
             // Some web-player responses are binary, cancelled, unreadable (the GraphQL ones
             // throw COMException), or belong to a closed page.
+        }
+    }
+
+    private static void ReportLibraryQuery(string body, Action<string, string> seen)
+    {
+        try
+        {
+            using var json = JsonDocument.Parse(body);
+            if (json.RootElement.TryGetProperty("operationName", out var name) && name.ValueKind == JsonValueKind.String
+                && json.RootElement.TryGetProperty("extensions", out var extensions)
+                && extensions.TryGetProperty("persistedQuery", out var persisted)
+                && persisted.TryGetProperty("sha256Hash", out var hash) && hash.ValueKind == JsonValueKind.String)
+                seen(name.GetString()!, hash.GetString()!);
+        }
+        catch (JsonException)
+        {
         }
     }
 

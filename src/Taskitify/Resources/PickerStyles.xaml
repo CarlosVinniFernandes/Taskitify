@@ -61,13 +61,17 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
                     <Border x:Name="Frame" CornerRadius="4" BorderThickness="2" BorderBrush="{StaticResource PickOffBrush}" Background="#26FFFFFF">
-                        <TextBlock x:Name="Glyph" Text="&#xE8D6;" FontFamily="{StaticResource IconFont}" FontSize="13"
-                                   Foreground="{StaticResource PickOffBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Grid>
+                            <TextBlock x:Name="Glyph" Text="&#xE8D6;" FontFamily="{StaticResource IconFont}" FontSize="13"
+                                       Foreground="{StaticResource PickOffBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <ContentPresenter x:Name="Cover" Opacity="0.45" />
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsChecked" Value="True">
                             <Setter TargetName="Frame" Property="BorderBrush" Value="{StaticResource PickOnBrush}" />
                             <Setter TargetName="Glyph" Property="Foreground" Value="{StaticResource PickOnBrush}" />
+                            <Setter TargetName="Cover" Property="Opacity" Value="1" />
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Frame" Property="Background" Value="#40FFFFFF" />

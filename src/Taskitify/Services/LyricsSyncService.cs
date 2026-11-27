@@ -29,6 +29,8 @@ public sealed class LyricsSyncService : IDisposable
     private CancellationTokenSource? _loadCts;
     private TrackQuery? _query;
     private int _retryCount;
+    private LyricFlow? _flow;
+    private TimeSpan? _flowDuration;
 
     public LyricsSyncService(ISpotifyMonitor monitor, ILyricsService lyrics, SettingsService settings)
     {
@@ -36,7 +38,7 @@ public sealed class LyricsSyncService : IDisposable
         _lyrics = lyrics;
         _settings = settings;
         _lineTimer = new DispatcherTimer(DispatcherPriority.Render);
-        _lineTimer.Tick += (_, _) => Reschedule();
+        _lineTimer.Tick += (_, _) => Reschedule(fromBoundaryTimer: true);
         _retryTimer = new DispatcherTimer();
         _retryTimer.Tick += (_, _) =>
         {
@@ -61,8 +63,34 @@ public sealed class LyricsSyncService : IDisposable
 
     public LyricsLine? CurrentLine => Timeline is { } t && CurrentIndex >= 0 ? t.Lines[CurrentIndex] : null;
 
-    /// <summary>Position used for lyrics: playback position plus the user's offset.</summary>
-    public TimeSpan LyricsPosition => _monitor.Position + TimeSpan.FromMilliseconds(_settings.Current.SyncOffsetMs);
+    /// <summary>
+    /// Position used for lyrics: playback position plus the user's adjustments (all songs, and this
+    /// one). The one place they are applied, so the bar, the mini player and Minimal Mode agree.
+    /// </summary>
+    public TimeSpan LyricsPosition => _monitor.Position + TimeSpan.FromMilliseconds(EffectiveOffsetMs);
+
+    /// <summary>The song playing's identity for its own adjustment (null: nothing playing).</summary>
+    public string? TrackKey => _monitor.Track is { } t ? AppSettings.TrackKey(t.Title, t.Artist) : null;
+
+    public int EffectiveOffsetMs => _settings.Current.EffectiveOffsetMs(TrackKey);
+
+    public bool IsPlaying => _monitor.IsPlaying;
+    public double PlaybackRate => _monitor.PlaybackRate;
+    public bool ChangedAtLineBoundary { get; private set; }
+
+    public LyricFill Fill(int index, LyricFlowMode mode)
+    {
+        if (mode == LyricFlowMode.Off || Timeline is not { } timeline)
+            return LyricFill.Full;
+        if (_flow is null || _flowDuration != _monitor.Duration)
+        {
+            _flowDuration = _monitor.Duration;
+            _flow = new LyricFlow(timeline, _flowDuration);
+        }
+        return _flow.At(index, LyricsPosition, mode);
+    }
+
+    public TimeSpan? NextChangeAfterCurrent => CurrentLine is { } line ? Timeline?.NextChangeAfter(line.Time) : null;
 
     /// <summary>State or lyrics changed (new song, loaded, not found...).</summary>
     public event EventHandler? LyricsChanged;
@@ -82,6 +110,19 @@ public sealed class LyricsSyncService : IDisposable
 
     /// <summary>Re-fetch the current track (after clearing the cache, for instance).</summary>
     public void Reload() => _ = LoadAsync(debounce: false);
+
+    /// <summary>
+    /// The line for the position now, if the current one is not it (a missed timer, a position
+    /// report that arrived late): self-correction while a view follows the lyrics closely.
+    /// </summary>
+    public void EnsureCurrent()
+    {
+        if (Timeline is { Count: > 0 } timeline && timeline.IndexAt(LyricsPosition) != CurrentIndex)
+        {
+            Log.Debug($"Lyrics line was {CurrentIndex}, position says {timeline.IndexAt(LyricsPosition)}: resynced");
+            Reschedule();
+        }
+    }
 
     /// <summary>Forget whatever is cached for the current song and look it up again.</summary>
     public async Task ForceReloadAsync()
@@ -137,6 +178,8 @@ public sealed class LyricsSyncService : IDisposable
 
         Result = null;
         Timeline = null;
+        _flow = null;
+        ChangedAtLineBoundary = false;
         _query = null;
         SetIndex(-1, force: true);
 
@@ -218,20 +261,23 @@ public sealed class LyricsSyncService : IDisposable
         Log.Info($"Retrying lyrics in {seconds:0} s");
     }
 
-    private void Reschedule()
+    private void Reschedule(bool fromBoundaryTimer = false)
     {
         _lineTimer.Stop();
         if (Timeline is not { Count: > 0 } timeline)
             return;
 
         var position = LyricsPosition;
-        SetIndex(timeline.IndexAt(position));
+        var index = timeline.IndexAt(position);
+        ChangedAtLineBoundary = fromBoundaryTimer && _monitor.IsPlaying && index == CurrentIndex + 1 && CurrentIndex >= 0
+            && position - timeline.Lines[index].Time <= TimeSpan.FromMilliseconds(125 * PlaybackRate);
+        SetIndex(index);
 
         if (!_monitor.IsPlaying)
             return;
 
         var next = timeline.NextChangeAfter(position);
-        var wait = next is { } n ? n - position : MaxTimerInterval;
+        var wait = next is { } n ? (n - position) / PlaybackRate : MaxTimerInterval;
         if (wait > MaxTimerInterval)
             wait = MaxTimerInterval;
         if (wait < TimeSpan.FromMilliseconds(15))

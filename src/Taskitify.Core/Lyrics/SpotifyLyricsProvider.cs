@@ -10,7 +10,8 @@ namespace Taskitify.Core.Lyrics;
 
 public sealed record SpotifyCredentials(string AccessToken, string? ClientToken);
 /// <param name="CoverUrl">The album cover on Spotify's image CDN, about the size the overlay draws.</param>
-public sealed record SpotifyTrack(string Id, LrclibRecord Metadata, string? CoverUrl = null);
+/// <param name="AlbumId">The Spotify album the track is on, when the search said.</param>
+public sealed record SpotifyTrack(string Id, LrclibRecord Metadata, string? CoverUrl = null, string? AlbumId = null);
 
 public interface ISpotifyLyricsSession
 {
@@ -43,6 +44,10 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
     // Cover of the song each recent search matched, by query: Spotify's desktop app sometimes
     // publishes a song to Windows without one, usually right when its lyrics are looked up.
     private readonly ConcurrentDictionary<string, string> _covers = new();
+
+    // The Spotify tracks each recent search matched, best first, by query (liking a song needs
+    // its id; the same song is often on an album, a single and a compilation).
+    private readonly ConcurrentDictionary<string, IReadOnlyList<string>> _trackIds = new();
 
     // A captured search Spotify rejected; skipped until the web player captures another one.
     private SpotifySearchTemplate? _staleTemplate;
@@ -132,6 +137,11 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
             .OrderBy(t => TrackMatcher.DurationDistance(query, t.Metadata)).ToList();
         if (matching.Select(t => t.CoverUrl).FirstOrDefault(url => url is not null) is { } cover)
             RememberCover(LyricsCache.KeyFor(query), cover);
+        if (matching.Count > 0)
+        {
+            RememberTrackIds(LyricsCache.KeyFor(query), matching.Select(t => t.Id));
+            _albums[LyricsCache.KeyFor(query)] = matching.Take(MaxTrackIds).Select(t => t.AlbumId ?? "").ToList();
+        }
 
         LrclibRecord? plain = null;
         var renewed = false;
@@ -204,6 +214,100 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
         {
             return null;
         }
+    }
+
+    public const int MaxTrackIds = 5;
+
+    // The album of each remembered track, in the same order as _trackIds.
+    private readonly ConcurrentDictionary<string, IReadOnlyList<string>> _albums = new();
+
+    /// <summary>The track on <paramref name="albumId"/> first, when it is one of them.</summary>
+    private IReadOnlyList<string> Prefer(IReadOnlyList<string> ids, string key, string? albumId)
+    {
+        if (albumId is null || !_albums.TryGetValue(key, out var albums))
+            return ids;
+        var index = albums.ToList().IndexOf(albumId);
+        return index <= 0 || index >= ids.Count ? ids : [ids[index], .. ids.Where((_, i) => i != index)];
+    }
+
+    /// <summary>
+    /// The Spotify tracks that are this song, best match first (up to <see cref="MaxTrackIds"/>):
+    /// the ones a lookup of it already matched, else Spotify's search. With <paramref name="wake"/>
+    /// false the web player is never opened (only a still valid token and the captured search are
+    /// used); with it true it may be. Empty when signed out or when no Spotify track matches.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> FindTrackIdsAsync(TrackQuery query, bool wake, CancellationToken ct, string? albumId = null)
+    {
+        var key = LyricsCache.KeyFor(query);
+        // The playing album (read from Spotify's own window) names the exact version.
+        if (_trackIds.TryGetValue(key, out var known) && (albumId is null || _albums.TryGetValue(key, out var a) && a.Contains(albumId)))
+            return Prefer(known, key, albumId);
+        var credentials = wake ? await session.GetCredentialsAsync(query, ct).ConfigureAwait(false) : session.ValidCredentials;
+        if (credentials is null)
+            return [];
+        var term = query.Title + " " + query.Artist;
+        var (tracks, _) = await ReplaySearchAsync(term, credentials, null, ct).ConfigureAwait(false);
+        var found = Matching(tracks ?? []);
+        if (found.Count == 0 && wake)
+        {
+            found = Matching(await session.SearchAsync(query, ct).ConfigureAwait(false));
+            if (await session.GetCredentialsAsync(null, ct).ConfigureAwait(false) is { } fresh
+                && (await ReplaySearchAsync(term, fresh, null, ct).ConfigureAwait(false)).Tracks is { } again)
+                found = Matching(again.Concat(found));
+        }
+        if (found.Count == 0)
+            return [];
+        RememberTrackIds(key, found.Select(t => t.Id));
+        _albums[key] = found.Take(MaxTrackIds).Select(t => t.AlbumId ?? "").ToList();
+        if (found[0].CoverUrl is { } cover)
+            RememberCover(key, cover);
+        return Prefer(_trackIds[key], key, albumId);
+
+        List<SpotifyTrack> Matching(IEnumerable<SpotifyTrack> candidates) => candidates.Where(t => TrackMatcher.IsMatch(query, t.Metadata))
+            .OrderBy(t => TrackMatcher.DurationDistance(query, t.Metadata)).DistinctBy(t => t.Id).ToList();
+    }
+
+    /// <summary>
+    /// The song's cover as large as Spotify's image CDN serves it (640 px), for the lyric card;
+    /// only when a lookup already saw its address. Null otherwise.
+    /// </summary>
+    public async Task<byte[]?> FindLargeCoverAsync(TrackQuery query, CancellationToken ct)
+    {
+        if (!_covers.TryGetValue(LyricsCache.KeyFor(query), out var url))
+            return null;
+        // Spotify's image ids carry their size: ab67616d0000b273 is the 640 px version of an album cover.
+        var large = url.Replace("ab67616d00001e02", "ab67616d0000b273", StringComparison.Ordinal)
+            .Replace("ab67616d00004851", "ab67616d0000b273", StringComparison.Ordinal);
+        foreach (var candidate in large == url ? [url] : new[] { large, url })
+        {
+            try
+            {
+                using var response = await http.GetAsync(candidate, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode || response.Content.Headers.ContentLength > MaxCoverBytes)
+                    continue;
+                var bytes = await response.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+                if (bytes.Length is > 0 and <= MaxCoverBytes)
+                    return bytes;
+            }
+            catch (HttpRequestException)
+            {
+            }
+        }
+        return null;
+    }
+
+    /// <summary>A Spotify track id already found for this song, if any. Never goes online.</summary>
+    public string? KnownTrackId(TrackQuery query) =>
+        _trackIds.TryGetValue(LyricsCache.KeyFor(query), out var ids) && ids.Count > 0 ? ids[0] : null;
+
+    private void RememberTrackIds(string key, IEnumerable<string> ids)
+    {
+        if (_trackIds.Count >= MaxCovers)
+        {
+            _trackIds.Clear();
+            _albums.Clear();
+        }
+        _trackIds[key] = ids.Distinct().Take(MaxTrackIds).ToList();
     }
 
     private void RememberCover(string key, string url)
@@ -408,9 +512,11 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
                          && ms.TryGetDouble(out duration)) seconds = duration / 1000;
                 var hasAlbum = node.TryGetProperty("album", out var a) || node.TryGetProperty("albumOfTrack", out a);
                 var album = hasAlbum ? String(a, "name") : null;
+                var albumUri = hasAlbum ? String(a, "uri") : null;
+                var albumId = albumUri?.StartsWith("spotify:album:", StringComparison.Ordinal) == true ? albumUri[14..] : null;
                 if (names.Length > 0 && seconds is > 0)
                     found[id] = new SpotifyTrack(id, new LrclibRecord(0, title, string.Join(", ", names), album, seconds, false, null, null),
-                        hasAlbum ? CoverUrl(a) : null);
+                        hasAlbum ? CoverUrl(a) : null, albumId);
             }
             foreach (var property in node.EnumerateObject()) Visit(property.Value);
         }
@@ -463,7 +569,9 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
             lrc.Append(CultureInfo.InvariantCulture, $"[{ms / 60000:00}:{ms / 1000 % 60:00}.{ms % 1000:000}]{words}\n");
         }
         if (plain.All(string.IsNullOrWhiteSpace)) return null;
-        return metadata with { PlainLyrics = string.Join('\n', plain), SyncedLyrics = lrc.Length > 0 ? lrc.ToString() : null };
+        // Spotify names its lyrics partner; it is credited where the lyrics are shown.
+        var credit = String(lyrics, "providerDisplayName") ?? String(lyrics, "provider");
+        return metadata with { PlainLyrics = string.Join('\n', plain), SyncedLyrics = lrc.Length > 0 ? lrc.ToString() : null, Credit = credit };
     }
 
     private static string? String(JsonElement element, string name) =>

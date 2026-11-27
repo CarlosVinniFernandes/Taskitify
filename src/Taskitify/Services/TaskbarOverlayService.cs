@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using Microsoft.Win32;
@@ -92,11 +94,20 @@ public sealed class TaskbarOverlayService : IDisposable
     /// <summary>The overlay was clicked; the mini player toggles.</summary>
     public event EventHandler? Clicked;
 
+    /// <summary>The right-click menu's "share lyrics as an image".</summary>
+    public event EventHandler? ShareRequested;
+
     public event EventHandler<bool>? CalibrationChanged;
 
     public bool IsCalibrating => _vm.IsCalibrating;
 
     public bool IsShown => _isShown;
+
+    /// <summary>Whether Minimal Mode is showing (switched on, or brought up by an app in front).</summary>
+    public Func<bool>? MinimalActive { get; set; }
+
+    /// <summary>Something outside the settings changed whether the player should show.</summary>
+    public void Reevaluate() => Evaluate();
 
     public IntPtr Handle => _hwnd;
 
@@ -176,21 +187,42 @@ public sealed class TaskbarOverlayService : IDisposable
         NativeMethods.SetWindowLong(_hwnd, NativeMethods.GWL_EXSTYLE, ex);
     }
 
+    private static System.Windows.Controls.TextBlock MenuGlyph(string glyph) => new()
+    {
+        Text = glyph,
+        FontFamily = (System.Windows.Media.FontFamily)Application.Current.FindResource("IconFont"),
+        FontSize = 14,
+    };
+
     private System.Windows.Controls.ContextMenu BuildContextMenu()
     {
-        var menu = new System.Windows.Controls.ContextMenu();
-        var calibrate = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("CalibratePosition") };
+        var menu = new System.Windows.Controls.ContextMenu { Placement = PlacementMode.Top, PlacementTarget = _window };
+        _window.ContextMenuOpening += (_, e) =>
+        {
+            var x = e.CursorLeft < 0 ? _window.ActualWidth / 2 : Mouse.GetPosition(_window).X;
+            menu.PlacementRectangle = new Rect(Math.Clamp(x, 0, _window.ActualWidth), 0, 1, _window.ActualHeight);
+        };
+        var share = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("LyricCardOpen"), Icon = MenuGlyph("\uE72D") };
+        share.Click += (_, _) => ShareRequested?.Invoke(this, EventArgs.Empty);
+        var player = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("ShowPlayer"), Icon = MenuGlyph("\uE90B") };
+        player.Click += (_, _) => Clicked?.Invoke(this, EventArgs.Empty);
+        // The mini player's mode, one click away.
+        var vertical = new System.Windows.Controls.MenuItem { IsCheckable = true };
+        vertical.Click += (_, _) => _settings.Update(s => s.MiniPlayerLook.Layout = MiniPlayerLayout.Vertical);
+        var wide = new System.Windows.Controls.MenuItem { IsCheckable = true };
+        wide.Click += (_, _) => _settings.Update(s => s.MiniPlayerLook.Layout = MiniPlayerLayout.Cinema);
+        var calibrate = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("CalibratePosition"), Icon = MenuGlyph("\uE7C9") };
         calibrate.Click += (_, _) => SetCalibrating(!IsCalibrating);
-        var settings = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("Settings") };
+        var settings = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("Settings"), Icon = MenuGlyph("\uE713") };
         settings.Click += (_, _) => ((App)Application.Current).ShowSettings();
-        var exit = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("Exit") };
+        var exit = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("Exit"), Icon = MenuGlyph("\uE7E8") };
         exit.Click += (_, _) => Application.Current.Shutdown();
         // Off: the caption row disappears and the lyric may use both lines.
         var showCaption = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("ShowCaption"), IsCheckable = true };
         showCaption.Click += (_, _) => _settings.Update(s => s.Bar.ShowCaption = showCaption.IsChecked);
         // Bypasses the cache for the song playing now, asking one source of the user's choice (the
         // other one's version may be better timed). Without separate sources, the usual lookup.
-        var refetch = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("ReloadLyrics") };
+        var refetch = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("ReloadLyrics"), Icon = MenuGlyph("\uE72C") };
         foreach (var source in _sync.Sources)
         {
             var item = new System.Windows.Controls.MenuItem { Tag = source };
@@ -199,24 +231,26 @@ public sealed class TaskbarOverlayService : IDisposable
         }
         if (refetch.Items.Count == 0)
             refetch.Click += (_, _) => _ = _sync.ForceReloadAsync();
+        refetch.SubmenuOpened += (_, _) => WindowInterop.RaisePopup(refetch.Items.OfType<System.Windows.Controls.MenuItem>().FirstOrDefault());
         // The overlay never takes focus, so WPF cannot tell when the user clicks elsewhere;
         // a low-level mouse hook (only while the menu is open) closes it on an outside click.
         // The menu and its open submenu are separate popups.
         var outside = new OutsideClickWatcher((x, y) =>
         {
-            foreach (var part in refetch.Items.OfType<System.Windows.Media.Visual>().Take(1).Prepend(menu))
-            {
-                if (PresentationSource.FromVisual(part) is HwndSource popup)
-                {
-                    var r = WindowInterop.GetBounds(popup.Handle);
-                    if (x >= r.Left && x < r.Right && y >= r.Top && y < r.Bottom)
-                        return;
-                }
-            }
+            if (WindowInterop.PopupContains(menu, x, y)
+                || refetch.IsSubmenuOpen && WindowInterop.PopupContains(refetch.Items.OfType<System.Windows.Controls.MenuItem>().FirstOrDefault(), x, y))
+                return;
             menu.Dispatcher.BeginInvoke(() => menu.IsOpen = false);
         });
         menu.Opened += (_, _) =>
         {
+            share.Header = LocalizationService.Get("LyricCardOpen");
+            share.IsEnabled = _monitor.Track is not null;
+            player.Header = LocalizationService.Get("ShowPlayer");
+            vertical.Header = LocalizationService.Get("ModeVertical");
+            wide.Header = LocalizationService.Get("ModeWide");
+            vertical.IsChecked = _settings.Current.MiniPlayerLook.Layout == MiniPlayerLayout.Vertical;
+            wide.IsChecked = _settings.Current.MiniPlayerLook.Layout == MiniPlayerLayout.Cinema;
             calibrate.Header = IsCalibrating ? LocalizationService.Get("FinishCalibration") : LocalizationService.Get("CalibratePosition");
             settings.Header = LocalizationService.Get("Settings");
             exit.Header = LocalizationService.Get("Exit");
@@ -231,6 +265,7 @@ public sealed class TaskbarOverlayService : IDisposable
                 item.IsEnabled = _monitor.Track is not null && (source != "Spotify" || _settings.Current.SpotifyLyricsEnabled);
             }
             outside.Start();
+            WindowInterop.RaisePopup(menu);
             NativeMethods.GetAsyncKeyState(NativeMethods.VK_ESCAPE); // clear a stale "pressed since" bit
             _menuEsc.Start();
         };
@@ -246,6 +281,11 @@ public sealed class TaskbarOverlayService : IDisposable
             if ((NativeMethods.GetAsyncKeyState(NativeMethods.VK_ESCAPE) & 0x8001) != 0)
                 menu.IsOpen = false;
         };
+        menu.Items.Add(share);
+        menu.Items.Add(player);
+        menu.Items.Add(vertical);
+        menu.Items.Add(wide);
+        menu.Items.Add(new System.Windows.Controls.Separator());
         menu.Items.Add(refetch);
         menu.Items.Add(showCaption);
         menu.Items.Add(calibrate);
@@ -275,7 +315,7 @@ public sealed class TaskbarOverlayService : IDisposable
     {
         UpdateFullscreen("foreground");
         if (_isShown)
-            WindowInterop.BringToTopmost(_hwnd);
+            RaiseOverlay();
     }
 
     /// <summary>
@@ -362,6 +402,9 @@ public sealed class TaskbarOverlayService : IDisposable
     {
         if (IsCalibrating)
             return null;
+        // Minimal Mode alone, unless the user keeps the taskbar player too (its layout is untouched).
+        if ((MinimalActive?.Invoke() ?? _settings.Current.Minimal.Enabled) && !_settings.Current.Minimal.KeepTaskbar)
+            return "minimal mode";
         if (_monitor.Track is null)
             return "no track";
         if (_monitor.Status != PlaybackState.Playing && !_vm.IsCompact)
@@ -428,7 +471,19 @@ public sealed class TaskbarOverlayService : IDisposable
     {
         if (_hwnd == IntPtr.Zero || _bounds.IsEmpty || !_isShown)
             return;
-        WindowInterop.SetBounds(_hwnd, _bounds, topmost: true);
+        WindowInterop.SetBounds(_hwnd, _bounds, topmost: _window.ContextMenu is not { IsOpen: true });
+    }
+
+    private void RaiseOverlay()
+    {
+        if (_window.ContextMenu is not { IsOpen: true } menu)
+        {
+            WindowInterop.BringToTopmost(_hwnd);
+            return;
+        }
+        WindowInterop.RaisePopup(menu);
+        foreach (var item in menu.Items.OfType<System.Windows.Controls.MenuItem>().Where(item => item.IsSubmenuOpen))
+            WindowInterop.RaisePopup(item.Items.OfType<System.Windows.Controls.MenuItem>().FirstOrDefault());
     }
 
     private void CheckTaskbarShown()
@@ -454,7 +509,7 @@ public sealed class TaskbarOverlayService : IDisposable
         }
         if (!_isShown)
             return;
-        WindowInterop.BringToTopmost(_hwnd);
+        RaiseOverlay();
         SampleTaskbarColor();
     }
 
@@ -573,7 +628,7 @@ public sealed class TaskbarOverlayService : IDisposable
         // From what is on screen, as the window move does.
         _sideDragFrom ??= WindowInterop.GetBounds(_hwnd);
         // No narrower than the width setting allows, so nothing jumps on release.
-        var min = (int)Math.Round((BarLayout.WidthRange(_vm.IsCompact).Min + TaskbarPositionService.ControlsWidth(layout)) * (_placement?.Scale ?? 1));
+        var min = (int)Math.Round((BarLayout.WidthRange(_vm.IsCompact).Min + TaskbarPositionService.ControlsWidth(layout, _settings.Current.SpotifyLyricsEnabled)) * (_placement?.Scale ?? 1));
         _bounds = OverlayLayout.DragSide(_sideDragFrom.Value, edge, offset, min);
         ApplyBounds();
     }
@@ -582,7 +637,7 @@ public sealed class TaskbarOverlayService : IDisposable
     private int CalibratedLayoutWidth(PixelRect r)
     {
         var (min, max) = BarLayout.WidthRange(_vm.IsCompact);
-        var width = TaskbarPositionService.LayoutWidthFor(r.Width, _settings.Current.Layout(_vm.IsCompact), _placement?.Scale ?? 1);
+        var width = TaskbarPositionService.LayoutWidthFor(r.Width, _settings.Current.Layout(_vm.IsCompact), _placement?.Scale ?? 1, _settings.Current.SpotifyLyricsEnabled);
         return Math.Clamp(width, min, max);
     }
 }

@@ -1,11 +1,16 @@
 using System.ComponentModel;
 using System.Windows;
+using Taskitify.Services;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Taskitify.Core.Layout;
+using Taskitify.Core.Lyrics;
+using Taskitify.Models;
 using Taskitify.Infrastructure;
 using Taskitify.ViewModels;
 
@@ -26,6 +31,14 @@ public partial class MiniPlayerWindow : Window
     private PixelRect _anchor;
     // The user scrolled the lyrics: they stay put until "sync", a line click, a new song or reopening.
     private bool _browsing;
+    private bool _lyricsUpdateQueued;
+    private bool _animateLyrics;
+    // When the running scroll ends. A finished animation stays attached to the transform
+    // (FillBehavior.Stop keeps its clock), so HasAnimatedProperties cannot tell it is over.
+    private DateTime _scrollEndsAt;
+    private bool _inkUpdateQueued;
+    private readonly LyricInkDriver _lyricInk;
+    private TextBlock? _activeText;
 
     public MiniPlayerWindow(MiniPlayerViewModel vm, Func<bool> animationsEnabled, Func<bool> useGradient)
     {
@@ -34,31 +47,78 @@ public partial class MiniPlayerWindow : Window
         _animationsEnabled = animationsEnabled;
         _useGradient = useGradient;
         DataContext = vm;
+        _lyricInk = new LyricInkDriver(TimeSpan.FromMilliseconds(1000d / 30), SampleLyricInk);
+        vm.LyricPositionChanged += (_, _) => QueueLyricInk();
+        LyricsViewport.SizeChanged += (_, _) => QueueLyrics(animate: false);
 
-        _outsideClicks = new OutsideClickWatcher((x, y) =>
-        {
-            var inside = WindowInterop.GetBounds(_hwnd);
-            // Clicks on the overlay toggle the popup themselves.
-            if (!Contains(inside, x, y) && !Contains(_anchor, x, y))
-                Dispatcher.BeginInvoke(HidePopup);
-        });
+        _outsideClicks = new OutsideClickWatcher(OnOutsideClick);
         Closed += (_, _) => _outsideClicks.Dispose();
 
         vm.PropertyChanged += OnViewModelChanged;
-        vm.CurrentLineChanged += (_, _) => Dispatcher.InvokeAsync(() => ScrollToCurrent(animate: true), DispatcherPriority.Loaded);
-        vm.Lines.CollectionChanged += (_, _) => Dispatcher.InvokeAsync(() =>
+        vm.CurrentLineChanged += (_, _) => QueueLyrics(vm.ScrollMilliseconds > 0);
+        vm.FollowCheck += (_, _) => KeepCentred();
+        vm.Lines.CollectionChanged += (_, change) =>
         {
-            SetBrowsing(false);
-            ScrollToCurrent(animate: false);
-        }, DispatcherPriority.Loaded);
+            if (change.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset)
+            {
+                _activeText = null;
+                _lyricInk.Invalidate();
+                SetBrowsing(false);
+            }
+            QueueLyrics(animate: false);
+        };
         LyricsViewport.PreviewMouseWheel += OnLyricsWheel;
-        VolumeButton.PreviewMouseWheel += (_, e) =>
+        // The wheel over the button (or the open slider) changes the volume without opening anything.
+        MouseWheelEventHandler wheel = (_, e) =>
         {
-            _vm.NudgeVolume(e.Delta > 0 ? 1 : -1);
+            _vm.Volume.Nudge(e.Delta > 0 ? 1 : -1);
             e.Handled = true;
         };
-        VolumeButton.MouseEnter += (_, _) => _vm.RefreshVolume();
+        VolumeButton.PreviewMouseWheel += wheel;
+        VolumeSlider.PreviewMouseWheel += wheel;
+        VolumeButton.MouseEnter += (_, _) => _vm.Volume.Refresh();
+        VolumePopup.CustomPopupPlacementCallback = (popup, target, _) =>
+        [
+            new CustomPopupPlacement(new Point(target.Width - popup.Width, -popup.Height - 4), PopupPrimaryAxis.Horizontal),
+            new CustomPopupPlacement(new Point(target.Width - popup.Width, target.Height + 4), PopupPrimaryAxis.Horizontal),
+        ];
+        VolumePopup.Opened += (_, _) => WindowInterop.RaisePopup(VolumePopup.Child);
+        VolumePopup.PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Escape)
+            {
+                _vm.Volume.IsOpen = false;
+                VolumeButton.Focus();
+                e.Handled = true;
+            }
+        };
 
+        _vm.Like.JustLiked += (_, _) => LikeIcon.Pulse();
+        ContentCard.ContextMenu = BuildMenu();
+        ContentCard.MouseLeftButtonDown += OnPinnedDrag;
+        // Ctrl + Alt + click on the floating player: clicks pass through from now on.
+        ContentCard.PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            if (IsPinned && NativeMethods.GetAsyncKeyState(0x11) < 0 && NativeMethods.GetAsyncKeyState(0x12) < 0)
+            {
+                e.Handled = true;
+                _pinned?.SetClickThrough(true);
+            }
+        };
+        MouseEnter += (_, _) => { UpdateHoverChrome(); UpdatePinnedToolbar(); };
+        MouseLeave += (_, _) => { UpdateHoverChrome(); UpdatePinnedToolbar(); };
+        PinnedSwitch.Click += (_, _) => _pinned?.SwitchMode();
+        PinnedSettings.Click += (_, _) => (Application.Current as App)?.ShowSettings(SettingsPage.NotMinimal);
+        PinnedClickThrough.Click += (_, _) => _pinned?.SetClickThrough(true);
+        PinnedLock.Click += (_, _) => _pinned?.SetLocked(!_pinned.Locked);
+        PinnedClose.Click += (_, _) => _pinned?.TurnOff();
+        PinnedGrip.MouseLeftButtonDown += OnGripDown;
+        PinnedGrip.MouseMove += OnGripMove;
+        PinnedGrip.MouseLeftButtonUp += OnGripUp;
+        PinnedGrip.LostMouseCapture += (_, _) => _gripping = false;
+        CoverPart.Cursor = Cursors.Hand;
+        CoverPart.ToolTip = LocalizationService.Get("OpenInSpotify");
+        CoverPart.MouseLeftButtonUp += (_, _) => OpenSpotify();
         Progress.Seek += _vm.SeekTo;
         Progress.Preview += _vm.PreviewPosition;
 
@@ -73,25 +133,395 @@ public partial class MiniPlayerWindow : Window
         // the GPU. So the process uses the GPU while it is open and software again once it is
         // hidden. The driver loaded by then stays (~12 MB after a full collection, measured)
         // until the app restarts: the saving only lasts until the mini player is first opened.
-        IsVisibleChanged += (_, _) => RenderOptions.ProcessRenderMode =
-            IsVisible ? System.Windows.Interop.RenderMode.Default : System.Windows.Interop.RenderMode.SoftwareOnly;
+        IsVisibleChanged += (_, _) =>
+        {
+            if (IsVisible)
+            {
+                GpuRendering.Acquire();
+                QueueLyrics(animate: false);
+            }
+            else
+            {
+                _lyricInk.Invalidate();
+                _activeText = null;
+                LyricsOffset.BeginAnimation(TranslateTransform.YProperty, null);
+                GpuRendering.Release();
+            }
+        };
+    }
+
+    /// <summary>
+    /// Right-click on the player: its mode, its background, sharing the lyrics and its settings,
+    /// without going through the settings window.
+    /// </summary>
+    private ContextMenu BuildMenu()
+    {
+        var menu = new ContextMenu { Placement = PlacementMode.Top, PlacementTarget = ContentCard };
+        ContentCard.ContextMenuOpening += (_, e) =>
+        {
+            var point = e.CursorLeft < 0
+                ? new Point(ContentCard.ActualWidth / 2, ContentCard.ActualHeight / 2)
+                : Mouse.GetPosition(ContentCard);
+            menu.PlacementRectangle = new Rect(point, new Size(1, 1));
+        };
+        var vertical = new MenuItem { IsCheckable = true };
+        vertical.Click += (_, _) => _vm.SetLayout(MiniPlayerLayout.Vertical);
+        var wide = new MenuItem { IsCheckable = true };
+        wide.Click += (_, _) => _vm.SetLayout(MiniPlayerLayout.Cinema);
+        var background = new MenuItem();
+        background.SubmenuOpened += (_, _) => WindowInterop.RaisePopup(background.Items.OfType<MenuItem>().FirstOrDefault());
+        foreach (var style in Enum.GetValues<MiniPlayerBackground>())
+        {
+            var item = new MenuItem { Tag = style, IsCheckable = true };
+            item.Click += (_, _) => _vm.SetBackground(style);
+            background.Items.Add(item);
+        }
+        var share = new MenuItem { Icon = MenuGlyph("\uE72D") };
+        share.Click += (_, _) => _vm.ShareCommand.Execute(null);
+        var spotify = new MenuItem { Icon = MenuGlyph("\uE8A7") };
+        spotify.Click += (_, _) => OpenSpotify();
+        var settings = new MenuItem { Icon = MenuGlyph("\uE713") };
+        settings.Click += (_, _) => (Application.Current as App)?.ShowSettings(SettingsPage.MiniPlayer);
+        menu.Items.Add(vertical);
+        menu.Items.Add(wide);
+        menu.Items.Add(background);
+        menu.Items.Add(new Separator());
+        menu.Items.Add(share);
+        menu.Items.Add(spotify);
+        menu.Items.Add(new Separator());
+        menu.Items.Add(settings);
+        menu.Opened += (_, _) =>
+        {
+            _vm.Volume.IsOpen = false;
+            vertical.Header = LocalizationService.Get("ModeVertical");
+            wide.Header = LocalizationService.Get("ModeWide");
+            vertical.IsChecked = !_vm.IsCinema;
+            wide.IsChecked = _vm.IsCinema;
+            background.Header = LocalizationService.Get("LookBackground");
+            foreach (var item in background.Items.OfType<MenuItem>())
+            {
+                var style = (MiniPlayerBackground)item.Tag;
+                item.Header = LocalizationService.Get("LookBackground" + style);
+                item.IsChecked = _vm.Look.Background == style;
+            }
+            share.Header = LocalizationService.Get("LyricCardOpen");
+            spotify.Header = LocalizationService.Get("OpenInSpotify");
+            settings.Header = LocalizationService.Get("MiniPlayerSettings");
+            WindowInterop.RaisePopup(menu);
+        };
+        return menu;
+    }
+
+    private static TextBlock MenuGlyph(string glyph) => new()
+    {
+        Text = glyph,
+        FontFamily = (FontFamily)Application.Current.FindResource("IconFont"),
+        FontSize = 14,
+    };
+
+    /// <summary>Brings Spotify up (its own protocol: the running app comes to the front).</summary>
+    private static void OpenSpotify()
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("spotify:") { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            Log.Warn($"Could not open Spotify: {ex.Message}");
+        }
     }
 
     /// <summary>When the popup last hid; lets the overlay click that caused it not re-open it.</summary>
     public DateTime LastHidden { get; private set; }
 
-    public void ShowAt(PixelRect anchor, PixelRect workArea, double scale)
+    /// <summary>
+    /// Shown as a live preview while its appearance is being customized in Settings: it stays
+    /// open next to the settings, without taking focus, until the preview ends.
+    /// </summary>
+    public bool IsPreview { get; private set; }
+
+    /// <summary>The settings closed: a preview hides; a player the user opened stays.</summary>
+    public void EndPreview()
+    {
+        if (!IsPreview)
+            return;
+        IsPreview = false;
+        HidePopup();
+    }
+
+    private void OnOutsideClick(int x, int y)
+    {
+        if (VolumePopup.IsOpen && WindowInterop.PopupContains(VolumePopup.Child, x, y))
+            return;
+        if (ContentCard.ContextMenu is { IsOpen: true } menu
+            && (WindowInterop.PopupContains(menu, x, y)
+                || menu.Items.OfType<MenuItem>().Any(item => item.IsSubmenuOpen
+                    && WindowInterop.PopupContains(item.Items.OfType<MenuItem>().FirstOrDefault(), x, y))))
+            return;
+        // Clicks on the overlay toggle the player themselves.
+        if (!Contains(WindowInterop.GetBounds(_hwnd), x, y) && !Contains(_anchor, x, y))
+            Dispatcher.BeginInvoke(HidePopup);
+        else if (VolumePopup.IsOpen && !ContainsVolumeButton(x, y))
+            Dispatcher.BeginInvoke(() => _vm.Volume.IsOpen = false);
+    }
+
+    /// <summary>Shown far off-screen for the welcome tour, which displays snapshots of it: no position, no hooks.</summary>
+    internal void ShowOffscreen()
     {
         _vm.IsActive = true;
+        ApplyLayout();
+        ApplyControlsStyle();
+        UpdatePlayGlyph();
+        UpdateProgressValue();
+        ApplyBackground();
+        Topmost = false;
+        Left = -20000;
+        Top = -20000;
+        Opacity = 1;
+        Show();
+        UpdateLayout();
+        ScrollToCurrent(animate: false);
+        QueueLyrics(animate: false);
+    }
+
+    /// <summary>"Not that minimal": the player floats, pinned (it does not close on a click outside or Esc).</summary>
+    public bool IsPinned { get; private set; }
+
+    private PinnedOptions? _pinned;
+    private ModifierClickWatcher? _unpinClicks;
+    private ForegroundWatcher? _pinnedForeground;
+    private bool _gripping;
+    private NativeMethods.POINT _gripStart;
+    private (double Width, double Lyrics) _gripFrom;
+
+    /// <summary>
+    /// Shows the player floating at a saved place (or bottom right of the main screen), until
+    /// <see cref="Unpin"/>, with Minimal Mode's possibilities: clicks through (Ctrl + Alt + click
+    /// both ways), never taking the focus, above games, locked, resized with its grip.
+    /// </summary>
+    public void ShowPinned(PixelRect saved, PinnedOptions options)
+    {
+        _pinned = options;
+        if (!IsPinned && IsVisible)
+            HidePopup(force: true);
+        IsPinned = true;
+        IsPreview = false;
+        if (IsVisible)
+        {
+            ApplyPinned();
+            return;
+        }
+        _vm.IsActive = true;
+        ApplyLayout();
+        ApplyControlsStyle();
+        UpdatePlayGlyph();
+        UpdateProgressValue();
+        OnViewModelChanged(this, new PropertyChangedEventArgs(nameof(MiniPlayerViewModel.StatusMessage)));
+        ApplyBackground();
+        BeginAnimation(OpacityProperty, null);
+        ChromeOffset.BeginAnimation(TranslateTransform.YProperty, null);
+        Opacity = 1;
+        Show();
+        UpdateLayout();
+        _hwnd = WindowInterop.EnsureHandle(this);
+        var bounds = WindowInterop.GetBounds(_hwnd);
+        var areas = TaskbarPositionService.GetMonitors().OrderByDescending(m => m.IsPrimary).Select(m => m.WorkArea).ToList();
+        var place = saved.IsEmpty || areas.Count == 0
+            ? areas.Count > 0 ? FloatingPlacement.Snap(bounds, areas[0], FloatingSpot.BottomRight, 24) : bounds
+            : FloatingPlacement.Resolve(new PixelRect(saved.X, saved.Y, bounds.Width, bounds.Height), areas, (bounds.Width, bounds.Height));
+        WindowInterop.SetPosition(_hwnd, place.X, place.Y);
+        ApplyPinned();
+        SetBrowsing(false);
+        ScrollToCurrent(animate: false);
+        QueueLyrics(animate: false);
+    }
+
+    /// <summary>Back to a regular popup, hidden.</summary>
+    public void Unpin()
+    {
+        if (!IsPinned)
+            return;
+        IsPinned = false;
+        _pinned = null;
+        _unpinClicks?.Stop();
+        _pinnedForeground?.Dispose();
+        _pinnedForeground = null;
+        PinnedMark.Visibility = PinnedGrip.Visibility = Visibility.Collapsed;
+        SetExStyle(transparent: false, noActivate: false);
+        _vm.FitScale = 1;
+        Topmost = true;
+        BeginAnimation(ToolbarShownProperty, null);
+        SetValue(ToolbarShownProperty, 0.0);
+        PinnedToolbar.Visibility = Visibility.Collapsed;
+        foreach (UIElement part in new UIElement[] { ActionsPart, ProgressPart, ControlsPart })
+            LyricMotionText.Tween(part, OpacityProperty, 1, 0, expressive: false);
+        HidePopup(force: true);
+        ApplyLayout();
+    }
+
+    /// <summary>The options as they are now (called on every settings change while pinned).</summary>
+    private void ApplyPinned()
+    {
+        if (_pinned is not { } o)
+            return;
+        Topmost = o.Topmost;
+        if (!o.Topmost)
+            NativeMethods.SetWindowPos(_hwnd, new IntPtr(-2), 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
+        // Games keep the focus: the player never takes it while floating.
+        SetExStyle(o.ClickThrough, noActivate: true);
+        PinnedMark.Visibility = o.ClickThrough && o.ShowMark ? Visibility.Visible : Visibility.Collapsed;
+        PinnedGrip.Visibility = o.ClickThrough || o.Locked ? Visibility.Collapsed : Visibility.Visible;
+        _unpinClicks ??= new ModifierClickWatcher(
+            (x, y) => IsVisible && IsPinned && Contains(WindowInterop.GetBounds(_hwnd), x, y),
+            () => Dispatcher.BeginInvoke(() => _pinned?.SetClickThrough(false)));
+        if (o.ClickThrough)
+            _unpinClicks.Start();
+        else
+            _unpinClicks.Stop();
+        if (o.Topmost && _pinnedForeground is null)
+            _pinnedForeground = new ForegroundWatcher(h =>
+            {
+                if (h != _hwnd && IsPinned && _pinned?.Topmost == true)
+                    WindowInterop.BringToTopmost(_hwnd);
+            });
+        else if (!o.Topmost && _pinnedForeground is not null)
+        {
+            _pinnedForeground.Dispose();
+            _pinnedForeground = null;
+        }
+        ApplyLayout();
+        UpdateFit();
+        UpdateHoverChrome();
+        UpdatePinnedToolbar();
+    }
+
+    /// <summary>Floating with controls on hover: only the cover, the song and the lyrics until the pointer comes.</summary>
+    private void UpdateHoverChrome()
+    {
+        var hide = IsPinned && _pinned is { ControlsOnHover: true } && !IsMouseOver && !_gripping;
+        var target = hide ? 0.0 : 1.0;
+        var duration = _animationsEnabled() && SystemParameters.ClientAreaAnimation ? 160 : 0;
+        foreach (UIElement part in new UIElement[] { ActionsPart, ProgressPart, ControlsPart })
+            LyricMotionText.Tween(part, OpacityProperty, target, duration, expressive: false);
+        // The grip goes with the window's own buttons.
+        var grip = IsPinned && _pinned is { PlayerButtonsOnHover: true } && !IsMouseOver && !_gripping ? 0.0 : IsMouseOver || _gripping ? 1.0 : 0.6;
+        LyricMotionText.Tween(PinnedGrip, OpacityProperty, grip, duration, expressive: false);
+    }
+
+    /// <summary>Floating, the player resizes further than as a popup.</summary>
+    private static (double Min, double Max) PinnedWidthRange(bool cinema) => cinema ? (520, 1200) : (300, 900);
+
+    private void SetExStyle(bool transparent, bool noActivate)
+    {
+        if (_hwnd == IntPtr.Zero)
+            return;
+        var ex = NativeMethods.GetWindowLong(_hwnd, NativeMethods.GWL_EXSTYLE);
+        var wanted = transparent ? ex | NativeMethods.WS_EX_TRANSPARENT : ex & ~NativeMethods.WS_EX_TRANSPARENT;
+        wanted = noActivate ? wanted | NativeMethods.WS_EX_NOACTIVATE : wanted & ~NativeMethods.WS_EX_NOACTIVATE;
+        if (wanted != ex)
+            NativeMethods.SetWindowLong(_hwnd, NativeMethods.GWL_EXSTYLE, wanted);
+    }
+
+    /// <summary>Lyrics shorter than usual (resized with the grip): their type shrinks with them, if chosen.</summary>
+    private void UpdateFit()
+    {
+        var usual = _vm.IsCinema ? (_vm.ShowCover ? 268 : 200) : 176;
+        _vm.FitScale = IsPinned && _pinned is { AutoFit: true } ? _lyricsBase / usual : 1;
+    }
+
+    /// <summary>One click from Settings: the floating player moved to a spot of its screen.</summary>
+    public void PlaceAt(FloatingSpot spot)
+    {
+        if (!IsPinned || !IsVisible)
+            return;
+        var bounds = WindowInterop.GetBounds(_hwnd);
+        if (WindowInterop.MonitorForRect(bounds) is not { } monitor)
+            return;
+        // The shadow margin (12 DIPs) is part of the window: the card itself keeps the distance.
+        var place = FloatingPlacement.Snap(bounds, monitor.WorkArea, spot, (int)Math.Round(20 * WindowInterop.GetScale(_hwnd)));
+        WindowInterop.SetPosition(_hwnd, place.X, place.Y);
+        SavePinned();
+    }
+
+    private void SavePinned() =>
+        _pinned?.Saved(WindowInterop.GetBounds(_hwnd), (int)Math.Round(Width), (int)Math.Round(_lyricsBase));
+
+    private void OnGripDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!IsPinned || _pinned is { Locked: true } or { ClickThrough: true })
+            return;
+        NativeMethods.GetCursorPos(out _gripStart);
+        _gripFrom = (Width, _lyricsBase);
+        _gripping = PinnedGrip.CaptureMouse();
+        e.Handled = true;
+    }
+
+    private void OnGripMove(object sender, MouseEventArgs e)
+    {
+        if (!_gripping)
+            return;
+        NativeMethods.GetCursorPos(out var now);
+        var scale = WindowInterop.GetScale(_hwnd);
+        var (min, max) = PinnedWidthRange(_vm.IsCinema);
+        Width = Math.Clamp(_gripFrom.Width + ((now.X - _gripStart.X) / scale), min, max);
+        ResizeLyrics(Math.Clamp(_gripFrom.Lyrics + ((now.Y - _gripStart.Y) / scale), 70, 900));
+        UpdateFit();
+    }
+
+    private void OnGripUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_gripping)
+            return;
+        _gripping = false;
+        PinnedGrip.ReleaseMouseCapture();
+        SavePinned();
+    }
+
+    /// <summary>Pinned: dragged by any part that is not a control (buttons, progress, lyrics).</summary>
+    private void OnPinnedDrag(object sender, MouseButtonEventArgs e)
+    {
+        if (!IsPinned || _pinned is { Locked: true } || e.OriginalSource is not DependencyObject source)
+            return;
+        for (var node = source; node is not null && node != ContentCard; node = node is Visual ? VisualTreeHelper.GetParent(node) : null)
+        {
+            if (node is System.Windows.Controls.Primitives.ButtonBase or SeekBar or Slider or LyricMotionText || node == CoverPart)
+                return;
+        }
+        try { DragMove(); }
+        catch (InvalidOperationException) { return; }
+        SavePinned();
+    }
+
+    public void ShowAt(PixelRect anchor, PixelRect workArea, double scale, bool preview = false)
+    {
+        // Floating (not that minimal): it is already where the user put it.
+        if (IsPinned)
+        {
+            Activate();
+            return;
+        }
+        // Opened by the user (a click): a regular popup again, even if it was a preview.
+        var wasVisible = IsVisible;
+        IsPreview = preview && (IsPreview || !wasVisible);
+        _vm.IsActive = true;
+        ApplyLayout();
+        ApplyControlsStyle();
         UpdatePlayGlyph();
         UpdateProgressValue();
         OnViewModelChanged(this, new PropertyChangedEventArgs(nameof(MiniPlayerViewModel.StatusMessage)));
         ApplyBackground();
 
         // Remember who had focus so closing with Esc gives it back.
-        _previousForeground = NativeMethods.GetForegroundWindow();
-
-        Opacity = 0;
+        if (!wasVisible)
+        {
+            _previousForeground = NativeMethods.GetForegroundWindow();
+            // A clock from the last opening can override the base opacity while the window
+            // is shown at its previous position. Clear both clocks before making it visible.
+            BeginAnimation(OpacityProperty, null);
+            Opacity = 0;
+            ChromeOffset.BeginAnimation(TranslateTransform.YProperty, null);
+        }
         Show();
         UpdateLayout();
         _hwnd = WindowInterop.EnsureHandle(this);
@@ -113,28 +543,41 @@ public partial class MiniPlayerWindow : Window
         // Position only: WPF keeps owning the size (SizeToContent, DPI changes between monitors).
         WindowInterop.SetPosition(_hwnd, x, y);
         _anchor = anchor;
-        _outsideClicks.Start();
-        FocusHelper.ForceForeground(_hwnd);
-        Activate();
         SetBrowsing(false);
         ScrollToCurrent(animate: false);
-
-        if (_animationsEnabled())
+        QueueLyrics(animate: false);
+        _outsideClicks.Start();
+        if (IsPreview)
         {
-            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(160)));
-            ChromeOffset.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty,
-                new DoubleAnimation(12, 0, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease });
-        }
-        else
-        {
+            // Beside the settings, which keep the focus.
             BeginAnimation(OpacityProperty, null);
             Opacity = 1;
+            return;
+        }
+        if (!IsActive && !Activate())
+            FocusHelper.ForceForeground(_hwnd);
+        if (wasVisible)
+            return;
+
+        Opacity = 1;
+        if (_animationsEnabled() && SystemParameters.ClientAreaAnimation)
+        {
+            var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+            BeginAnimation(OpacityProperty,
+                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(160)) { FillBehavior = FillBehavior.Stop });
+            ChromeOffset.BeginAnimation(TranslateTransform.YProperty,
+                new DoubleAnimation(12, 0, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
         }
     }
 
-    public void HidePopup()
+    public void HidePopup() => HidePopup(force: false);
+
+    /// <param name="force">Also when pinned (floating): only turning that mode off hides it.</param>
+    public void HidePopup(bool force)
     {
+        if (IsPinned && !force)
+            return;
+        IsPreview = false;
         if (!IsVisible)
             return;
         LastHidden = DateTime.UtcNow;
@@ -149,6 +592,9 @@ public partial class MiniPlayerWindow : Window
     protected override void OnDeactivated(EventArgs e)
     {
         base.OnDeactivated(e);
+        // A preview stays while the settings are used; a menu of its own does not close it either.
+        if (IsPreview || IsPinned || ContentCard.ContextMenu is { IsOpen: true } || VolumePopup.Child is { IsKeyboardFocusWithin: true })
+            return;
         HidePopup();
     }
 
@@ -157,6 +603,11 @@ public partial class MiniPlayerWindow : Window
         base.OnKeyDown(e);
         switch (e.Key)
         {
+            case Key.Escape when _vm.Volume.IsOpen:
+                _vm.Volume.IsOpen = false;
+                VolumeButton.Focus();
+                e.Handled = true;
+                break;
             case Key.Escape:
                 HidePopup();
                 break;
@@ -198,13 +649,25 @@ public partial class MiniPlayerWindow : Window
             case nameof(MiniPlayerViewModel.Palette):
                 ApplyBackground();
                 break;
+            case nameof(MiniPlayerViewModel.Look):
+                if (!IsVisible)
+                    break;
+                ApplyLayout();
+                ApplyControlsStyle();
+                UpdatePlayGlyph();
+                ApplyBackground();
+                _lyricInk.Invalidate();
+                QueueLyrics(animate: false);
+                break;
             case nameof(MiniPlayerViewModel.WindowWidth):
                 // Not a XAML binding: the window writes its HWND's size to Width, which drops one.
-                Width = _vm.WindowWidth;
+                if (!(IsPinned && _pinned is { Width: > 0 }))
+                    Width = _vm.WindowWidth;
                 break;
             case nameof(MiniPlayerViewModel.StatusMessage):
                 StatusText.Visibility = string.IsNullOrEmpty(_vm.StatusMessage) ? Visibility.Collapsed : Visibility.Visible;
                 LyricsList.Visibility = string.IsNullOrEmpty(_vm.StatusMessage) ? Visibility.Visible : Visibility.Collapsed;
+                QueueLyrics(animate: false);
                 break;
         }
     }
@@ -216,7 +679,15 @@ public partial class MiniPlayerWindow : Window
     private void ApplyBackground()
     {
         var keys = new[] { "TextPrimaryBrush", "TextSecondaryBrush", "TextTertiaryBrush", "TrackBrush", "SubtleFillBrush", "SubtleFillHoverBrush", "WindowBackgroundBrush" };
-        if (!_useGradient())
+        var look = _vm.Look.Background;
+        var useGradient = look switch
+        {
+            MiniPlayerBackground.Theme => false,
+            MiniPlayerBackground.AlbumGradient => true,
+            MiniPlayerBackground.Default => _useGradient(),
+            _ => true,
+        };
+        if (!useGradient)
         {
             foreach (var key in keys)
                 Resources.Remove(key);
@@ -225,9 +696,23 @@ public partial class MiniPlayerWindow : Window
         }
 
         var (start, end) = _vm.Palette;
-        var gradient = new LinearGradientBrush(end, start, new Point(0, 0), new Point(1, 1));
-        gradient.Freeze();
-        ContentCard.Background = gradient;
+        if (MiniPlayerBackdrop.IsAtmospheric(look))
+        {
+            // A small image made once per cover and style, stretched: it is all soft gradients.
+            var (w, h) = _vm.IsCinema ? (192, 112) : (128, 176);
+            var image = MiniPlayerBackdrop.Render(_vm.Cover as BitmapSource, look, w, h, BackdropTuning.From(_vm.Look));
+            var brush = new ImageBrush(image) { Stretch = Stretch.Fill };
+            RenderOptions.SetBitmapScalingMode(brush, BitmapScalingMode.HighQuality);
+            brush.Freeze();
+            ContentCard.Background = brush;
+        }
+        else
+        {
+            var dim = MiniPlayerStyle.ClampDim(_vm.Look.BackgroundDim);
+            var gradient = new LinearGradientBrush(MiniPlayerBackdrop.Dimmed(end, dim), MiniPlayerBackdrop.Dimmed(start, dim), new Point(0, 0), new Point(1, 1));
+            gradient.Freeze();
+            ContentCard.Background = gradient;
+        }
         Resources["TextPrimaryBrush"] = Frozen(Colors.White);
         Resources["TextSecondaryBrush"] = Frozen(Color.FromArgb(0xB3, 0xFF, 0xFF, 0xFF));
         Resources["TextTertiaryBrush"] = Frozen(Color.FromArgb(0x73, 0xFF, 0xFF, 0xFF));
@@ -246,7 +731,205 @@ public partial class MiniPlayerWindow : Window
 
     private static bool Contains(PixelRect r, int x, int y) => x >= r.Left && x < r.Right && y >= r.Top && y < r.Bottom;
 
-    private void UpdatePlayGlyph() => PlayPauseGlyph.Text = _vm.IsPlaying ? "" : "";
+    private bool ContainsVolumeButton(int x, int y)
+    {
+        if (!VolumeButton.IsVisible)
+            return false;
+        var topLeft = VolumeButton.PointToScreen(new Point());
+        var bottomRight = VolumeButton.PointToScreen(new Point(VolumeButton.ActualWidth, VolumeButton.ActualHeight));
+        return x >= topLeft.X && x < bottomRight.X && y >= topLeft.Y && y < bottomRight.Y;
+    }
+
+    private static readonly Geometry SolidPlay = Geometry.Parse("M7,4.2 L19.6,12 L7,19.8 Z");
+    private static readonly Geometry SolidPause = Geometry.Parse("M6.2,4.5 L10.2,4.5 L10.2,19.5 L6.2,19.5 Z M13.8,4.5 L17.8,4.5 L17.8,19.5 L13.8,19.5 Z");
+    private static readonly Geometry SolidPrevious = Geometry.Parse("M5,5 L7.6,5 L7.6,19 L5,19 Z M19,5 L19,19 L8.6,12 Z");
+    private static readonly Geometry SolidNext = Geometry.Parse("M16.4,5 L19,5 L19,19 L16.4,19 Z M5,5 L15.4,12 L5,19 Z");
+
+    private void UpdatePlayGlyph()
+    {
+        if (_vm.Look.Controls == ControlsLook.Solid)
+        {
+            PlayPauseButton.Content = Solid(_vm.IsPlaying ? SolidPause : SolidPlay, 26);
+            return;
+        }
+        if (PlayPauseButton.Content != PlayPauseGlyph)
+            PlayPauseButton.Content = PlayPauseGlyph;
+        PlayPauseGlyph.Text = _vm.IsPlaying ? "" : "";
+    }
+
+    /// <summary>A solid vector icon in the text colour (it follows the background's).</summary>
+    private static FrameworkElement Solid(Geometry shape, double size)
+    {
+        var path = new System.Windows.Shapes.Path { Data = shape, Stretch = Stretch.Uniform };
+        path.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, "TextPrimaryBrush");
+        return new Viewbox { Width = size, Height = size, Child = new Grid { Width = 24, Height = 24, Children = { path } } };
+    }
+
+    /// <summary>Outline icons with play in a circle, or solid ones with a large bare play.</summary>
+    private void ApplyControlsStyle()
+    {
+        var solid = _vm.Look.Controls == ControlsLook.Solid;
+        PlayPauseButton.Style = (Style)FindResource(solid ? "SolidPlayButton" : "PlayButton");
+        PreviousButton.Content = solid ? Solid(SolidPrevious, 18) : "";
+        NextButton.Content = solid ? Solid(SolidNext, 18) : "";
+    }
+
+    /// <summary>
+    /// Vertical: song, lyrics, progress, controls, one under the other. Cinema wide: a large
+    /// cover with the song on the left, the lyrics on the right, progress and controls across.
+    /// Same parts, other places.
+    /// </summary>
+    private void ApplyLayout()
+    {
+        var cinema = _vm.IsCinema;
+        LayoutRoot.RowDefinitions.Clear();
+        LayoutRoot.ColumnDefinitions.Clear();
+        HeaderPart.RowDefinitions.Clear();
+        HeaderPart.ColumnDefinitions.Clear();
+        var rows = cinema ? 4 : 5;
+        for (var i = 0; i < rows; i++)
+            LayoutRoot.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        if (cinema)
+        {
+            LayoutRoot.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(196) });
+            LayoutRoot.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Place(HeaderPart, 0, 0);
+            Place(LyricsPart, 0, 1);
+            Place(ProgressPart, 1, 0, span: 2);
+            Place(ControlsPart, 2, 0, span: 2);
+            Place(ConfirmPart, 3, 0, span: 2);
+            // The song: cover on top, title, artist, then the actions.
+            for (var i = 0; i < 3; i++)
+                HeaderPart.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Place(CoverPart, 0, 0);
+            Place(TitlePart, 1, 0);
+            Place(ActionsPart, 2, 0);
+            CoverPart.Width = CoverPart.Height = 168;
+            CoverPart.Margin = new Thickness(0, 0, 0, 12);
+            CoverPart.HorizontalAlignment = HorizontalAlignment.Left;
+            TitlePart.Margin = new Thickness(0, 0, 12, 0);
+            ActionsPart.Margin = new Thickness(-8, 6, 0, 0);
+            ActionsPart.HorizontalAlignment = HorizontalAlignment.Left;
+            LyricsPart.Margin = new Thickness(18, 0, 0, 8);
+            SetLyricsHeight(IsPinned && _pinned is { LyricsHeight: > 0 } c ? c.LyricsHeight : _vm.ShowCover ? 268 : 200);
+            HeaderPart.VerticalAlignment = VerticalAlignment.Top;
+        }
+        else
+        {
+            LayoutRoot.ColumnDefinitions.Add(new ColumnDefinition());
+            Place(HeaderPart, 0, 0);
+            Place(LyricsPart, 1, 0);
+            Place(ProgressPart, 2, 0);
+            Place(ControlsPart, 3, 0);
+            Place(ConfirmPart, 4, 0);
+            HeaderPart.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            HeaderPart.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            HeaderPart.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            Place(CoverPart, 0, 0);
+            Place(TitlePart, 0, 1);
+            Place(ActionsPart, 0, 2);
+            CoverPart.Width = CoverPart.Height = 64;
+            CoverPart.Margin = new Thickness(0, 0, 14, 0);
+            TitlePart.Margin = new Thickness(0);
+            ActionsPart.Margin = new Thickness(8, 0, -6, 0);
+            ActionsPart.HorizontalAlignment = HorizontalAlignment.Right;
+            LyricsPart.Margin = new Thickness(0, 12, 0, 6);
+            SetLyricsHeight(IsPinned && _pinned is { LyricsHeight: > 0 } v ? v.LyricsHeight : 176);
+        }
+        Width = IsPinned && _pinned is { Width: > 0 } w ? Math.Clamp(w.Width, PinnedWidthRange(cinema).Min, PinnedWidthRange(cinema).Max) : _vm.WindowWidth;
+    }
+
+    private static void Place(UIElement element, int row, int column, int span = 1)
+    {
+        Grid.SetRow(element, row);
+        Grid.SetColumn(element, column);
+        Grid.SetColumnSpan(element, span);
+        Grid.SetRowSpan(element, 1);
+    }
+
+    // The lyrics' height as laid out (or set with the grip); while the floating toolbar shows, it
+    // takes ToolbarRoom of it (eased), so the window keeps its size and the verses get the room back.
+    private double _lyricsBase = 176;
+    private const double ToolbarRoom = 30;
+
+    private Thickness _lyricsMargin;
+
+    /// <summary>From the layout: the lyrics' height and margin as laid out.</summary>
+    private void SetLyricsHeight(double height)
+    {
+        _lyricsMargin = LyricsPart.Margin;
+        _lyricsBase = height;
+        ApplyToolbarRoom();
+    }
+
+    /// <summary>From the grip: only the height changes.</summary>
+    private void ResizeLyrics(double height)
+    {
+        _lyricsBase = height;
+        ApplyToolbarRoom();
+    }
+
+    private static readonly DependencyProperty ToolbarShownProperty = DependencyProperty.Register(
+        "ToolbarShown", typeof(double), typeof(MiniPlayerWindow), new PropertyMetadata(0.0, (d, _) => ((MiniPlayerWindow)d).ApplyToolbarRoom()));
+
+    private double ToolbarShown => (double)GetValue(ToolbarShownProperty);
+
+    private void ApplyToolbarRoom()
+    {
+        var shown = IsPinned ? ToolbarShown : 0;
+        var room = ToolbarRoom * shown;
+        var height = Math.Max(60, _lyricsBase - room);
+        LyricsViewport.Height = height;
+        LyricsFade.EndPoint = new Point(0, height);
+        // Wide: the toolbar sits over the lyrics column, which gives it the room; vertical: over the
+        // song's row, so everything moves down by what the lyrics give. Either way the size holds.
+        if (_vm.IsCinema)
+        {
+            ContentCard.Padding = new Thickness(16, 16, 16, 10);
+            LyricsPart.Margin = new Thickness(_lyricsMargin.Left, _lyricsMargin.Top + room, _lyricsMargin.Right, _lyricsMargin.Bottom);
+        }
+        else
+        {
+            ContentCard.Padding = new Thickness(16, 16 + room, 16, 10);
+            LyricsPart.Margin = _lyricsMargin;
+        }
+        PinnedToolbar.Opacity = shown;
+    }
+
+    /// <summary>The floating toolbar: shown, or (buttons on hover) only while the pointer is over the player.</summary>
+    private void UpdatePinnedToolbar()
+    {
+        var o = _pinned;
+        var available = IsPinned && o is { ClickThrough: false };
+        PinnedToolbar.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
+        var target = available && (IsMouseOver || _gripping || o is { PlayerButtonsOnHover: false }) ? 1.0 : 0.0;
+        if (IsPinned && o is { } p)
+        {
+            PinnedLock.Content = p.Locked ? "\uE72E" : "\uE785";
+            PinnedLock.ToolTip = LocalizationService.Get(p.Locked ? "MinimalUnlock" : "MinimalLock");
+        }
+        var ms = _animationsEnabled() && SystemParameters.ClientAreaAnimation && IsVisible ? (target > ToolbarShown ? 180 : 260) : 0;
+        if (ms == 0)
+        {
+            BeginAnimation(ToolbarShownProperty, null);
+            SetValue(ToolbarShownProperty, target);
+            return;
+        }
+        BeginAnimation(ToolbarShownProperty, new DoubleAnimation(ToolbarShown, target, TimeSpan.FromMilliseconds(ms))
+        {
+            EasingFunction = ToolbarEase,
+            FillBehavior = FillBehavior.HoldEnd,
+        }, HandoffBehavior.SnapshotAndReplace);
+    }
+
+    private static readonly IEasingFunction ToolbarEase = CreateToolbarEase();
+
+    private static IEasingFunction CreateToolbarEase()
+    {
+        var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
+        ease.Freeze();
+        return ease;
+    }
 
     private void UpdateProgressValue()
     {
@@ -261,6 +944,7 @@ public partial class MiniPlayerWindow : Window
             // Jumping to a line follows the song again from there.
             SetBrowsing(false);
             _vm.SeekToLineCommand.Execute(line);
+            QueueLyrics(animate: false);
         }
     }
 
@@ -289,6 +973,80 @@ public partial class MiniPlayerWindow : Window
     {
         _browsing = browsing;
         ResyncButton.Visibility = browsing ? Visibility.Visible : Visibility.Collapsed;
+        if (browsing)
+            _lyricInk.Invalidate();
+    }
+
+    private void QueueLyrics(bool animate)
+    {
+        if (!IsVisible)
+            return;
+        _animateLyrics = animate;
+        if (_lyricsUpdateQueued)
+            return;
+        _lyricsUpdateQueued = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+        {
+            _lyricsUpdateQueued = false;
+            ScrollToCurrent(_animateLyrics);
+        });
+    }
+
+    private void QueueLyricInk()
+    {
+        if (!IsVisible || _vm.FlowMode == LyricFlowMode.Off || _inkUpdateQueued)
+            return;
+        _inkUpdateQueued = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+        {
+            _inkUpdateQueued = false;
+            _lyricInk.Refresh();
+        });
+    }
+
+    private (TextBlock?, LyricFill, bool) SampleLyricInk()
+    {
+        if (!IsVisible || _browsing || _vm.FlowMode == LyricFlowMode.Off
+            || _activeText?.DataContext is not LyricLineViewModel line || line.Index != _vm.CurrentIndex)
+            return (null, LyricFill.Full, false);
+        return (_activeText, _vm.CurrentFill, _vm.IsPlaying);
+    }
+
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        _lyricInk.Invalidate();
+        QueueLyrics(animate: false);
+    }
+
+    /// <summary>
+    /// The list drifted from the current line (an interrupted animation, a layout change after
+    /// the last scroll): slide back to it. Not while the user browses or a scroll is running.
+    /// </summary>
+    private void KeepCentred()
+    {
+        if (!IsVisible || _browsing || _lyricsUpdateQueued || _vm.Lines.Count == 0 || DateTime.UtcNow < _scrollEndsAt)
+            return;
+        if (!LyricsList.IsArrangeValid)
+            LyricsList.UpdateLayout();
+        if (CentreTarget() is { } target && Math.Abs(LyricsOffset.Y - target) > 2)
+        {
+            Log.Debug($"Mini player lyrics off the current line ({LyricsOffset.Y:0} vs {target:0}, line {_vm.CurrentIndex}): recentred");
+            ScrollToCurrent(animate: Math.Abs(LyricsOffset.Y - target) < LyricsViewport.ActualHeight);
+        }
+    }
+
+    /// <summary>Where the list must sit for the current line to be in the middle; null before layout.</summary>
+    private double? CentreTarget()
+    {
+        var index = _vm.CurrentIndex;
+        if (LyricsList.ItemContainerGenerator.ContainerFromIndex(Math.Max(0, index)) is not FrameworkElement container || !container.IsArrangeValid)
+            return null;
+        var viewport = LyricsViewport.ActualHeight;
+        var top = container.TranslatePoint(new Point(0, 0), LyricsList).Y;
+        return index < 0
+            ? (viewport / 2) - (container.ActualHeight / 2) + container.ActualHeight
+            : (viewport / 2) - top - (container.ActualHeight / 2);
     }
 
     /// <summary>Translate the list so the current line is vertically centred in the viewport.</summary>
@@ -300,6 +1058,9 @@ public partial class MiniPlayerWindow : Window
         var viewport = LyricsViewport.ActualHeight;
         double target;
         var index = _vm.CurrentIndex;
+        // The lines' layout must be current, or the target is computed from stale positions.
+        if (!LyricsList.IsArrangeValid)
+            LyricsList.UpdateLayout();
         var container = LyricsList.ItemContainerGenerator.ContainerFromIndex(Math.Max(0, index)) as FrameworkElement;
         if (container is null)
             return;
@@ -309,15 +1070,20 @@ public partial class MiniPlayerWindow : Window
             ? (viewport / 2) - (container.ActualHeight / 2) + container.ActualHeight // first line just below centre
             : (viewport / 2) - top - (container.ActualHeight / 2);
 
-        if (animate && _animationsEnabled())
-        {
-            LyricsOffset.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty,
-                new DoubleAnimation(target, TimeSpan.FromMilliseconds(320)) { EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut } });
-        }
+        var duration = animate && _animationsEnabled() && SystemParameters.ClientAreaAnimation
+            ? (_vm.ScrollMilliseconds > 0 ? _vm.ScrollMilliseconds : 240)
+            : 0;
+        _scrollEndsAt = DateTime.UtcNow + TimeSpan.FromMilliseconds(duration + 80);
+        LyricMotionText.Tween(LyricsOffset, TranslateTransform.YProperty, target, duration, _vm.ExpressiveMotion);
+        if (_vm.FlowMode != LyricFlowMode.Off && index >= 0 && container is ContentPresenter presenter
+            && VisualTreeHelper.GetChildrenCount(presenter) > 0)
+            _activeText = VisualTreeHelper.GetChild(presenter, 0) as TextBlock;
         else
-        {
-            LyricsOffset.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty, null);
-            LyricsOffset.Y = target;
-        }
+            _activeText = null;
+        _lyricInk.Refresh();
     }
 }
+
+/// <summary>How the floating player behaves (Minimal Mode's settings) and where its changes go.</summary>
+public sealed record PinnedOptions(bool ClickThrough, bool Locked, bool Topmost, bool ShowMark, bool AutoFit, bool ControlsOnHover, bool PlayerButtonsOnHover,
+    int Width, int LyricsHeight, Action<bool> SetClickThrough, Action<PixelRect, int, int> Saved, Action<bool> SetLocked, Action TurnOff, Action SwitchMode);

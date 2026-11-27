@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using Microsoft.Win32;
 using Taskitify.Core.Imaging;
 using Taskitify.Core.Lyrics;
 using Taskitify.Infrastructure;
@@ -31,6 +32,7 @@ public interface ISpotifyMonitor : IDisposable
     TimeSpan Position { get; }
 
     TimeSpan? Duration { get; }
+    double PlaybackRate => 1;
 
     ImageSource? Thumbnail { get; }
 
@@ -146,7 +148,11 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
     public PlaybackState Status { get; private set; } = PlaybackState.NoSession;
     public TimeSpan Position => _clock.Position;
     public TimeSpan? Duration => _clock.Duration;
+    public double PlaybackRate => _clock.Rate;
     public ImageSource? Thumbnail { get; private set; }
+
+    /// <summary>The encoded cover (as Windows or Spotify's CDN gave it), for the lyric card.</summary>
+    public byte[]? CoverData { get; private set; }
     public bool CanSeek { get; private set; }
     public bool CanGoNext { get; private set; }
     public bool CanGoPrevious { get; private set; }
@@ -170,6 +176,7 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
     {
         _manager = await GlobalSystemMediaTransportControlsSessionManager.RequestAsync();
         _manager.SessionsChanged += OnSessionsChanged;
+        SystemEvents.PowerModeChanged += OnPowerModeChanged;
         await RefreshSessionAsync();
     }
 
@@ -255,8 +262,30 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
         }
     }
 
+    private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
+    {
+        if (e.Mode is not (PowerModes.Resume or PowerModes.Suspend))
+            return;
+        _dispatcher.InvokeAsync(() =>
+        {
+            if (_session is null)
+                return;
+            if (e.Mode == PowerModes.Suspend)
+            {
+                _clock.SetPlaying(false);
+                return;
+            }
+
+            ReadPlaybackInfo();
+            _clock.SetPlaying(Status == PlaybackState.Playing);
+            ReadTimeline();
+            TimelineChanged?.Invoke(this, EventArgs.Empty);
+        });
+    }
+
     public void Dispose()
     {
+        SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         _correctionTimer.Stop();
         _coverRetry.Stop();
         if (_manager is not null)
@@ -349,6 +378,7 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
         var hadTrack = Track is not null;
         Track = null;
         Thumbnail = null;
+        CoverData = null;
         _thumbnailLoaded = false;
         if (Status != PlaybackState.NoSession)
         {
@@ -439,6 +469,7 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
             _coverRetries = 0;
             _coverRetry.Stop();
             Thumbnail = null;
+            CoverData = null;
             TrackChanged?.Invoke(this, EventArgs.Empty);
             ThumbnailChanged?.Invoke(this, EventArgs.Empty);
             ReadTimeline();
@@ -540,6 +571,7 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
 
         if (forTrack == Track)
         {
+            CoverData = encoded;
             Thumbnail = image;
             Palette = palette;
             ThumbnailChanged?.Invoke(this, EventArgs.Empty);
@@ -632,6 +664,9 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
             _ => PlaybackState.Stopped, // Closed
         };
 
+        var rateChanged = _clock.SetRate(info.PlaybackRate ?? 1);
+        if (rateChanged)
+            TimelineChanged?.Invoke(this, EventArgs.Empty);
         if (status == Status)
         {
             if (modesChanged)
@@ -675,8 +710,8 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
             return false;
         var now = DateTimeOffset.UtcNow;
         var playing = Status == PlaybackState.Playing;
-        var expected = seek.Target + (playing ? now - seek.SentAt : TimeSpan.Zero);
-        var projected = reported + (playing && reportedAt <= now ? now - reportedAt : TimeSpan.Zero);
+        var expected = seek.Target + (playing ? (now - seek.SentAt) * PlaybackRate : TimeSpan.Zero);
+        var projected = reported + (playing && reportedAt <= now ? (now - reportedAt) * PlaybackRate : TimeSpan.Zero);
         if (now > seek.Until || Math.Abs((projected - expected).TotalSeconds) < 1.5)
         {
             _pendingSeek = null;

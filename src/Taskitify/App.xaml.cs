@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http;
 using System.Windows;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Taskitify.Core.Lyrics;
 using Taskitify.Core.Net;
@@ -33,10 +35,26 @@ public partial class App : Application
     private TaskbarOverlayService? _overlay;
     private MiniPlayerViewModel? _miniPlayerVm;
     private MiniPlayerWindow? _miniPlayer;
+    private MinimalLyricsViewModel? _minimalVm;
+    private MinimalLyricsWindow? _minimal;
+    // Minimal Mode is off but its look is being changed in the settings: shown until they close.
+    private bool _minimalPreview;
+    // An app chosen in the settings is in front (Minimal Mode shows); the shortcut hid it for now.
+    private bool _minimalAuto;
+    private bool _minimalSuppressed;
+    private ForegroundWatcher? _autoWatch;
+    private readonly Dictionary<uint, string> _processNames = [];
+    private GlobalHotkey? _hotkey;
+    private (bool, int, int)? _hotkeyApplied;
+    private bool _hotkeyTaken;
+    private bool _hotkeyPaused;
     private TrayIconService? _tray;
     private SettingsWindow? _settingsWindow;
     private SettingsViewModel? _settingsVm;
     private DebugWindow? _debugWindow;
+    private LyricCardWindow? _lyricCardWindow;
+    private SpotifyLikeService? _likes;
+    private SpotifyLyricsProvider? _spotifyProvider;
 
     public bool IsShuttingDown { get; private set; }
 
@@ -72,6 +90,7 @@ public partial class App : Application
             (_, _) => Dispatcher.InvokeAsync(ShowSettings), null, Timeout.Infinite, executeOnlyOnce: false);
 
         DispatcherUnhandledException += OnDispatcherUnhandledException;
+        SessionEnding += (_, _) => IsShuttingDown = true;
         TaskScheduler.UnobservedTaskException += (_, args) =>
         {
             Log.Error("Unobserved task exception", args.Exception);
@@ -159,17 +178,37 @@ public partial class App : Application
                 _spotifyLyrics.PrepareForNextSong();
         };
 
-        _taskbarVm = new TaskbarViewModel(_monitor, _sync, _settings, new AppVolumeService());
+        var library = new SpotifyLibraryClient(_spotifyHttp, Log.Debug);
+        _spotifyLyrics.LibraryQuerySeen = library.Learn;
+        _likes = new SpotifyLikeService(_monitor, _sync, _settings, _spotifyLyrics, spotifyProvider, library, Dispatcher);
+        _spotifyProvider = spotifyProvider;
+
+        _taskbarVm = new TaskbarViewModel(_monitor, _sync, _settings, new AppVolumeService(), _likes);
         _overlay = new TaskbarOverlayService(_monitor, _sync, _settings, new TaskbarPositionService(), _taskbarVm);
         _overlay.Initialize();
         _overlay.Clicked += (_, _) => ToggleMiniPlayer();
+        _overlay.ShareRequested += (_, _) => ShowLyricCard();
         _overlay.CalibrationChanged += (_, on) => _settingsVm?.SyncCalibrating(on);
 
-        _miniPlayerVm = new MiniPlayerViewModel(_monitor, _sync, _settings, new AppVolumeService());
+        _miniPlayerVm = new MiniPlayerViewModel(_monitor, _sync, _settings, new AppVolumeService(), _likes);
+        _miniPlayerVm.ShareRequested += (_, _) => ShowLyricCard();
         _miniPlayer = new MiniPlayerWindow(_miniPlayerVm, () => _settings.Current.EnableAnimations,
             () => _settings.Current.Background == Models.OverlayBackground.AlbumGradient);
 
-        _tray = new TrayIconService(ShowSettings, ShowMiniPlayerFromTray, ShowDebug, Shutdown);
+        _minimalVm = new MinimalLyricsViewModel(_monitor, _sync, _settings);
+        // The floating lyrics' first button: the whole player instead (Not that minimal).
+        _minimalVm.MiniPlayerRequested += (_, _) => _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, true));
+        _minimal = new MinimalLyricsWindow(_minimalVm, _settings, _monitor);
+        _hotkey = new GlobalHotkey(OnMinimalHotkey);
+        _overlay.MinimalActive = () => MinimalShown;
+
+        _tray = new TrayIconService(ShowSettings, ShowMiniPlayerFromTray, ShowLyricCard, ShowDebug, Shutdown, ShowTour)
+        {
+            CanMakeLyricCard = () => _monitor?.Track is not null,
+            Minimal = () => (_settings.Current.Minimal.Enabled, _settings.Current.Minimal.ClickThrough),
+            ToggleMinimal = () => _settings.Update(s => s.Minimal.Enabled = !s.Minimal.Enabled),
+            ToggleMinimalClicks = () => _settings.Update(s => s.Minimal.ClickThrough = !s.Minimal.ClickThrough),
+        };
         ApplySettings();
         _settings.Changed += (_, _) => ApplySettings();
 
@@ -190,8 +229,12 @@ public partial class App : Application
                 "Taskitify", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        if (_settings.IsFirstRun)
-            ShowWelcome();
+        _settings.Current.FirstUseDay ??= DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        if (_monitor is not null)
+            _monitor.PlaybackChanged += (_, _) => RecordListening();
+        // The tour opens once: on a new installation, and once for users updating from a version without it.
+        if (e.Args.Contains("--tour", StringComparer.OrdinalIgnoreCase) || _settings.Current.TourVersion < TourWindow.Version)
+            ShowTour();
         else if (!background && _tray.Visible)
             _tray.ShowBalloon("Taskitify", LocalizationService.Get("BackgroundNotice"));
     }
@@ -201,9 +244,15 @@ public partial class App : Application
         IsShuttingDown = true;
         _settings?.Flush();
         _tray?.Dispose();
+        _hotkey?.Dispose();
+        _autoWatch?.Dispose();
+        _minimal?.HideLyrics();
+        _settings?.Flush();
+        _minimalVm?.Dispose();
         _overlay?.Dispose();
         _miniPlayerVm?.Dispose();
         _taskbarVm?.Dispose();
+        _likes?.Dispose();
         _sync?.Dispose();
         _monitor?.Dispose();
         _theme?.Dispose();
@@ -221,27 +270,142 @@ public partial class App : Application
         base.OnExit(e);
     }
 
-    public void ShowSettings()
+    public void ShowSettings() => ShowSettings(null);
+
+    public void ShowSettings(SettingsPage? page)
     {
-        if (_settings is null || _cache is null || _sync is null || _overlay is null)
+        if (_settings is null || _cache is null || _sync is null || _overlay is null || _monitor is null || _theme is null)
             return;
         if (_settingsWindow is { IsLoaded: true })
         {
-            _settingsWindow.Activate();
+            if (page is { } p)
+                _settingsWindow.ShowPage(p);
+            BringToFront(_settingsWindow);
             return;
         }
         _spotifyLyrics?.CheckSession();
-        _settingsVm = new SettingsViewModel(_settings, _cache, _sync, _overlay.IsCalibrating, _overlay.SetCalibrating);
+        _settingsVm = new SettingsViewModel(_settings, _cache, _sync, _overlay.IsCalibrating, _overlay.SetCalibrating)
+        {
+            MiniLook = new MiniPlayerLookViewModel(_settings, _monitor, _sync, _theme),
+            MinimalLook = new MinimalLookViewModel(_settings, _monitor, _theme),
+        };
+        // Customizing the mini player shows it, live, beside the settings.
+        _settingsVm.MiniLook!.PreviewRequested += (_, _) => PreviewMiniPlayer();
+        _settingsVm.MinimalLook!.PreviewRequested += (_, _) =>
+        {
+            _minimalPreview = true;
+            UpdateMinimal();
+        };
+        _settingsVm.MinimalLook.ResetPlacementRequested += (_, _) => _minimal?.ResetPlacement();
+        _settingsVm.MinimalLook.PlaceRequested += (_, spot) =>
+        {
+            if (_miniPlayer is { IsPinned: true })
+                _miniPlayer.PlaceAt(spot);
+            else
+                _minimal?.PlaceAt(spot);
+        };
+        _settingsVm.MinimalLook.HotkeyTaken = () => _hotkeyTaken;
+        _settingsVm.MinimalLook.CapturingChanged += (_, _) =>
+        {
+            // The shortcut being typed must reach the settings, not toggle the lyrics.
+            _hotkeyPaused = _settingsVm?.MinimalLook?.IsCapturing == true;
+            ApplyHotkey();
+        };
         _settingsWindow = new SettingsWindow(_settingsVm, _spotifyLyrics!);
+        _settingsVm.SetCurrentTrack(_monitor.Track);
+        EventHandler followTrack = (_, _) => _settingsVm?.SetCurrentTrack(_monitor.Track);
+        _monitor.TrackChanged += followTrack;
+        _settingsWindow.Closed += (_, _) => _monitor.TrackChanged -= followTrack;
+        if (page is { } first)
+            _settingsWindow.ShowPage(first);
         _settingsWindow.Closed += (_, _) =>
         {
             _settingsWindow = null;
             _settingsVm = null;
+            _miniPlayer?.EndPreview();
+            _minimalPreview = false;
+            UpdateMinimal();
             _settings.Flush();
         };
         WindowInterop.SetDarkTitleBar(_settingsWindow, !_theme!.AppsUseLightTheme);
         _settingsWindow.Show();
         _settingsWindow.Activate();
+    }
+
+    /// <summary>
+    /// An open window asked for again (tray, second launch, a button): restored if minimized and
+    /// brought to the front with the focus, even when another app has it.
+    /// </summary>
+    private static void BringToFront(Window window)
+    {
+        if (window.WindowState == WindowState.Minimized)
+            window.WindowState = WindowState.Normal;
+        window.Show();
+        window.Activate();
+        // Activate alone may only flash the taskbar button when another app has the focus.
+        var hwnd = WindowInterop.EnsureHandle(window);
+        if (NativeMethods.GetForegroundWindow() != hwnd)
+            FocusHelper.ForceForeground(hwnd);
+        window.Focus();
+    }
+
+    private TourWindow? _tour;
+
+    /// <summary>The welcome tour (for now opened from the tray menu or with --tour).</summary>
+    public void ShowTour()
+    {
+        if (_tour is not null)
+        {
+            _tour.Activate();
+            return;
+        }
+        _miniPlayer?.HidePopup();
+        _tour = new TourWindow(page => { ShowSettings(page); return true; }, _settings!);
+        _tour.Closed += (_, _) =>
+        {
+            _tour = null;
+            if (_settings.Current.TourVersion < TourWindow.Version)
+            {
+                _settings.Update(s => s.TourVersion = TourWindow.Version);
+                _settings.Flush(); // seen, even if the app is closed right away
+            }
+        };
+        WindowInterop.SetDarkTitleBar(_tour, true);
+        _tour.Show();
+        _tour.Activate();
+    }
+
+    /// <summary>Counts the days music played (local only), then perhaps invites a rating once.</summary>
+    private void RecordListening()
+    {
+        if (_monitor?.Status != Models.PlaybackState.Playing || _settings is null)
+            return;
+        var today = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        if (_settings.Current.LastListeningDay == today)
+            return;
+        _settings.Update(s => { s.LastListeningDay = today; s.ListeningDays++; });
+        InviteRatingOnce();
+    }
+
+    /// <summary>
+    /// After two weeks and seven days with music, one quiet notification offers the Store's review page.
+    /// Only for the Store package, never during the first run or the tour, never again once shown.
+    /// </summary>
+    private void InviteRatingOnce()
+    {
+        var s = _settings!.Current;
+        if (s.RatingInviteShown || s.ListeningDays < 7 || _tour is not null || _tray?.Visible != true
+            || !DateTime.TryParse(s.FirstUseDay, CultureInfo.InvariantCulture, DateTimeStyles.None, out var first) || (DateTime.Today - first).TotalDays < 14)
+            return;
+        string family;
+        try { family = global::Windows.ApplicationModel.Package.Current.Id.FamilyName; }
+        catch (InvalidOperationException) { return; } // not installed from the Store package
+        _settings.Update(x => x.RatingInviteShown = true);
+        _tray.ShowBalloon(LocalizationService.Get("RatingTitle"), LocalizationService.Get("RatingText"), () =>
+        {
+            try { Process.Start(new ProcessStartInfo($"ms-windows-store://review/?PFN={family}") { UseShellExecute = true }); }
+            catch (System.ComponentModel.Win32Exception ex) { Log.Error("Could not open the Store review page", ex); }
+        });
     }
 
     /// <summary>First run: LRCLIB alone or Spotify + LRCLIB, and what the Spotify connection does.</summary>
@@ -251,6 +415,63 @@ public partial class App : Application
         WindowInterop.SetDarkTitleBar(welcome, !_theme!.AppsUseLightTheme);
         welcome.Show();
         welcome.Activate();
+    }
+
+    /// <summary>The lyric card maker for the song playing (one window; reopening brings it back with the new song).</summary>
+    private void ShowLyricCard()
+    {
+        if (_monitor?.Track is not { } track || _sync is null || _theme is null)
+            return;
+        _miniPlayer?.HidePopup();
+        var lines = new List<LyricCardLine>();
+        var current = 0;
+        if (_sync.Timeline is { } timeline)
+        {
+            for (var i = 0; i < timeline.Count; i++)
+            {
+                if (string.IsNullOrWhiteSpace(timeline.Lines[i].Text))
+                    continue;
+                if (i <= _sync.CurrentIndex)
+                    current = lines.Count;
+                lines.Add(new LyricCardLine(timeline.Lines[i].Text.Trim(), timeline.Lines[i].Time));
+            }
+        }
+        else if (_sync.Result?.PlainText is { } plain)
+        {
+            lines.AddRange(plain.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).Select(l => new LyricCardLine(l, null)));
+        }
+
+        BitmapSource? cover = null;
+        if (_monitor.CoverData is { } data)
+        {
+            try
+            {
+                var image = new BitmapImage();
+                image.BeginInit();
+                image.CacheOption = BitmapCacheOption.OnLoad;
+                image.StreamSource = new System.IO.MemoryStream(data);
+                image.EndInit();
+                image.Freeze();
+                cover = image;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                cover = _monitor.Thumbnail as BitmapSource;
+            }
+        }
+        var query = new TrackQuery(track.Title, track.Artist, track.Album, _monitor.Duration);
+        var provider = _spotifyProvider;
+        var source = new LyricCardSource(track.Title, track.Artist, string.IsNullOrWhiteSpace(track.Album) ? null : track.Album, lines, current, cover,
+            _monitor.Palette.Start, _monitor.Palette.End, _monitor.Duration, LyricsCredit.For(_sync.Result),
+            provider is null ? null : () => provider.FindLargeCoverAsync(query, CancellationToken.None),
+            provider?.KnownTrackId(query));
+
+        _lyricCardWindow?.Close();
+        _lyricCardWindow = new LyricCardWindow(new LyricCardViewModel(source, _settings!));
+        _lyricCardWindow.Closed += (_, _) => _lyricCardWindow = null;
+        WindowInterop.SetDarkTitleBar(_lyricCardWindow, !_theme.AppsUseLightTheme);
+        _lyricCardWindow.Show();
+        _lyricCardWindow.Activate();
     }
 
     private void ShowDebug()
@@ -298,7 +519,23 @@ public partial class App : Application
         OpenMiniPlayer(anchor);
     }
 
-    private void OpenMiniPlayer(Core.Layout.PixelRect anchor)
+    /// <summary>Show the mini player without taking focus after an appearance change.</summary>
+    private void PreviewMiniPlayer()
+    {
+        if (_miniPlayer is null || _overlay is null)
+            return;
+        // After the change is applied and the player has its new size.
+        Dispatcher.InvokeAsync(() =>
+        {
+            if (_settingsWindow is not { IsVisible: true })
+                return;
+            var anchor = _overlay.IsShown ? _overlay.Bounds
+                : _overlay.Placement is { } p ? TaskbarPositionService.ComputeOverlayRect(p, _settings!.Current) : default;
+            OpenMiniPlayer(anchor, preview: true);
+        }, DispatcherPriority.Loaded);
+    }
+
+    private void OpenMiniPlayer(Core.Layout.PixelRect anchor, bool preview = false)
     {
         if (_miniPlayer is null || _overlay is null)
             return;
@@ -309,7 +546,7 @@ public partial class App : Application
         if (anchor.IsEmpty)
             anchor = new Core.Layout.PixelRect(monitor.WorkArea.Right - 200, monitor.WorkArea.Bottom, 200, 0);
         var scale = _overlay.Placement?.Scale ?? WindowInterop.GetScale(_overlay.Handle);
-        _miniPlayer.ShowAt(anchor, monitor.WorkArea, scale);
+        _miniPlayer.ShowAt(anchor, monitor.WorkArea, scale, preview);
     }
 
     private void ApplySettings()
@@ -319,6 +556,140 @@ public partial class App : Application
         Log.WriteToFile = _settings.Current.DebugMode;
         _tray.Visible = _settings.Current.ShowTrayIcon;
         _tray.DebugEnabled = _settings.Current.DebugMode;
+        ApplyHotkey();
+        UpdateAutoWatch();
+        UpdateMinimal();
+    }
+
+    /// <summary>Minimal Mode shows: switched on, or an app chosen for it is in front (unless the shortcut hid it).</summary>
+    private bool MinimalShown => _settings?.Current.Minimal.Enabled == true || (_minimalAuto && !_minimalSuppressed);
+
+    /// <summary>The shortcut, from anywhere (games too): hides what shows, shows what is hidden.</summary>
+    private void OnMinimalHotkey()
+    {
+        if (_settings is null)
+            return;
+        if (MinimalShown)
+        {
+            if (_settings.Current.Minimal.Enabled)
+                _settings.Update(s => s.Minimal.Enabled = false);
+            if (_minimalAuto)
+                _minimalSuppressed = true;
+        }
+        else if (_minimalAuto)
+            _minimalSuppressed = false;
+        else
+            _settings.Update(s => s.Minimal.Enabled = true);
+        UpdateMinimal();
+        _overlay?.Reevaluate();
+    }
+
+    private void ApplyHotkey()
+    {
+        if (_hotkey is null || _settings is null)
+            return;
+        var m = _settings.Current.Minimal;
+        var wanted = (m.HotkeyEnabled && !_hotkeyPaused, m.HotkeyModifiers, m.HotkeyKey);
+        if (_hotkeyApplied == wanted)
+            return;
+        _hotkeyApplied = wanted;
+        if (wanted.Item1)
+        {
+            _hotkeyTaken = !_hotkey.Register(m.HotkeyModifiers, m.HotkeyKey);
+            if (_hotkeyTaken)
+                Log.Warn("Minimal Mode shortcut is taken by another app");
+        }
+        else
+        {
+            _hotkey.Unregister();
+            _hotkeyTaken = false;
+        }
+    }
+
+    /// <summary>The foreground is watched (an event, no polling) only while some app is chosen.</summary>
+    private void UpdateAutoWatch()
+    {
+        if (_settings is null)
+            return;
+        if (_settings.Current.Minimal.AutoApps.Count > 0)
+        {
+            _autoWatch ??= new ForegroundWatcher(OnForeground);
+            OnForeground(NativeMethods.GetForegroundWindow());
+        }
+        else if (_autoWatch is not null)
+        {
+            _autoWatch.Dispose();
+            _autoWatch = null;
+            SetMinimalAuto(false);
+        }
+    }
+
+    private void OnForeground(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero || _settings is null)
+            return;
+        NativeMethods.GetWindowThreadProcessId(hwnd, out var pid);
+        // Taskitify itself and the taskbar never change it: clicking the lyrics' tray icon mid-game must not.
+        if (pid == Environment.ProcessId || WindowInterop.GetClassName(hwnd) is "Shell_TrayWnd" or "Shell_SecondaryTrayWnd")
+            return;
+        if (!_processNames.TryGetValue(pid, out var name))
+        {
+            try
+            {
+                using var process = Process.GetProcessById((int)pid);
+                name = process.ProcessName;
+            }
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
+            {
+                name = "";
+            }
+            if (_processNames.Count > 256)
+                _processNames.Clear();
+            _processNames[pid] = name;
+        }
+        SetMinimalAuto(_settings.Current.Minimal.AutoApps.Contains(name, StringComparer.OrdinalIgnoreCase));
+    }
+
+    private void SetMinimalAuto(bool on)
+    {
+        if (on == _minimalAuto)
+            return;
+        _minimalAuto = on;
+        if (!on)
+            _minimalSuppressed = false;
+        Log.Info($"Minimal Mode {(on ? "brought up" : "put away")} by the app in front");
+        UpdateMinimal();
+        _overlay?.Reevaluate();
+    }
+
+    /// <summary>Minimal Mode's window follows its switch (and the settings' live preview).</summary>
+    private void UpdateMinimal()
+    {
+        // Settings saved while closing (the windows' last places) must not show them again.
+        if (_minimal is null || _settings is null || IsShuttingDown)
+            return;
+        var on = MinimalShown;
+        // Not that minimal: the mini player floats instead of the lyrics alone.
+        if (on && _settings.Current.Minimal.NotThatMinimal && _miniPlayer is not null)
+        {
+            _minimal.HideLyrics();
+            var m = _settings.Current.Minimal;
+            _miniPlayer.ShowPinned(new Core.Layout.PixelRect(m.PlayerX, m.PlayerY, m.PlayerWidth, m.PlayerWidth > 0 ? 1 : 0),
+                new PinnedOptions(m.ClickThrough, m.Locked, m.Topmost, m.ShowClickThroughMark, m.AutoFit, m.ControlsOnHover, m.PlayerButtonsOnHover,
+                    m.PlayerWindowWidth, m.PlayerLyricsHeight,
+                    on => _settings.Update(s => s.Minimal.ClickThrough = on),
+                    (r, width, lyrics) => _settings.Update(s => (s.Minimal.PlayerX, s.Minimal.PlayerY, s.Minimal.PlayerWidth, s.Minimal.PlayerWindowWidth, s.Minimal.PlayerLyricsHeight)
+                        = (r.X, r.Y, r.Width, width, lyrics)),
+                    locked => _settings.Update(s => s.Minimal.Locked = locked),
+                    () => _settings.Update(s => s.Minimal.Enabled = false),
+                    () => _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, false))));
+            return;
+        }
+        _miniPlayer?.Unpin();
+        if (on || _minimalPreview)
+            _minimal.ShowLyrics(preview: !on);
+        else
+            _minimal.HideLyrics();
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

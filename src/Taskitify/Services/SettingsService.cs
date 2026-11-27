@@ -16,6 +16,7 @@ public sealed class SettingsService
     };
 
     private readonly DispatcherTimer _saveTimer;
+    private bool _inMemory;
 
     public SettingsService()
     {
@@ -26,6 +27,9 @@ public sealed class SettingsService
             Save();
         };
     }
+
+    /// <summary>Settings that live only in memory (the welcome tour's demonstrations): never saved, never change the language.</summary>
+    public static SettingsService InMemory(AppSettings current) => new() { Current = current, _inMemory = true };
 
     public static string FilePath { get; } = Path.Combine(AppPaths.RoamingDirectory, "settings.json");
 
@@ -41,8 +45,13 @@ public sealed class SettingsService
         {
             if (File.Exists(FilePath))
             {
-                Current = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath), Json) ?? new AppSettings();
+                var text = File.ReadAllText(FilePath);
+                Current = JsonSerializer.Deserialize<AppSettings>(text, Json) ?? new AppSettings();
                 Current.MigrateLegacy();
+                // Looks saved before the display typeface had Windows' font as their default.
+                if (text.Contains("\"MiniPlayerLook\"", StringComparison.Ordinal) && !text.Contains("\"Revision\"", StringComparison.Ordinal)
+                    && Current.MiniPlayerLook.Typeface == Models.LyricsTypeface.System)
+                    Current.MiniPlayerLook.Typeface = Models.LyricsTypeface.Modern;
                 return;
             }
             IsFirstRun = true;
@@ -50,14 +59,23 @@ public sealed class SettingsService
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
             Log.Error("Could not read settings, using defaults", ex);
+            // Keep the unreadable file: the next save would otherwise replace it with the defaults.
+            try { File.Copy(FilePath, FilePath + ".invalid", overwrite: true); }
+            catch (Exception copy) when (copy is IOException or UnauthorizedAccessException) { Log.Warn($"Could not keep the unreadable settings: {copy.Message}"); }
         }
-        Current = new AppSettings();
+        // New settings already have every button they default to; only older files are migrated.
+        Current = new AppSettings { LikeButtonAdded = true };
     }
 
     /// <summary>Mutates the settings, notifies listeners and saves shortly after (debounced).</summary>
     public void Update(Action<AppSettings> change)
     {
         change(Current);
+        if (_inMemory)
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
+            return;
+        }
         LocalizationService.SetLanguage(Current.Language);
         Changed?.Invoke(this, EventArgs.Empty);
         _saveTimer.Stop();

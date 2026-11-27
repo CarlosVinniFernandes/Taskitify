@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
 using Taskitify.Core.Layout;
 using static Taskitify.Infrastructure.NativeMethods;
 
@@ -61,6 +62,20 @@ internal static class WindowInterop
 
     public static void BringToTopmost(IntPtr hwnd) =>
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+
+    public static void RaisePopup(Visual? content)
+    {
+        if (content is UIElement { IsVisible: true } && PresentationSource.FromVisual(content) is HwndSource popup)
+            BringToTopmost(popup.Handle);
+    }
+
+    public static bool PopupContains(Visual? content, int x, int y)
+    {
+        if (content is not UIElement { IsVisible: true } || PresentationSource.FromVisual(content) is not HwndSource popup)
+            return false;
+        var bounds = GetBounds(popup.Handle);
+        return x >= bounds.Left && x < bounds.Right && y >= bounds.Top && y < bounds.Bottom;
+    }
 
     public static PixelRect GetBounds(IntPtr hwnd) =>
         GetWindowRect(hwnd, out var r) ? PixelRect.FromLTRB(r.Left, r.Top, r.Right, r.Bottom) : default;
@@ -221,6 +236,73 @@ internal static class FocusHelper
 }
 
 /// <summary>
+/// Ctrl + Alt + left click on a window that lets clicks through (Minimal Mode): the click is
+/// caught, never reaches what is underneath, and gives the window its clicks back. A low-level
+/// mouse hook, installed only while clicks pass through; it answers at once and polls nothing.
+/// </summary>
+internal sealed class ModifierClickWatcher : IDisposable
+{
+    private const int VK_CONTROL = 0x11;
+    private const int VK_MENU = 0x12;
+    private const int WM_LBUTTONUP = 0x0202;
+    private readonly LowLevelMouseProc _proc; // kept alive for the native side
+    private readonly Func<int, int, bool> _inside;
+    private readonly Action _onClick;
+    private IntPtr _hook;
+    private bool _swallowUp;
+
+    public ModifierClickWatcher(Func<int, int, bool> inside, Action onClick)
+    {
+        _inside = inside;
+        _onClick = onClick;
+        _proc = HookProc;
+    }
+
+    public bool IsRunning => _hook != IntPtr.Zero;
+
+    public void Start()
+    {
+        if (_hook == IntPtr.Zero)
+            _hook = SetWindowsHookEx(WH_MOUSE_LL, _proc, GetModuleHandle(null), 0);
+    }
+
+    public void Stop()
+    {
+        if (_hook != IntPtr.Zero)
+        {
+            UnhookWindowsHookEx(_hook);
+            _hook = IntPtr.Zero;
+        }
+    }
+
+    public void Dispose() => Stop();
+
+    private IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode >= 0)
+        {
+            var message = (int)wParam;
+            if (message == WM_LBUTTONDOWN && GetAsyncKeyState(VK_CONTROL) < 0 && GetAsyncKeyState(VK_MENU) < 0)
+            {
+                var data = System.Runtime.InteropServices.Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
+                if (_inside(data.X, data.Y))
+                {
+                    _swallowUp = true;
+                    _onClick();
+                    return new IntPtr(1);
+                }
+            }
+            else if (message == WM_LBUTTONUP && _swallowUp)
+            {
+                _swallowUp = false;
+                return new IntPtr(1);
+            }
+        }
+        return CallNextHookEx(_hook, nCode, wParam, lParam);
+    }
+}
+
+/// <summary>
 /// Low-level mouse hook used only while the mini player is open, to close it on a click
 /// outside even if it could not take activation. Runs in this process; nothing is injected.
 /// </summary>
@@ -262,6 +344,58 @@ internal sealed class OutsideClickWatcher : IDisposable
             _onButtonDown(data.X, data.Y);
         }
         return CallNextHookEx(_hook, nCode, wParam, lParam);
+    }
+}
+
+/// <summary>
+/// A system-wide keyboard shortcut (RegisterHotKey on a message-only window): Windows sends a
+/// message when it is pressed, in any app or game; nothing is hooked or polled.
+/// </summary>
+internal sealed class GlobalHotkey : IDisposable
+{
+    private const int Id = 0x7A11;
+    private readonly System.Windows.Interop.HwndSource _source;
+    private readonly Action _pressed;
+    private bool _registered;
+
+    public GlobalHotkey(Action pressed)
+    {
+        _pressed = pressed;
+        _source = new System.Windows.Interop.HwndSource(new System.Windows.Interop.HwndSourceParameters("Taskitify shortcut")
+        {
+            ParentWindow = new IntPtr(-3), // HWND_MESSAGE
+            WindowStyle = 0,
+        });
+        _source.AddHook((IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled) =>
+        {
+            if (msg == WM_HOTKEY && wParam.ToInt32() == Id)
+            {
+                handled = true;
+                _pressed();
+            }
+            return IntPtr.Zero;
+        });
+    }
+
+    /// <summary>False when another app already uses the combination.</summary>
+    public bool Register(int modifiers, int key)
+    {
+        Unregister();
+        _registered = RegisterHotKey(_source.Handle, Id, (uint)modifiers | MOD_NOREPEAT, (uint)key);
+        return _registered;
+    }
+
+    public void Unregister()
+    {
+        if (_registered)
+            UnregisterHotKey(_source.Handle, Id);
+        _registered = false;
+    }
+
+    public void Dispose()
+    {
+        Unregister();
+        _source.Dispose();
     }
 }
 

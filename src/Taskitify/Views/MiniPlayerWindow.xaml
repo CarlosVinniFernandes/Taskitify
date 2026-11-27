@@ -7,6 +7,7 @@
         AllowsTransparency="True"
         Background="Transparent"
         ResizeMode="NoResize"
+        ShowActivated="False"
         ShowInTaskbar="False"
         Topmost="True"
         Width="384"
@@ -15,6 +16,27 @@
         TextOptions.TextFormattingMode="Display"
         UseLayoutRounding="True">
 
+    <Window.Resources>
+        <!-- Every transport button fits the narrowest card (6 × 36 + play). -->
+        <Style x:Key="RowButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+            <Setter Property="Width" Value="36" />
+            <Setter Property="Height" Value="36" />
+        </Style>
+        <!-- Shuffle, repeat and an open volume turn Spotify green, as on the taskbar. -->
+        <Style x:Key="ModeButton" TargetType="Button" BasedOn="{StaticResource RowButton}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="Foreground" Value="#FF1ED760" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <!-- "Solid" controls: a large play glyph without its circle. -->
+        <Style x:Key="SolidPlayButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="48" />
+        </Style>
+    </Window.Resources>
+
     <!-- 12px transparent margin leaves room for the shadow. -->
     <Grid x:Name="Chrome" Margin="12">
         <Grid.RenderTransform>
@@ -22,132 +44,112 @@
         </Grid.RenderTransform>
 
         <!-- Shadow lives on its own layer so the content keeps ClearType-sharp text. -->
-        <Border CornerRadius="10" Background="{DynamicResource PopupBackgroundBrush}">
+        <Border CornerRadius="12" Background="{DynamicResource PopupBackgroundBrush}">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="24" ShadowDepth="6" Direction="270" Opacity="0.35" Color="Black" />
             </Border.Effect>
         </Border>
 
-        <Border x:Name="ContentCard" CornerRadius="10" Background="{DynamicResource PopupBackgroundBrush}"
-                BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="1" Padding="16,16,16,12">
-            <StackPanel>
-                <!-- Header: cover, title, artist. Every element below is optional (Settings), like on the taskbar. -->
-                <Grid Visibility="{Binding ShowHeader, Converter={StaticResource BoolToVisibility}}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Grid Width="64" Height="64" Margin="0,0,14,0" Visibility="{Binding ShowCover, Converter={StaticResource BoolToVisibility}}">
-                        <Border CornerRadius="6" Background="{DynamicResource SubtleFillHoverBrush}">
+        <!-- Floating (not that minimal): clicks pass through, marked by the crossed-out pointer;
+             the corner grip resizes it. Both only while pinned. -->
+        <Border x:Name="ContentCard" CornerRadius="12" Background="{DynamicResource PopupBackgroundBrush}"
+                BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="1" Padding="16,16,16,10" ClipToBounds="True">
+            <!-- The parts below are placed by the layout (vertical or cinema wide) in code: one set, two arrangements. -->
+            <Grid x:Name="LayoutRoot">
+
+                <!-- Song: cover, title, artist and the secondary actions (like, share). -->
+                <Grid x:Name="HeaderPart" Visibility="{Binding ShowHeaderPart, Converter={StaticResource BoolToVisibility}}" TextOptions.TextFormattingMode="Ideal">
+                    <Grid x:Name="CoverPart" Width="64" Height="64" Margin="0,0,14,0" VerticalAlignment="Top"
+                          Visibility="{Binding ShowCover, Converter={StaticResource BoolToVisibility}}">
+                        <Border x:Name="CoverPlaceholder" CornerRadius="8" Background="{DynamicResource SubtleFillHoverBrush}">
                             <TextBlock Text="&#xE8D6;" FontFamily="{StaticResource IconFont}" FontSize="24"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
-                        <Border CornerRadius="6">
+                        <Border x:Name="CoverImage" CornerRadius="8">
                             <Border.Background>
                                 <ImageBrush ImageSource="{Binding Cover}" Stretch="UniformToFill" />
                             </Border.Background>
                         </Border>
                     </Grid>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Title}" FontFamily="{StaticResource UiDisplayFont}" FontSize="16" FontWeight="SemiBold"
+                    <StackPanel x:Name="TitlePart" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Title}" FontFamily="{Binding TitleFont}" FontSize="{Binding TitleFontSize}" FontWeight="{Binding TitleWeight}"
                                    Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"
                                    ToolTip="{Binding Title}" Visibility="{Binding ShowTitle, Converter={StaticResource BoolToVisibility}}" />
-                        <TextBlock Text="{Binding Artist}" FontSize="13" Margin="0,2,0,0"
+                        <TextBlock Text="{Binding Artist}" FontSize="13.5" Margin="0,3,0,0" FontFamily="{Binding TitleFont}" FontWeight="Medium"
                                    Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"
-                                   Visibility="{Binding ShowArtist, Converter={StaticResource BoolToVisibility}}" />
+                                   ToolTip="{Binding Artist}" Visibility="{Binding ShowArtist, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                    <StackPanel x:Name="ActionsPart" Orientation="Horizontal" VerticalAlignment="Top" Margin="8,0,-6,0">
+                        <Button Style="{StaticResource IconButton}" Width="34" Height="34" Command="{Binding Like.ClickCommand}"
+                                ToolTip="{Binding Like.Tip}" AutomationProperties.Name="{Binding Like.Tip}"
+                                Visibility="{Binding ShowLike, Converter={StaticResource BoolToVisibility}}">
+                            <local:LikeGlyph x:Name="LikeIcon" IsLiked="{Binding Like.IsLiked}" Stroke="{DynamicResource TextPrimaryBrush}" Width="18" Height="18" />
+                        </Button>
+                        <Button Style="{StaticResource IconButton}" Width="34" Height="34" FontSize="15" Command="{Binding ShareCommand}" Content="&#xE72D;"
+                                ToolTip="{DynamicResource Loc.LyricCardOpen}" AutomationProperties.Name="{DynamicResource Loc.LyricCardOpen}" />
                     </StackPanel>
                 </Grid>
 
-                <!-- Controls -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,4"
-                            Visibility="{Binding ShowControls, Converter={StaticResource BoolToVisibility}}">
-                    <StackPanel.Resources>
-                        <!-- Shuffle and repeat turn Spotify green while on, as on the taskbar. -->
-                        <Style x:Key="ModeButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
-                                    <Setter Property="Foreground" Value="#FF1ED760" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </StackPanel.Resources>
-                    <Button Style="{StaticResource ModeButton}" Command="{Binding ShuffleCommand}" Content="&#xE8B1;" Tag="{Binding IsShuffleActive}"
-                            ToolTip="{DynamicResource Loc.Shuffle}" Visibility="{Binding ShowShuffle, Converter={StaticResource BoolToVisibility}}" />
-                    <Button Style="{StaticResource IconButton}" Command="{Binding PreviousCommand}" Content="&#xE892;" ToolTip="{DynamicResource Loc.Previous}"
-                            Visibility="{Binding ShowPrevious, Converter={StaticResource BoolToVisibility}}" />
-                    <Button Style="{StaticResource PlayButton}" Command="{Binding PlayPauseCommand}" Margin="12,0" x:Name="PlayPauseButton"
-                            ToolTip="{DynamicResource Loc.PlayPause}" Visibility="{Binding ShowPlayPause, Converter={StaticResource BoolToVisibility}}">
-                        <TextBlock x:Name="PlayPauseGlyph" Text="&#xE768;" FontFamily="{StaticResource IconFont}"
-                                   Foreground="{DynamicResource WindowBackgroundBrush}" />
-                    </Button>
-                    <Button Style="{StaticResource IconButton}" Command="{Binding NextCommand}" Content="&#xE893;" ToolTip="{DynamicResource Loc.Next}"
-                            Visibility="{Binding ShowNext, Converter={StaticResource BoolToVisibility}}" />
-                    <Button Style="{StaticResource ModeButton}" Command="{Binding RepeatCommand}" Content="{Binding RepeatGlyph}" Tag="{Binding IsRepeatActive}"
-                            ToolTip="{DynamicResource Loc.Repeat}" Visibility="{Binding ShowRepeat, Converter={StaticResource BoolToVisibility}}" />
-                    <Button x:Name="VolumeButton" Style="{StaticResource IconButton}" Command="{Binding MuteCommand}" Content="{Binding VolumeGlyph}"
-                            ToolTip="{Binding VolumeTip}" Visibility="{Binding ShowVolume, Converter={StaticResource BoolToVisibility}}" />
-                </StackPanel>
-
-                <Grid Margin="0,8,0,8">
                 <!-- Lyrics: a fixed viewport; the list is translated so the current line sits in the middle.
                      A transparent background lets the wheel scroll it anywhere, between lines too. -->
-                <Grid x:Name="LyricsViewport" Height="168" ClipToBounds="True" Background="Transparent">
-                    <Grid.OpacityMask>
-                        <!-- Absolute: relative mapping would use the bounds of the whole (translated) list. -->
-                        <LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="0,168">
-                            <GradientStop Offset="0" Color="Transparent" />
-                            <GradientStop Offset="0.18" Color="Black" />
-                            <GradientStop Offset="0.82" Color="Black" />
-                            <GradientStop Offset="1" Color="Transparent" />
-                        </LinearGradientBrush>
-                    </Grid.OpacityMask>
+                <Grid x:Name="LyricsPart" Margin="0,10,0,6" TextOptions.TextFormattingMode="Ideal">
+                    <Grid x:Name="LyricsViewport" Height="176" ClipToBounds="True" Background="Transparent">
+                        <Grid.OpacityMask>
+                            <!-- Absolute: relative mapping would use the bounds of the whole (translated) list. -->
+                            <LinearGradientBrush x:Name="LyricsFade" MappingMode="Absolute" StartPoint="0,0" EndPoint="0,176">
+                                <GradientStop Offset="0" Color="Transparent" />
+                                <GradientStop Offset="0.16" Color="Black" />
+                                <GradientStop Offset="0.84" Color="Black" />
+                                <GradientStop Offset="1" Color="Transparent" />
+                            </LinearGradientBrush>
+                        </Grid.OpacityMask>
 
-                    <!-- A Canvas measures its child with infinite height, so no layout clip cuts the list. -->
-                    <Canvas>
-                    <ItemsControl x:Name="LyricsList" ItemsSource="{Binding Lines}"
-                                  Width="{Binding ActualWidth, ElementName=LyricsViewport}">
-                        <ItemsControl.RenderTransform>
-                            <TranslateTransform x:Name="LyricsOffset" />
-                        </ItemsControl.RenderTransform>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Text}" TextWrapping="Wrap" TextAlignment="Center"
-                                           FontSize="14" Padding="4,5" Cursor="Hand"
-                                           MouseLeftButtonUp="OnLyricLineClicked">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <!-- In the style (not a local value) so the triggers can override it. -->
-                                            <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsPast}" Value="True">
-                                                    <Setter Property="Opacity" Value="0.75" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding IsCurrent}" Value="True">
-                                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-                                                    <Setter Property="FontWeight" Value="SemiBold" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    </Canvas>
+                        <!-- A Canvas measures its child with infinite height, so no layout clip cuts the list. -->
+                        <Canvas>
+                            <StackPanel Width="{Binding ActualWidth, ElementName=LyricsViewport}">
+                                <StackPanel.RenderTransform>
+                                    <TranslateTransform x:Name="LyricsOffset" />
+                                </StackPanel.RenderTransform>
+                                <ItemsControl x:Name="LyricsList" ItemsSource="{Binding Lines}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <!-- The emphasis (opacity, scale, weight) comes from the highlight style; scaling is a render
+                                                 transform, so a growing line never moves the others or resizes the window. -->
+                                            <local:LyricMotionText Text="{Binding Text}" TextWrapping="Wrap" Cursor="Hand"
+                                                       LineStackingStrategy="BlockLineHeight"
+                                                       LineHeight="{Binding DataContext.MotionLineHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       Expressive="{Binding DataContext.ExpressiveMotion, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       TransitionMilliseconds="{Binding MotionMilliseconds}"
+                                                       TextAlignment="{Binding DataContext.LyricsTextAlignment, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       FontFamily="{Binding DataContext.LyricsFont, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       FontSize="{Binding DataContext.LyricsFontSize, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       Padding="{Binding DataContext.LyricsLinePadding, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       RenderTransformOrigin="{Binding DataContext.LyricsScaleOrigin, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}" TargetOpacity="{Binding Emphasis}"
+                                                       FontWeight="{Binding Weight}" Effect="{Binding Soften}" TargetScale="{Binding Scale}"
+                                                       MouseLeftButtonUp="OnLyricLineClicked" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Text="{Binding Credit}" FontSize="14" FontWeight="SemiBold" Margin="4,16,4,4"
+                                           TextWrapping="Wrap" TextAlignment="{Binding LyricsTextAlignment}"
+                                           Foreground="{DynamicResource TextPrimaryBrush}" Visibility="{Binding Credit, Converter={StaticResource NullToCollapsed}}" />
+                            </StackPanel>
+                        </Canvas>
 
-                    <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" TextAlignment="Center"
-                               VerticalAlignment="Center" Margin="12,0" FontSize="13"
-                               Foreground="{DynamicResource TextSecondaryBrush}" x:Name="StatusText" />
-                </Grid>
-                <!-- Shown once the user scrolls the lyrics; outside the viewport so its fade does not dim it. -->
-                <Button x:Name="ResyncButton" Style="{StaticResource FlatButton}" Visibility="Collapsed" Click="OnResync"
-                        VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,2" Padding="12,4" FontSize="12"
-                        Background="{DynamicResource WindowBackgroundBrush}" Content="{DynamicResource Loc.LyricsResync}" />
+                        <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" TextAlignment="Center"
+                                   VerticalAlignment="Center" Margin="12,0" FontSize="13"
+                                   Foreground="{DynamicResource TextSecondaryBrush}" x:Name="StatusText" />
+                    </Grid>
+                    <!-- Shown once the user scrolls the lyrics; outside the viewport so its fade does not dim it. -->
+                    <Button x:Name="ResyncButton" Style="{StaticResource FlatButton}" Visibility="Collapsed" Click="OnResync"
+                            VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,2" Padding="12,4" FontSize="12"
+                            Background="{DynamicResource WindowBackgroundBrush}" Content="{DynamicResource Loc.LyricsResync}" />
                 </Grid>
 
                 <!-- Progress -->
-                <StackPanel Visibility="{Binding ShowProgress, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel x:Name="ProgressPart" Margin="0,2,0,0" Visibility="{Binding ShowProgress, Converter={StaticResource BoolToVisibility}}">
                     <local:SeekBar x:Name="Progress" IsEnabled="{Binding CanSeek}"
                                    AutomationProperties.Name="{DynamicResource Loc.Seek}" />
                     <Grid Margin="0,2,0,0">
@@ -156,7 +158,114 @@
                                    HorizontalAlignment="Right" />
                     </Grid>
                 </StackPanel>
-            </StackPanel>
+
+                <!-- Controls, under the progress, nearest the taskbar. Play always sits in the middle whatever else is
+                     chosen: previous and shuffle to its left, next and repeat to its right, the volume at the edge. -->
+                <Grid x:Name="ControlsPart" Margin="0,6,0,2" Visibility="{Binding ShowTransport, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Style="{StaticResource ModeButton}" Command="{Binding ShuffleCommand}" Content="&#xE8B1;" Tag="{Binding IsShuffleActive}"
+                                AutomationProperties.Name="{DynamicResource Loc.Shuffle}" ToolTip="{DynamicResource Loc.Shuffle}" Visibility="{Binding ShowShuffle, Converter={StaticResource BoolToVisibility}}" />
+                        <Button x:Name="PreviousButton" Style="{StaticResource RowButton}" Command="{Binding PreviousCommand}" Content="&#xE892;" AutomationProperties.Name="{DynamicResource Loc.Previous}" ToolTip="{DynamicResource Loc.Previous}"
+                                Visibility="{Binding ShowPrevious, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+
+                    <Button Grid.Column="1" Style="{StaticResource PlayButton}" Command="{Binding PlayPauseCommand}" Margin="8,0" x:Name="PlayPauseButton"
+                            AutomationProperties.Name="{DynamicResource Loc.PlayPause}" ToolTip="{DynamicResource Loc.PlayPause}" Visibility="{Binding ShowPlayPause, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock x:Name="PlayPauseGlyph" Text="&#xE768;" FontFamily="{StaticResource IconFont}"
+                                   Foreground="{DynamicResource WindowBackgroundBrush}" />
+                    </Button>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Button x:Name="NextButton" Style="{StaticResource RowButton}" Command="{Binding NextCommand}" Content="&#xE893;" AutomationProperties.Name="{DynamicResource Loc.Next}" ToolTip="{DynamicResource Loc.Next}"
+                                Visibility="{Binding ShowNext, Converter={StaticResource BoolToVisibility}}" />
+                        <Button Style="{StaticResource ModeButton}" Command="{Binding RepeatCommand}" Content="{Binding RepeatGlyph}" Tag="{Binding IsRepeatActive}"
+                                AutomationProperties.Name="{DynamicResource Loc.Repeat}" ToolTip="{DynamicResource Loc.Repeat}" Visibility="{Binding ShowRepeat, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                    <Button x:Name="VolumeButton" Grid.Column="2" Style="{StaticResource ModeButton}" Command="{Binding Volume.ToggleOpenCommand}"
+                            Content="{Binding Volume.Glyph}" HorizontalAlignment="Right" Tag="{Binding Volume.IsOpen}" ToolTip="{Binding Volume.Tip}"
+                            Visibility="{Binding ShowVolume, Converter={StaticResource BoolToVisibility}}" />
+                </Grid>
+
+                <Popup x:Name="VolumePopup" PlacementTarget="{Binding ElementName=VolumeButton}" Placement="Custom"
+                       StaysOpen="True" AllowsTransparency="True" IsOpen="{Binding Volume.IsOpen, Mode=TwoWay}">
+                    <!-- Include the flyout's shadow margin in its placement size. -->
+                    <Grid>
+                        <Border Style="{StaticResource FlyoutCard}">
+                            <StackPanel Orientation="Horizontal">
+                                <Button Style="{StaticResource IconButton}" Command="{Binding Volume.MuteCommand}" Content="{Binding Volume.Glyph}"
+                                        ToolTip="{DynamicResource Loc.MuteUnmute}" AutomationProperties.Name="{DynamicResource Loc.MuteUnmute}" />
+                                <Slider x:Name="VolumeSlider" Style="{StaticResource SettingsSlider}" Width="170" Minimum="0" Maximum="100" Margin="6,0,10,0"
+                                        VerticalAlignment="Center" IsMoveToPointEnabled="True" SmallChange="1" LargeChange="10"
+                                        Value="{Binding Volume.Percent, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Volume}" />
+                                <TextBlock Text="{Binding Volume.Percent, StringFormat={}{0:0}}" Width="26" TextAlignment="Right"
+                                           VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Popup>
+
+                <!-- Unlike needs a confirmation, so a stray click does not drop a song from Liked Songs. -->
+                <Border x:Name="ConfirmPart" Margin="0,8,0,4" Padding="12,8" CornerRadius="6" Background="{DynamicResource SubtleFillHoverBrush}"
+                        Visibility="{Binding Like.IsConfirming, Converter={StaticResource BoolToVisibility}}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{DynamicResource Loc.UnlikeQuestion}" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,10,0" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Style="{StaticResource FlatButton}" Command="{Binding Like.CancelCommand}" Content="{DynamicResource Loc.Cancel}"
+                                    Padding="10,4" Margin="0,0,6,0" FontSize="12" />
+                            <Button Style="{StaticResource DangerButton}" Command="{Binding Like.ConfirmCommand}" Content="{DynamicResource Loc.UnlikeConfirm}"
+                                    Padding="10,4" FontSize="12" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
         </Border>
+        <!-- Floating: the window's own buttons, top right, in the room the lyrics give up for them. -->
+        <StackPanel x:Name="PinnedToolbar" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,7,12,0"
+                    Visibility="Collapsed" Opacity="0">
+            <StackPanel.Resources>
+                <Style x:Key="PinnedTool" TargetType="Button" BasedOn="{StaticResource IconButton}">
+                    <Setter Property="Width" Value="28" />
+                    <Setter Property="Height" Value="28" />
+                    <Setter Property="FontSize" Value="12" />
+                </Style>
+            </StackPanel.Resources>
+            <Button x:Name="PinnedSwitch" Style="{StaticResource PinnedTool}" Content="&#xE8D6;"
+                    ToolTip="{DynamicResource Loc.SwitchToMinimal}" AutomationProperties.Name="{DynamicResource Loc.SwitchToMinimal}" />
+            <Button x:Name="PinnedSettings" Style="{StaticResource PinnedTool}" Content="&#xE713;"
+                    ToolTip="{DynamicResource Loc.MinimalSettings}" AutomationProperties.Name="{DynamicResource Loc.MinimalSettings}" />
+            <Button x:Name="PinnedClickThrough" Style="{StaticResource PinnedTool}"
+                    ToolTip="{DynamicResource Loc.MinimalClickThroughTip}" AutomationProperties.Name="{DynamicResource Loc.MinimalClickThroughTip}">
+                <Grid Width="16" Height="16">
+                    <Path Data="M4,2 L4,12 L6.5,9.6 L8.6,13.8 L10.2,13 L8.2,8.9 L11.6,8.9 Z" Fill="{DynamicResource TextPrimaryBrush}" />
+                    <Path Data="M2.5,14 L13.5,2.5" Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                </Grid>
+            </Button>
+            <Button x:Name="PinnedLock" Style="{StaticResource PinnedTool}" Content="&#xE785;"
+                    ToolTip="{DynamicResource Loc.MinimalLock}" AutomationProperties.Name="{DynamicResource Loc.MinimalLock}" />
+            <Button x:Name="PinnedClose" Style="{StaticResource PinnedTool}" Content="&#xE711;"
+                    ToolTip="{DynamicResource Loc.MinimalClose}" AutomationProperties.Name="{DynamicResource Loc.MinimalClose}" />
+        </StackPanel>
+        <Grid x:Name="PinnedMark" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10,0,0,8"
+              Opacity="0.6" IsHitTestVisible="False" Visibility="Collapsed">
+            <Path Data="M5,3 L5,15 L8,12 L10.5,17 L12.5,16 L10,11 L14,11 Z" Fill="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <Path Data="M3,17 L17,3" Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Grid>
+        <Grid x:Name="PinnedGrip" Width="22" Height="22" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,2"
+              Background="Transparent" Cursor="SizeNWSE" Opacity="0.6" Visibility="Collapsed" ToolTip="{DynamicResource Loc.MinimalResize}">
+            <Path Data="M16,4 L4,16 M16,9 L9,16 M16,14 L14,16" Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.6"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Grid>
     </Grid>
 </Window>
