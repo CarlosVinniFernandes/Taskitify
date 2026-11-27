@@ -224,117 +224,160 @@ public static partial class LyricCardRenderer
     // ======================= Dictionary page =======================
 
     /// <summary>
-    /// A page of a dictionary, edge to edge: running head and guide word, the headword set large
-    /// and alone, its grammar in italics, the lines as the numbered definition, the source as the
-    /// citation, and a thumb-index tab cut into the page's edge.
+    /// A page torn from a reference book, kept: running head and guide word, the headword alone
+    /// and large, its respelling and grammar, the lines as the numbered definition, the citation,
+    /// the next entries in two tight columns. Someone read it with a pencil: the headword is
+    /// underlined, a heart and a date sit in the margin. A ribbon marks the page; the spine
+    /// shades its inner edge; a thumb index is cut into the outer one.
     /// </summary>
     private static FrameworkElement DictionaryEntry(Studio d)
     {
         var u = d.U;
         var W = d.CardWidth;
         var H = d.Height;
-        var paper = C("#F4F0E6");
+        var paper = C("#F3EEE2");
         var ink = C("#1D1B18");
-        var grey = C("#7A7166");
+        var grey = C("#766D62");
+        var pencil = C("#5E5B57");
         var accent = Luminance(d.Accent) > .55 ? Darken(d.Accent, .5) : d.Accent;
         var word = d.Text("word");
-        var root = new Grid { Background = Fibers(paper, Alpha(C("#B9A98E"), 34)) };
-        var left = (d.Wide ? 190 : 118) * u;
-        var right = (d.Wide ? 230 : 150) * u;
+        var root = new Grid { Background = Fibers(paper, Alpha(C("#B5A487"), 40)) };
+        // The spine's shade on the inner edge, and a little age at the outer one.
+        root.Children.Add(new Border { Background = new LinearGradientBrush(new GradientStopCollection
+        {
+            new(Alpha(C("#3B2E1E"), 70), 0), new(Alpha(C("#3B2E1E"), 0), .09), new(Alpha(C("#3B2E1E"), 0), .93), new(Alpha(C("#8A6A3E"), 34), 1),
+        }, 0) });
+        var left = (d.Wide ? 200 : 128) * u;
+        var right = (d.Wide ? 240 : 158) * u;
         var width = W - left - right;
+        var tall = !d.Wide && H > 1500;
 
-        // Running head: dictionary name, rule, guide word and page.
-        var head = new Grid { Margin = new Thickness(left, 84 * u, right, 0), VerticalAlignment = VerticalAlignment.Top };
-        head.Children.Add(Spaced("TASKITIFY · DICTIONARY OF SONGS", Figtree, 20 * u, FontWeights.Bold, grey, TextAlignment.Left, .3));
-        var guide = Label(word.ToLower(CultureInfo.CurrentCulture) + "   " + d.Text("number").PadLeft(1) + "27", Georgia, 24 * u, FontWeights.Normal, grey, TextAlignment.Right);
+        // Running head: small capitals, rule, guide word in italics, folio.
+        var head = new Grid { Margin = new Thickness(left, 86 * u, right, 0), VerticalAlignment = VerticalAlignment.Top };
+        head.Children.Add(Spaced("DICTIONARY OF SONGS", Figtree, 18 * u, FontWeights.Bold, grey, TextAlignment.Left, .32));
+        var guide = Label(word.ToLower(CultureInfo.CurrentCulture) + "  —  " + d.Text("number") + "27", Georgia, 23 * u, FontWeights.Normal, grey, TextAlignment.Right);
         guide.FontStyle = FontStyles.Italic;
         head.Children.Add(guide);
         root.Children.Add(head);
-        root.Children.Add(new Border { Height = 1.6 * u, Background = Brush(Alpha(ink, 150)), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(left, 128 * u, right, 0) });
+        root.Children.Add(new Border { Height = 1.4 * u, Background = Brush(Alpha(ink, 140)), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(left, 126 * u, right, 0) });
+        root.Children.Add(new Border { Height = .8 * u, Background = Brush(Alpha(ink, 90)), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(left, 131 * u, right, 0) });
 
-        // Thumb index: the page's letter, cut into the right edge.
+        // Thumb index and ribbon.
         var initial = string.IsNullOrWhiteSpace(word) ? "A" : StringInfo.GetNextTextElement(word.Trim()).ToUpper(CultureInfo.CurrentCulture);
+        var tab = Label(initial, DmSerif, 60 * u, FontWeights.Normal, C("#F7F1E6"), TextAlignment.Center);
+        tab.VerticalAlignment = VerticalAlignment.Center;
         root.Children.Add(new Border
         {
-            Width = 86 * u, Height = 190 * u, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(0, H * .3, 0, 0), CornerRadius = new CornerRadius(16 * u, 0, 0, 16 * u),
-            Background = new LinearGradientBrush(Lighten(accent, .12), Darken(accent, .82), 0),
-            Child = Label(initial, DmSerif, 64 * u, FontWeights.Normal, C("#F7F1E6"), TextAlignment.Center),
+            Width = 84 * u, Height = 184 * u, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, H * .32, 0, 0), CornerRadius = new CornerRadius(14 * u, 0, 0, 14 * u),
+            Background = new LinearGradientBrush(Lighten(accent, .1), Darken(accent, .8), 0), Child = tab,
         });
-        ((FrameworkElement)((Border)root.Children[^1]).Child).VerticalAlignment = VerticalAlignment.Center;
+        root.Children.Add(Ribbon(accent, 40 * u, (tall ? 430 : 300) * u, HorizontalAlignment.Right, new Thickness(0, 0, 96 * u, 0)));
 
         // The entry.
         var entry = new StackPanel { Width = width, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
-        var headword = FitText(word, DmSerif, FontWeights.Normal, FontStyles.Normal, ink, width, 330 * u, 190 * u, 70 * u, TextAlignment.Left, 1.0);
-        entry.Children.Add(headword);
+        var headword = FitText(word, DmSerif, FontWeights.Normal, FontStyles.Normal, ink, width - 40 * u, 330 * u, 186 * u, 70 * u, TextAlignment.Left, 1.0);
+        var wordBox = new Grid();
+        wordBox.Children.Add(headword);
+        // A pencil underline, drawn quickly under the headword.
+        headword.Measure(new Size(width, double.PositiveInfinity));
+        var under = headword.DesiredSize.Height + (6 * u);
+        var lastLine = word.Contains(' ') && MeasureWidth(word, DmSerif, headword.FontSize) > width - 40 * u ? word[(word.LastIndexOf(' ') + 1)..] : word;
+        var span = Math.Min(width * .7, MeasureWidth(lastLine, DmSerif, headword.FontSize) * 1.05);
+        wordBox.Children.Add(Pencil(Geometry.Parse(FormattableString.Invariant(
+            $"M{4 * u},{under} C{span * .3},{under + (9 * u)} {span * .62},{under - (5 * u)} {span},{under + (4 * u)}")), pencil, 3.2 * u));
+        entry.Children.Add(wordBox);
+
         var category = d.Text("category");
         var cls = d.Text("class");
-        var grammar = new TextBlock { Margin = new Thickness(4 * u, 14 * u, 0, 0), TextWrapping = TextWrapping.Wrap };
-        grammar.Inlines.Add(new System.Windows.Documents.Run("/" + Syllables(word) + "/   ") { FontFamily = Georgia, FontSize = 30 * u, Foreground = Brush(grey) });
+        var grammar = new TextBlock { Margin = new Thickness(4 * u, 22 * u, 0, 0), TextWrapping = TextWrapping.Wrap, FontFamily = Georgia, FontSize = 30 * u, Foreground = Brush(grey) };
+        grammar.Inlines.Add(new System.Windows.Documents.Run("/" + Syllables(word) + "/   "));
         grammar.Inlines.Add(new System.Windows.Documents.Run(string.IsNullOrWhiteSpace(category) ? "n." : category)
-            { FontFamily = Georgia, FontStyle = FontStyles.Italic, FontSize = 34 * u, Foreground = Brush(accent) });
-        if (!string.IsNullOrWhiteSpace(cls) || d.Album is not null)
-            grammar.Inlines.Add(new System.Windows.Documents.Run("  ·  " + (string.IsNullOrWhiteSpace(cls) ? d.Album : cls))
-                { FontFamily = Georgia, FontStyle = FontStyles.Italic, FontSize = 30 * u, Foreground = Brush(grey) });
+            { FontStyle = FontStyles.Italic, FontSize = 34 * u, Foreground = Brush(accent) });
+        var context = string.IsNullOrWhiteSpace(cls) ? d.Album : cls;
+        if (!string.IsNullOrWhiteSpace(context))
+        {
+            grammar.Inlines.Add(new System.Windows.Documents.Run("   ["));
+            grammar.Inlines.Add(new System.Windows.Documents.Run(context.ToUpper(CultureInfo.CurrentCulture)) { FontSize = 22 * u, FontFamily = Figtree, FontWeight = FontWeights.Bold });
+            grammar.Inlines.Add(new System.Windows.Documents.Run("]"));
+        }
         entry.Children.Add(grammar);
-        entry.Children.Add(new Border { Width = 96 * u, Height = 3 * u, Background = Brush(accent), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(4 * u, 44 * u, 0, 40 * u) });
+        entry.Children.Add(new Border { Width = 96 * u, Height = 3 * u, Background = Brush(accent), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(4 * u, 40 * u, 0, 38 * u) });
 
-        // Definition: hanging number, the lines in a reading serif.
+        // Definition: hanging bold numeral, the lines in a reading serif.
         var definition = new Grid();
-        definition.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(62 * u) });
+        definition.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(60 * u) });
         definition.ColumnDefinitions.Add(new ColumnDefinition());
-        var number = Label(d.Text("number") + ".", Figtree, 34 * u, FontWeights.Bold, accent, TextAlignment.Left);
-        number.Margin = new Thickness(0, 8 * u, 0, 0);
+        var number = Label(d.Text("number") + ".", Georgia, 40 * u, FontWeights.Bold, accent, TextAlignment.Left);
         definition.Children.Add(number);
         var face = d.UserFace;
-        var reserved = 130 * u + 330 * u + 200 * u + 240 * u + 160 * u;
         var meaning = FitText(d.LyricText, face?.Family ?? Georgia, face?.Weight ?? FontWeights.Normal, FontStyles.Normal, ink,
-            width - 62 * u, Math.Max(200 * u, H - reserved), (H > 1500 ? 68 : 58) * u * d.TextScale, 24 * u, d_Align(d, TextAlignment.Left), 1.32);
+            width - 60 * u, (tall ? 440 : 260) * u, (tall ? 66 : 54) * u * d.TextScale, 24 * u, d.Align(TextAlignment.Left), 1.3);
         Grid.SetColumn(meaning, 1);
         definition.Children.Add(meaning);
         entry.Children.Add(definition);
 
-        // Citation and cross-reference.
-        var cite = new TextBlock { Margin = new Thickness(62 * u, 34 * u, 0, 0), TextWrapping = TextWrapping.Wrap, FontFamily = Georgia, FontSize = 28 * u, Foreground = Brush(grey) };
+        var cite = new TextBlock { Margin = new Thickness(60 * u, 30 * u, 0, 0), TextWrapping = TextWrapping.Wrap, FontFamily = Georgia, FontSize = 27 * u, Foreground = Brush(grey) };
         cite.Inlines.Add(new System.Windows.Documents.Run("— "));
         cite.Inlines.Add(new System.Windows.Documents.Run("“" + d.Title + "”") { FontStyle = FontStyles.Italic });
         var note = d.Text("note");
         if (!string.IsNullOrWhiteSpace(note))
-            cite.Inlines.Add(new System.Windows.Documents.Run(", " + note));
+            cite.Inlines.Add(new System.Windows.Documents.Run(", " + note + (d.Album is { } album ? " (" + album + ")" : "")));
         entry.Children.Add(cite);
-        entry.Children.Add(new TextBlock
-        {
-            Margin = new Thickness(62 * u, 22 * u, 0, 0), FontFamily = Georgia, FontSize = 24 * u, Foreground = Brush(Alpha(grey, 200)),
-            Text = "See also  " + (d.Album ?? d.Artist).ToUpper(CultureInfo.CurrentCulture),
-        });
-        entry.Margin = new Thickness(left, (d.Wide ? 190 : H > 1500 ? 280 : 200) * u, right, 0);
+        entry.Margin = new Thickness(left, (d.Wide ? 186 : tall ? 262 : 186) * u, right, 0);
         root.Children.Add(entry);
 
-        // A real page goes on: the next entries, quieter, below a gap (only where there is room).
+        // The reader's pencil in the margin: a heart and the day.
+        var margin = new StackPanel
+        {
+            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(Math.Max(10 * u, left - 120 * u), (d.Wide ? 470 : tall ? 640 : 470) * u, 0, 0),
+            RenderTransformOrigin = new Point(.5, .5), RenderTransform = new RotateTransform(-9),
+        };
+        margin.Children.Add(Label("♡", Symbols, 44 * u, FontWeights.Normal, pencil, TextAlignment.Center));
+        margin.Children.Add(Label(DateTime.Today.ToString("dd.MM", CultureInfo.InvariantCulture), HandFont, 34 * u, FontWeights.Normal, pencil, TextAlignment.Center));
+        root.Children.Add(margin);
+
+        // The page goes on: the next entries in two tight columns with a rule between them.
         if (!d.Wide && H > 1200)
         {
-            var next = new StackPanel { Width = width, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom,
-                Margin = new Thickness(left, 0, right, 170 * u), Opacity = .5 };
+            var columns = new Grid { Width = width, Margin = new Thickness(0, 120 * u, 0, 0), Opacity = .62 };
+            columns.ColumnDefinitions.Add(new ColumnDefinition());
+            columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(44 * u) });
+            columns.ColumnDefinitions.Add(new ColumnDefinition());
             TextBlock Neighbour(string word2, string body)
             {
-                var t = new TextBlock { TextWrapping = TextWrapping.Wrap, FontFamily = Georgia, FontSize = 30 * u, Foreground = Brush(ink), Margin = new Thickness(0, 0, 0, 22 * u), LineHeight = 42 * u, LineStackingStrategy = LineStackingStrategy.BlockLineHeight };
-                t.Inlines.Add(new System.Windows.Documents.Run(word2 + " ") { FontFamily = DmSerif, FontSize = 40 * u });
+                var t = new TextBlock { TextWrapping = TextWrapping.Wrap, FontFamily = Georgia, FontSize = 24 * u, Foreground = Brush(ink),
+                    LineHeight = 33 * u, LineStackingStrategy = LineStackingStrategy.BlockLineHeight, TextAlignment = TextAlignment.Left };
+                t.Inlines.Add(new System.Windows.Documents.Run(word2 + " ") { FontWeight = FontWeights.Bold, FontSize = 27 * u });
                 t.Inlines.Add(new System.Windows.Documents.Run("/" + Syllables(word2) + "/ ") { Foreground = Brush(grey) });
                 t.Inlines.Add(new System.Windows.Documents.Run("n. ") { FontStyle = FontStyles.Italic, Foreground = Brush(accent) });
                 t.Inlines.Add(new System.Windows.Documents.Run(body));
                 return t;
             }
-            next.Children.Add(new Border { Height = 1.2 * u, Background = Brush(Alpha(ink, 90)), Margin = new Thickness(0, 0, 0, 30 * u) });
-            if (!string.IsNullOrWhiteSpace(d.Artist))
-                next.Children.Add(Neighbour(d.Artist, "1. The voice behind \u201C" + d.Title + "\u201D. 2. Someone worth listening to again."));
-            if (!string.IsNullOrWhiteSpace(d.Album))
-                next.Children.Add(Neighbour(d.Album!, "A record kept on repeat; see " + word.ToLower(CultureInfo.CurrentCulture) + "."));
-            root.Children.Add(next);
+            columns.Children.Add(new Border { Height = 1.2 * u, Background = Brush(Alpha(ink, 80)), VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, -30 * u, 0, 0) });
+            Grid.SetColumnSpan(columns.Children[^1], 3);
+            var first = Neighbour(string.IsNullOrWhiteSpace(d.Artist) ? "song" : d.Artist,
+                "1. The voice behind “" + d.Title + "”. 2. Someone worth listening to again, often late at night.");
+            columns.Children.Add(first);
+            var second = Neighbour(string.IsNullOrWhiteSpace(d.Album) ? "refrain" : d.Album!,
+                "A record kept on repeat. — See " + word.ToLower(CultureInfo.CurrentCulture) + ".");
+            var lastWord = word.Trim().Split(' ').Last();
+            var stackRight = new StackPanel();
+            stackRight.Children.Add(second);
+            var third = Neighbour(lastWord.ToLower(CultureInfo.CurrentCulture), "1. What the song is about. 2. Fig. Anything played too loud, too often, with the windows down.");
+            third.Margin = new Thickness(0, 18 * u, 0, 0);
+            stackRight.Children.Add(third);
+            Grid.SetColumn(stackRight, 2);
+            columns.Children.Add(stackRight);
+            var rule = new Border { Width = 1, Background = Brush(Alpha(ink, 70)), HorizontalAlignment = HorizontalAlignment.Center };
+            Grid.SetColumn(rule, 1);
+            columns.Children.Add(rule);
+            entry.Children.Add(columns);
         }
 
-        // Folio and signature at the foot of the page.
         var foot = new Grid { Margin = new Thickness(left, 0, right, 70 * u), VerticalAlignment = VerticalAlignment.Bottom };
-        foot.Children.Add(d.Signature(Alpha(ink, 210), paper, TextAlignment.Left));
+        foot.Children.Add(d.Signature(Alpha(ink, 200), paper, TextAlignment.Left));
         foot.Children.Add(Label(d.Text("number") + "27", Georgia, 24 * u, FontWeights.Normal, grey, TextAlignment.Right));
         root.Children.Add(foot);
         return root;
@@ -374,204 +417,237 @@ public static partial class LyricCardRenderer
     // ======================= Personal letter =======================
 
     /// <summary>
-    /// A letter on ruled paper, folded in three, lying on its envelope: light, human serif text
-    /// set on the rules, the date and greeting in italics, and the envelope's stamp and postmark.
+    /// A letter written by hand: fountain-pen ink on ruled paper, each line a little off the
+    /// rule and a little tilted the way a hand moves, the name signed with a flourish, a note
+    /// squeezed into the margin. The sheet is folded in three, taped at a corner, and lies on its
+    /// air-mail envelope with stamp and postmark; a cup once stood on it.
     /// </summary>
     private static FrameworkElement PersonalLetter(Studio d)
     {
-        const double w = 860, h = 1100, rule = 74;
-        var paper = C("#FBF7EE");
-        var ink = C("#22304A");
-        var canvas = new Canvas { Width = w + 120, Height = h + 120 };
+        const double w = 860, h = 1120, rule = 72, top = 214, inner = 150;
+        var paper = C("#FBF6EA");
+        var ink = C("#1E3772");
+        var canvas = new Canvas { Width = w + 140, Height = h + 170 };
 
-        // The envelope underneath, turned a little.
-        var envelope = new Grid { Width = w - 40, Height = 600, Background = new LinearGradientBrush(C("#E2CFAE"), C("#C9B08A"), 90) };
-        envelope.Children.Add(new Path
-        {
-            Data = Geometry.Parse("M0,0 L410,330 L820,0"), Stroke = Brush(Alpha(C("#8C7350"), 120)), StrokeThickness = 3,
-            Stretch = Stretch.None,
-        });
+        // Air-mail envelope underneath, its striped border showing.
+        var envelope = new Grid { Width = w - 30, Height = 560, Background = new LinearGradientBrush(C("#F1EADB"), C("#E3D8C2"), 90) };
+        envelope.Children.Add(new Border { BorderThickness = new Thickness(18), BorderBrush = AirMail() });
+        envelope.Children.Add(new Path { Data = Geometry.Parse("M18,18 L415,300 L812,18"), Stroke = Brush(Alpha(C("#8C7350"), 110)), StrokeThickness = 2.5 });
         var stamp = new Border
         {
-            Width = 120, Height = 146, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
-            Margin = new Thickness(0, 34, 40, 0), Background = Brush(C("#F8F2E4")), Padding = new Thickness(9),
-            BorderBrush = Brush(C("#F8F2E4")), BorderThickness = new Thickness(0),
+            Width = 118, Height = 142, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom,
+            Margin = new Thickness(0, 0, 58, 46), Background = Brush(C("#FBF7EC")), Padding = new Thickness(9),
             Child = new Border
             {
-                Background = new LinearGradientBrush(Lighten(d.Accent, .2), Darken(d.Accent, .75), 90),
-                Child = Label("♪", Symbols, 54, FontWeights.Normal, C("#F8F2E4"), TextAlignment.Center),
+                Background = new LinearGradientBrush(Lighten(d.Accent, .25), Darken(d.Accent, .7), 90),
+                Child = Label("♪", Symbols, 52, FontWeights.Normal, C("#FBF7EC"), TextAlignment.Center),
             },
+            RenderTransformOrigin = new Point(.5, .5), RenderTransform = new RotateTransform(3),
         };
         ((FrameworkElement)((Border)stamp.Child).Child).VerticalAlignment = VerticalAlignment.Center;
         envelope.Children.Add(stamp);
-        for (var i = 0; i < 2; i++)
-            envelope.Children.Add(new Ellipse
-            {
-                Width = 150, Height = 150, Stroke = Brush(Alpha(C("#3A3A46"), 110)), StrokeThickness = 3,
-                HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 46 + (i * 0), 120 + (i * 22), 0),
-            });
+        // Postmark: a ring with the day, and the wavy cancellation lines across the stamp.
+        var postmark = new Grid { Width = 140, Height = 140, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, 130, 70), Opacity = .62 };
+        postmark.Children.Add(new Ellipse { Stroke = Brush(C("#2D2C3A")), StrokeThickness = 3 });
+        postmark.Children.Add(Label(DateTime.Today.ToString("dd MMM\nyyyy", CultureInfo.InvariantCulture).ToUpperInvariant(), Courier, 18, FontWeights.Bold, C("#2D2C3A"), TextAlignment.Center));
+        ((FrameworkElement)postmark.Children[^1]).VerticalAlignment = VerticalAlignment.Center;
+        envelope.Children.Add(postmark);
+        envelope.Children.Add(new Path
+        {
+            Data = Geometry.Parse("M560,430 c20,-14 40,14 60,0 s40,14 60,0 s40,14 60,0 s40,14 60,0 M560,452 c20,-14 40,14 60,0 s40,14 60,0 s40,14 60,0 s40,14 60,0 M560,474 c20,-14 40,14 60,0 s40,14 60,0 s40,14 60,0 s40,14 60,0"),
+            Stroke = Brush(Alpha(C("#2D2C3A"), 150)), StrokeThickness = 3,
+        });
         envelope.RenderTransformOrigin = new Point(.5, .5);
-        envelope.RenderTransform = new RotateTransform(5);
+        envelope.RenderTransform = new RotateTransform(4.5);
         envelope.Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 40, ShadowDepth = 14, Direction = 280, Opacity = .35 };
-        canvas.Children.Add(At(envelope, 110, h - 470));
+        canvas.Children.Add(At(envelope, 104, h - 370));
 
-        // The sheet: ruled, with a red margin and the two folds.
-        var sheet = new Grid { Width = w, Height = h };
+        // The sheet: ruled, a red margin, aged edges, two folds, a faint ring from a cup.
+        var sheet = new Grid { Width = w, Height = h, Background = Fibers(paper, Alpha(C("#C9B996"), 30)) };
         var rules = new DrawingGroup();
-        rules.Children.Add(new GeometryDrawing(Brush(paper), null, new RectangleGeometry(new Rect(0, 0, 10, rule))));
-        rules.Children.Add(new GeometryDrawing(Brush(C("#C8D5E4")), null, new RectangleGeometry(new Rect(0, rule - 2, 10, 2))));
+        rules.Children.Add(new GeometryDrawing(Brushes.Transparent, null, new RectangleGeometry(new Rect(0, 0, 10, rule))));
+        rules.Children.Add(new GeometryDrawing(Brush(Alpha(C("#7E9DC4"), 120)), null, new RectangleGeometry(new Rect(0, rule - 1.6, 10, 1.6))));
         sheet.Children.Add(new Border
         {
-            Background = new DrawingBrush(rules)
-            {
-                TileMode = TileMode.Tile, Viewport = new Rect(0, 150 - rule, 10, rule), ViewportUnits = BrushMappingMode.Absolute,
-            },
+            Margin = new Thickness(0, top - rule, 0, 40),
+            Background = new DrawingBrush(rules) { TileMode = TileMode.Tile, Viewport = new Rect(0, 0, 10, rule), ViewportUnits = BrushMappingMode.Absolute },
         });
-        sheet.Children.Add(new Border { Height = 150, VerticalAlignment = VerticalAlignment.Top, Background = Brush(paper) });
-        sheet.Children.Add(new Border { Width = 2.5, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(112, 0, 0, 0), Background = Brush(C("#E2A3A0")) });
+        sheet.Children.Add(new Border { Width = 2.4, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(inner - 32, 0, 0, 0), Background = Brush(Alpha(C("#D9706B"), 150)) });
+        sheet.Children.Add(new Border { BorderThickness = new Thickness(14), BorderBrush = new SolidColorBrush(Alpha(C("#C8A86E"), 26)), Opacity = .9 });
         foreach (var fold in new[] { h / 3, h * 2 / 3 })
-        {
             sheet.Children.Add(new Border
             {
-                Height = 24, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, fold - 12, 0, 0),
+                Height = 26, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, fold - 13, 0, 0),
                 Background = new LinearGradientBrush(new GradientStopCollection
                 {
-                    new(Alpha(Colors.Black, 0), 0), new(Alpha(Colors.Black, 20), .48), new(Alpha(Colors.White, 90), .54), new(Alpha(Colors.White, 0), 1),
+                    new(Alpha(Colors.Black, 0), 0), new(Alpha(Colors.Black, 24), .48), new(Alpha(Colors.White, 110), .55), new(Alpha(Colors.White, 0), 1),
                 }, 90),
             });
-        }
+        sheet.Children.Add(new Ellipse
+        {
+            Width = 250, Height = 236, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom,
+            Margin = new Thickness(0, 0, -60, 120), StrokeThickness = 9,
+            Stroke = new LinearGradientBrush(Alpha(C("#8B5A2B"), 34), Alpha(C("#8B5A2B"), 6), 35),
+        });
 
-        // Writing: date, greeting, the lines on the rules, the closing and the name.
+        // Writing, by hand.
+        // Shifted so the writing's baselines rest on the rules.
+        var writing = new Canvas { RenderTransform = new TranslateTransform(0, 12) };
+        var date = Handwriting(d.Text("date"), HandFont, 40, ink, 330, 11, TextAlignment.Right, rule);
+        writing.Children.Add(At(date, w - 330 - 70, top - (rule * 2) + 8));
+        var hello = Handwriting(d.Text("hello"), HandFont, 62, ink, w - inner - 80, 12, TextAlignment.Left, rule);
+        writing.Children.Add(At(hello, inner - 6, top - rule + 6));
         var face = d.UserFace;
-        var text = new StackPanel { Margin = new Thickness(146, 54, 74, 0) };
-        var date = Label(d.Text("date"), Georgia, 30, FontWeights.Normal, Alpha(ink, 200), TextAlignment.Right);
-        date.FontStyle = FontStyles.Italic;
-        date.Height = 96;
-        text.Children.Add(date);
-        var hello = Label(d.Text("hello"), Georgia, 50, FontWeights.Normal, ink, TextAlignment.Left);
-        hello.FontStyle = FontStyles.Italic;
-        hello.Height = rule * 2;
-        hello.VerticalAlignment = VerticalAlignment.Top;
-        hello.Padding = new Thickness(0, 4, 0, 0);
-        text.Children.Add(hello);
-        var body = FitText(d.LyricText, face?.Family ?? Georgia, face?.Weight ?? FontWeights.Normal, FontStyles.Normal, ink,
-            w - 146 - 74, rule * 7, 56 * d.TextScale, 24, d_Align(d, TextAlignment.Left), 0);
-        // On the rules: each line of text is exactly one rule high.
-        body.LineHeight = rule;
-        body.Padding = new Thickness(0, 6, 0, 0);
-        text.Children.Add(body);
-        var bye = Label(d.Text("bye"), Georgia, 40, FontWeights.Normal, ink, TextAlignment.Right);
-        bye.FontStyle = FontStyles.Italic;
-        bye.Margin = new Thickness(0, rule, 0, 0);
-        text.Children.Add(bye);
-        var name = Label(d.Text("sign"), Georgia, 56, FontWeights.Bold, ink, TextAlignment.Right);
-        name.FontStyle = FontStyles.Italic;
-        text.Children.Add(name);
-        var ps = Label("P.S. — " + d.Title + (string.IsNullOrWhiteSpace(d.Artist) ? "" : ", " + d.Artist), Georgia, 28, FontWeights.Normal, Alpha(ink, 170), TextAlignment.Left);
-        ps.FontStyle = FontStyles.Italic;
-        ps.Margin = new Thickness(0, rule * .8, 0, 0);
-        text.Children.Add(ps);
-        sheet.Children.Add(text);
-        var paperShape = new Border { Width = w, Height = h, Child = sheet, ClipToBounds = true };
-        paperShape.RenderTransformOrigin = new Point(.5, .5);
-        paperShape.RenderTransform = new RotateTransform(-2.2);
-        paperShape.Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 46, ShadowDepth = 16, Direction = 280, Opacity = .33 };
-        canvas.Children.Add(At(paperShape, 40, 20));
+        var body = Handwriting(d.LyricText, face?.Family ?? HandFont, 60 * d.TextScale, ink, w - inner - 70, 13, d.Align(TextAlignment.Left), rule,
+            maxHeight: rule * 7, weight: face?.Weight ?? FontWeights.Normal);
+        writing.Children.Add(At(body, inner, top + 6));
+        body.Measure(new Size(w - inner - 70, double.PositiveInfinity));
+        var lines = Math.Max(1, (int)Math.Round(body.DesiredSize.Height / rule));
+        var bye = Handwriting(d.Text("bye"), HandFont, 54, ink, 400, 14, TextAlignment.Left, rule);
+        writing.Children.Add(At(bye, w - 470, top + ((lines + 1) * rule) + 6));
+        var name = Handwriting(d.Text("sign"), HandFont, 84, ink, 440, 15, TextAlignment.Left, rule, weight: FontWeights.Bold);
+        writing.Children.Add(At(name, w - 450, top + ((lines + 2) * rule) - 4));
+        // The flourish under the name.
+        var y = top + ((lines + 3) * rule) + 4;
+        writing.Children.Add(Pen(Geometry.Parse(FormattableString.Invariant($"M{w - 440},{y} C{w - 360},{y + 22} {w - 230},{y - 26} {w - 120},{y - 4} S{w - 90},{y + 10} {w - 70},{y - 14}")), ink, 3.4));
+        // A note squeezed into the margin, with its arrow.
+        var note = Handwriting("♪ " + d.Title, HandFont, 34, Alpha(ink, 225), 330, 16, TextAlignment.Left, 38, maxHeight: 40);
+        note.RenderTransformOrigin = new Point(0, 0);
+        note.RenderTransform = new RotateTransform(-7);
+        var noteY = top + ((lines + 4) * rule) + 20;
+        writing.Children.Add(At(note, inner - 10, noteY));
+        writing.Children.Add(Pen(Geometry.Parse(FormattableString.Invariant($"M{inner + 40},{noteY - 10} C{inner + 30},{noteY - 60} {inner + 50},{noteY - 110} {inner + 90},{noteY - 140} M{inner + 90},{noteY - 140} l-24,6 M{inner + 90},{noteY - 140} l-4,24")), Alpha(ink, 210), 2.6));
+        sheet.Children.Add(writing);
 
-        var backdrop = Desk(C("#7B6656"), C("#3A2E27"));
-        return ObjectStage(d, canvas, canvas.Width, canvas.Height, backdrop, C("#F3E9DC"), C("#3A2E27"));
+        var sheetBox = new Border { Width = w, Height = h, Child = sheet, ClipToBounds = true };
+        sheetBox.RenderTransformOrigin = new Point(.5, .5);
+        sheetBox.RenderTransform = new RotateTransform(-2.4);
+        sheetBox.Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 46, ShadowDepth = 16, Direction = 280, Opacity = .33 };
+        canvas.Children.Add(At(sheetBox, 50, 46));
+        // Tape holding the corner.
+        canvas.Children.Add(At(Tape(Lighten(d.Accent, .55), 210, 64, -32), w - 120, 16));
+
+        return ObjectStage(d, canvas, canvas.Width, canvas.Height, Desk(C("#7D6858"), C("#382C25")), C("#F3E9DC"), C("#382C25"));
+    }
+
+    /// <summary>The red and blue diagonal stripes of an air-mail envelope's border.</summary>
+    private static Brush AirMail()
+    {
+        var tile = new DrawingGroup();
+        tile.Children.Add(new GeometryDrawing(Brush(C("#F1EADB")), null, new RectangleGeometry(new Rect(0, 0, 60, 60))));
+        tile.Children.Add(new GeometryDrawing(Brush(C("#C8323B")), null, Geometry.Parse("M0,0 L15,0 L60,45 L60,60 L45,60 L0,15 Z")));
+        tile.Children.Add(new GeometryDrawing(Brush(C("#24418C")), null, Geometry.Parse("M30,0 L45,0 L60,15 L60,30 Z M0,30 L30,60 L15,60 L0,45 Z")));
+        var brush = new DrawingBrush(tile) { TileMode = TileMode.Tile, Viewport = new Rect(0, 0, 40, 40), ViewportUnits = BrushMappingMode.Absolute };
+        brush.Freeze();
+        return brush;
     }
 
     // ======================= Boarding pass =======================
 
     /// <summary>
-    /// A printed boarding pass: the airline band, the route as two big airport codes, the lines
-    /// as the passenger's message, the flight fields, the perforation with its notches, and the
-    /// stub with a 2D code and a barcode.
+    /// A printed boarding pass in two layers, like a real one: the card stock came preprinted
+    /// (airline band, small labels, rules) and the kiosk printed the passenger's data on top in
+    /// a thermal monospace, slightly off register and a little faded. Then it was used: the gate
+    /// was circled in pen with a note, a "BOARDED" stamp went across, it was folded once, and
+    /// the stub was torn along the perforation.
     /// </summary>
     private static FrameworkElement BoardingPassTicket(Studio d)
     {
         const double w = 820, h = 1500, tear = 1088;
-        var paper = C("#FBFAF6");
-        var ink = C("#13203A");
-        var grey = C("#7C8392");
+        var paper = C("#FAF8F2");
+        var printed = C("#1B2236");
+        var data = C("#232326");
+        var grey = C("#80869A");
+        var pen = C("#2546A8");
         var band = Luminance(d.Accent) > .5 ? Darken(d.Accent, .45) : Darken(d.Accent, .9);
         string Code(string value) => new string(value.Where(char.IsLetterOrDigit).Take(3).ToArray()).ToUpperInvariant().PadRight(3, '•');
         var from = d.Text("from");
         var to = d.Text("to");
 
-        // Paper with the two notches at the perforation.
-        var outline = new CombinedGeometry(GeometryCombineMode.Exclude,
-            RoundRect(0, 0, w, h, 26, 26, 26, 26),
-            new GeometryGroup { Children = { new EllipseGeometry(new Point(0, tear), 30, 30), new EllipseGeometry(new Point(w, tear), 30, 30) } });
+        var outline = new CombinedGeometry(GeometryCombineMode.Exclude, RoundRect(0, 0, w, h, 24, 24, 24, 24),
+            new GeometryGroup { Children = { new EllipseGeometry(new Point(0, tear), 28, 28), new EllipseGeometry(new Point(w, tear), 28, 28) } });
         var canvas = new Canvas { Width = w, Height = h, Clip = outline };
-        canvas.Children.Add(new Path { Data = outline, Fill = Fibers(paper, Alpha(C("#C8C2B4"), 22)) });
-        canvas.Children.Add(At(Label("✈", Symbols, 520, FontWeights.Normal, Alpha(ink, 9), TextAlignment.Left), 150, 380));
+        canvas.Children.Add(new Path { Data = outline, Fill = Fibers(paper, Alpha(C("#C4BCA8"), 26)) });
+        // Preprinted security pattern: fine guilloche-like lines behind the data.
+        canvas.Children.Add(At(Guilloche(Alpha(band, 26), w, 620), 0, 160));
+        canvas.Children.Add(At(Label("✈", Symbols, 480, FontWeights.Normal, Alpha(band, 12), TextAlignment.Left), 190, 400));
 
-        // Airline band.
-        canvas.Children.Add(At(new Border { Width = w, Height = 150, Background = new LinearGradientBrush(Lighten(band, .1), band, 0) }, 0, 0));
-        canvas.Children.Add(At(Spaced("TASKITIFY AIRLINES", Figtree, 32, FontWeights.ExtraBold, C("#FFFFFF"), TextAlignment.Left, .2), 48, 38));
-        canvas.Children.Add(At(Spaced("BOARDING PASS · " + d.Text("id"), Figtree, 18, FontWeights.SemiBold, Alpha(Colors.White, 200), TextAlignment.Left, .2), 50, 88));
-        canvas.Children.Add(At(Label("✈", Symbols, 58, FontWeights.Normal, Colors.White, TextAlignment.Left), 710, 36));
+        // Preprinted band.
+        canvas.Children.Add(At(new Border { Width = w, Height = 150, Background = new LinearGradientBrush(Lighten(band, .12), band, 0) }, 0, 0));
+        canvas.Children.Add(At(Spaced("TASKITIFY AIRLINES", Figtree, 31, FontWeights.ExtraBold, Colors.White, TextAlignment.Left, .22), 48, 40));
+        canvas.Children.Add(At(Spaced("BOARDING PASS  ·  CARTÃO DE EMBARQUE", Figtree, 15, FontWeights.SemiBold, Alpha(Colors.White, 210), TextAlignment.Left, .22), 50, 90));
+        canvas.Children.Add(At(Label("✈", Symbols, 56, FontWeights.Normal, Colors.White, TextAlignment.Left), 712, 38));
 
-        // Route.
-        void Airport(string code, string city, double x, TextAlignment align)
-        {
-            var stack = new StackPanel { Width = 330 };
-            var big = Label(code, Figtree, 132, FontWeights.Black, ink, align);
-            big.TextTrimming = TextTrimming.None;
-            stack.Children.Add(big);
-            var name = Spaced(city.ToUpperInvariant(), Figtree, 20, FontWeights.Bold, grey, align, .2);
-            name.Margin = new Thickness(0, -14, 0, 0);
-            stack.Children.Add(name);
-            canvas.Children.Add(At(stack, x, 176));
-        }
-        Airport(Code(from), from, 46, TextAlignment.Left);
-        Airport(Code(to), to, w - 376, TextAlignment.Right);
-        canvas.Children.Add(At(new Line { X1 = 0, X2 = 120, Stroke = Brush(Alpha(ink, 120)), StrokeThickness = 2.5, StrokeDashArray = [3, 3] }, 350, 268));
-        canvas.Children.Add(At(Label("✈", Symbols, 40, FontWeights.Normal, band, TextAlignment.Left), 388, 238));
-        canvas.Children.Add(At(Label(d.Duration, Figtree, 18, FontWeights.SemiBold, grey, TextAlignment.Center), 372, 292));
+        // Small preprinted labels; the data printed onto them by the kiosk (thermal, a bit off).
+        TextBlock Lbl(string text) => Spaced(text, Figtree, 14, FontWeights.Bold, grey, TextAlignment.Left, .3);
+        FrameworkElement Data(string text, double size, int seed, bool bold = true) => Thermal(text, size, data, seed, bold);
+        canvas.Children.Add(At(Lbl("FROM / DE"), 48, 180));
+        canvas.Children.Add(At(Lbl("TO / PARA"), w - 300, 180));
+        canvas.Children.Add(At(Data(Code(from), 120, 1), 40, 196));
+        canvas.Children.Add(At(Data(Code(to), 120, 2), w - 306, 196));
+        canvas.Children.Add(At(Data(from.ToUpperInvariant(), 20, 3, bold: false), 48, 336));
+        canvas.Children.Add(At(Data(to.ToUpperInvariant(), 20, 4, bold: false), w - 300, 336));
+        canvas.Children.Add(At(new Line { X1 = 0, X2 = 116, Stroke = Brush(Alpha(printed, 110)), StrokeThickness = 2.5, StrokeDashArray = [3, 3] }, 340, 276));
+        canvas.Children.Add(At(Label("✈", Symbols, 38, FontWeights.Normal, band, TextAlignment.Left), 378, 250));
 
-        // Message: the lines.
-        canvas.Children.Add(At(Spaced("PASSENGER MESSAGE", Figtree, 17, FontWeights.Bold, grey, TextAlignment.Left, .3), 48, 400));
+        // The passenger's message: the lines.
+        canvas.Children.Add(At(Lbl("PASSENGER MESSAGE / MENSAGEM"), 48, 410));
         var face = d.UserFace;
-        var lyric = FitText(d.LyricText, face?.Family ?? InterDisplay, face?.Weight ?? FontWeights.SemiBold, FontStyles.Normal, ink,
-            w - 96, 320, 62 * d.TextScale, 22, d_Align(d, TextAlignment.Left), 1.14);
-        canvas.Children.Add(At(lyric, 48, 436));
+        var message = face is null
+            ? ThermalBlock(d.LyricText, data, w - 96, 300, 52 * d.TextScale, d.Align(TextAlignment.Left))
+            : FitText(d.LyricText, face.Value.Family, face.Value.Weight, FontStyles.Normal, data, w - 96, 300, 52 * d.TextScale, 22, d.Align(TextAlignment.Left), 1.16);
+        canvas.Children.Add(At(message, 46, 444));
 
-        // Flight fields.
-        var fields = new UniformGrid2(3, 2) { Width = w - 96 };
-        foreach (var (label, value) in new[]
+        // Flight fields: label above, printed value below.
+        canvas.Children.Add(At(new Border { Width = w - 96, Height = 1.4, Background = Brush(Alpha(printed, 70)) }, 48, 770));
+        var fields = new[]
         {
-            ("PASSENGER", d.Artist), ("FLIGHT", d.Text("id")), ("DATE", d.Text("date")),
+            ("PASSENGER", d.Artist.ToUpperInvariant()), ("FLIGHT", d.Text("id")), ("DATE", d.Text("date").ToUpperInvariant()),
             ("GATE", "A" + d.Time.Replace(":", "")), ("SEAT", "27A"), ("BOARDING", d.Time),
-        })
+        };
+        for (var i = 0; i < fields.Length; i++)
         {
-            var cell = new StackPanel { Margin = new Thickness(0, 0, 12, 26) };
-            cell.Children.Add(Spaced(label, Figtree, 15, FontWeights.Bold, grey, TextAlignment.Left, .3));
-            var v = Label(value.ToUpper(CultureInfo.CurrentCulture), Figtree, 26, FontWeights.Bold, ink, TextAlignment.Left);
-            v.TextWrapping = TextWrapping.Wrap;
-            v.TextTrimming = TextTrimming.None;
-            v.Margin = new Thickness(0, 4, 0, 0);
-            cell.Children.Add(v);
-            fields.Add(cell);
+            var x = 48 + ((i % 3) * 248);
+            var yy = 796 + ((i / 3) * 100);
+            canvas.Children.Add(At(Lbl(fields[i].Item1), x, yy));
+            var value = Thermal(fields[i].Item2, 28, data, 10 + i, true);
+            ((FrameworkElement)value).Width = 236;
+            canvas.Children.Add(At(value, x - 2, yy + 22));
         }
-        canvas.Children.Add(At(new Border { Width = w - 96, Height = 1.5, Background = Brush(Alpha(ink, 60)) }, 48, 770));
-        canvas.Children.Add(At(fields.Build(), 48, 800));
-        canvas.Children.Add(At(Label(d.Text("note"), Georgia, 22, FontWeights.Normal, grey, TextAlignment.Left), 48, 1000));
+        // The gate circled in pen, with a note.
+        canvas.Children.Add(Pen(Geometry.Parse("M32,940 C26,912 148,904 158,932 C166,958 62,968 38,950 C30,942 34,930 48,922"), pen, 3.2));
+        var gateNote = Label("gate changed!", HandFont, 38, FontWeights.Normal, pen, TextAlignment.Left);
+        gateNote.RenderTransformOrigin = new Point(0, .5);
+        gateNote.RenderTransform = new RotateTransform(-6);
+        canvas.Children.Add(At(gateNote, 150, 958));
+        canvas.Children.Add(At(Label(d.Text("note"), Georgia, 22, FontWeights.Normal, grey, TextAlignment.Left), 48, 1014));
         ((TextBlock)canvas.Children[^1]).FontStyle = FontStyles.Italic;
 
-        // Perforation.
-        canvas.Children.Add(At(new Line { X1 = 0, X2 = w - 80, Stroke = Brush(Alpha(ink, 90)), StrokeThickness = 3, StrokeDashArray = [1.2, 2.4] }, 40, tear));
+        // "BOARDED", stamped across the fields.
+        canvas.Children.Add(At(RubberStamp("BOARDED", "✈  " + d.Text("date").ToUpperInvariant(), C("#B3262E"), -11, 3), 488, 948));
 
-        // Stub: route again, seat, a 2D code and a barcode.
-        canvas.Children.Add(At(Label(Code(from) + "  ✈  " + Code(to), Figtree, 46, FontWeights.Black, ink, TextAlignment.Left), 48, tear + 50));
-        canvas.Children.Add(At(Spaced("SEAT 27A  ·  GROUP 1  ·  " + d.Text("id"), Figtree, 17, FontWeights.Bold, grey, TextAlignment.Left, .25), 50, tear + 118));
-        canvas.Children.Add(At(Label(d.Title, Figtree, 24, FontWeights.SemiBold, ink, TextAlignment.Left), 50, tear + 158));
-        ((TextBlock)canvas.Children[^1]).Width = 440;
-        canvas.Children.Add(At(Aztec(ink, 200), w - 248, tear + 44));
-        canvas.Children.Add(At(LinearBarcode(ink, w - 96, 78), 48, tear + 262));
-        canvas.Children.Add(At(Label("0027 4815 1623 4200 " + d.Text("id").Replace("–", "").Replace("-", ""), Mono, 18, FontWeights.SemiBold, grey, TextAlignment.Left), 48, tear + 350));
+        // Perforation and the stub.
+        canvas.Children.Add(At(new Line { X1 = 0, X2 = w - 80, Stroke = Brush(Alpha(printed, 90)), StrokeThickness = 3, StrokeDashArray = [1.2, 2.4] }, 40, tear));
+        canvas.Children.Add(At(Lbl("STUB / CANHOTO"), 50, tear + 34));
+        canvas.Children.Add(At(Data(Code(from) + " > " + Code(to), 44, 20), 46, tear + 58));
+        canvas.Children.Add(At(Data("SEAT 27A  GRP 1  " + d.Text("id"), 18, 21, bold: false), 50, tear + 120));
+        var stubTitle = Data(d.Title, 22, 22, bold: false);
+        ((FrameworkElement)stubTitle).Width = 440;
+        canvas.Children.Add(At(stubTitle, 50, tear + 158));
+        canvas.Children.Add(At(Aztec(data, 196), w - 246, tear + 44));
+        canvas.Children.Add(At(LinearBarcode(data, w - 96, 76), 48, tear + 262));
+        canvas.Children.Add(At(Label("0027 4815 1623 4200 " + d.Text("id").Replace("–", "").Replace("-", ""), Courier, 18, FontWeights.Normal, grey, TextAlignment.Left), 48, tear + 350));
+
+        // A single fold across the middle.
+        canvas.Children.Add(At(new Border
+        {
+            Width = w, Height = 34,
+            Background = new LinearGradientBrush(new GradientStopCollection
+            {
+                new(Alpha(Colors.Black, 0), 0), new(Alpha(Colors.Black, 22), .46), new(Alpha(Colors.White, 120), .54), new(Alpha(Colors.White, 0), 1),
+            }, 90),
+            RenderTransformOrigin = new Point(.5, .5), RenderTransform = new RotateTransform(-1.4),
+        }, 0, 690));
 
         var ticket = new Grid { Width = w, Height = h, Children = { canvas } };
         ticket.RenderTransformOrigin = new Point(.5, .5);
@@ -624,6 +700,165 @@ public static partial class LyricCardRenderer
         }
         canvas.Children.Add(new Path { Data = bars, Fill = Brush(ink) });
         return canvas;
+    }
+
+    // ======================= Human marks =======================
+
+    private static readonly FontFamily HandFont = new(FontFolder, "./#Caveat");
+    private static readonly FontFamily Courier = new(FontFolder, "./#Courier Prime");
+
+    /// <summary>
+    /// Writing by hand: each line its own block, a little tilted, a little off the rule, a size
+    /// that wavers and ink that is not quite even, all from a fixed seed (the same every time).
+    /// Line boxes are exactly one rule tall, so the writing sits on ruled paper.
+    /// </summary>
+    private static FrameworkElement Handwriting(string text, FontFamily font, double size, Color ink, double width, int seed, TextAlignment align,
+        double rule, double maxHeight = double.PositiveInfinity, FontWeight? weight = null)
+    {
+        for (var scale = 1.0; ; scale *= .93)
+        {
+            var random = new Random(seed);
+            var stack = new StackPanel { Width = width };
+            foreach (var raw in text.Split('\n'))
+            {
+                var block = new TextBlock
+                {
+                    Text = raw, FontFamily = font, FontWeight = weight ?? FontWeights.Normal, TextWrapping = TextWrapping.Wrap,
+                    FontSize = size * scale * (0.97 + (random.NextDouble() * .06)), Foreground = Brush(Alpha(ink, (byte)(226 + random.Next(29)))),
+                    TextAlignment = align, LineHeight = rule, LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
+                    Margin = new Thickness((random.NextDouble() * 12) - 2, 0, 0, 0),
+                    RenderTransformOrigin = new Point(0, .5), RenderTransform = new RotateTransform((random.NextDouble() * 1.6) - .9),
+                };
+                stack.Children.Add(block);
+            }
+            stack.Measure(new Size(width, double.PositiveInfinity));
+            if (stack.DesiredSize.Height <= maxHeight || scale < .5)
+                return stack;
+        }
+    }
+
+    /// <summary>Kiosk print: a thermal monospace, a touch off register and unevenly dark.</summary>
+    private static FrameworkElement Thermal(string text, double size, Color ink, int seed, bool bold)
+    {
+        var random = new Random(seed * 7919);
+        var block = Label(text, Courier, size, bold ? FontWeights.Bold : FontWeights.Normal, Alpha(ink, (byte)(205 + random.Next(40))), TextAlignment.Left);
+        block.TextTrimming = TextTrimming.None;
+        block.TextWrapping = TextWrapping.Wrap;
+        block.RenderTransformOrigin = new Point(0, .5);
+        block.RenderTransform = new TransformGroup
+        {
+            Children = { new RotateTransform((random.NextDouble() * .7) - .35), new TranslateTransform((random.NextDouble() * 4) - 2, (random.NextDouble() * 3) - 1) },
+        };
+        block.OpacityMask = Speckle(seed, .82);
+        return block;
+    }
+
+    private static FrameworkElement ThermalBlock(string text, Color ink, double width, double maxHeight, double start, TextAlignment align)
+    {
+        var fitted = FitText(text, Courier, FontWeights.Bold, FontStyles.Normal, ink, width, maxHeight, start, 20, align, 1.12);
+        fitted.Foreground = Brush(Alpha(ink, 225));
+        fitted.OpacityMask = Speckle(5, .8);
+        fitted.RenderTransformOrigin = new Point(0, .5);
+        fitted.RenderTransform = new RotateTransform(-.3);
+        return fitted;
+    }
+
+    /// <summary>Uneven ink: a fine, fixed speckle of slightly lighter spots.</summary>
+    private static Brush Speckle(int seed, double floor)
+    {
+        var group = new DrawingGroup();
+        group.Children.Add(new GeometryDrawing(Brushes.Black, null, new RectangleGeometry(new Rect(0, 0, 60, 60))));
+        var random = new Random(seed);
+        var spots = new GeometryGroup();
+        for (var i = 0; i < 26; i++)
+            spots.Children.Add(new EllipseGeometry(new Point(random.NextDouble() * 60, random.NextDouble() * 60), .6 + random.NextDouble() * 1.6, .5 + random.NextDouble()));
+        group.Children.Add(new GeometryDrawing(new SolidColorBrush(Color.FromArgb((byte)(255 * floor), 0, 0, 0)), null, spots));
+        var brush = new DrawingBrush(group) { TileMode = TileMode.Tile, Viewport = new Rect(0, 0, 60, 60), ViewportUnits = BrushMappingMode.Absolute };
+        brush.Freeze();
+        return brush;
+    }
+
+    /// <summary>A rubber stamp: double frame, heavy capitals, a second line, ink that did not take everywhere.</summary>
+    private static FrameworkElement RubberStamp(string text, string line, Color color, double angle, int seed)
+    {
+        var inside = new StackPanel();
+        inside.Children.Add(Label(text, Figtree, 54, FontWeights.Black, color, TextAlignment.Center));
+        var second = Label(line, Courier, 18, FontWeights.Bold, color, TextAlignment.Center);
+        second.Margin = new Thickness(0, -4, 0, 0);
+        inside.Children.Add(second);
+        var stamp = new Border
+        {
+            BorderBrush = Brush(color), BorderThickness = new Thickness(5), CornerRadius = new CornerRadius(10), Padding = new Thickness(5),
+            Child = new Border { BorderBrush = Brush(color), BorderThickness = new Thickness(2), CornerRadius = new CornerRadius(6), Padding = new Thickness(22, 6, 22, 10), Child = inside },
+            Opacity = .78, OpacityMask = Speckle(seed, .35),
+            RenderTransformOrigin = new Point(.5, .5), RenderTransform = new RotateTransform(angle),
+        };
+        return stamp;
+    }
+
+    /// <summary>A line drawn in pen: round ends, ink a little uneven.</summary>
+    private static FrameworkElement Pen(Geometry path, Color ink, double thickness) => new Path
+    {
+        Data = path, Stroke = Brush(ink), StrokeThickness = thickness, StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round,
+        StrokeLineJoin = PenLineJoin.Round, Opacity = .92,
+    };
+
+    /// <summary>A pencil line: grey, soft, grainy.</summary>
+    private static FrameworkElement Pencil(Geometry path, Color graphite, double thickness) => new Path
+    {
+        Data = path, Stroke = Brush(Alpha(graphite, 190)), StrokeThickness = thickness, StrokeStartLineCap = PenLineCap.Round,
+        StrokeEndLineCap = PenLineCap.Round, OpacityMask = Speckle(41, .45),
+    };
+
+    /// <summary>Paper tape: translucent, its ends torn in a zigzag.</summary>
+    private static FrameworkElement Tape(Color color, double width, double height, double angle)
+    {
+        var points = new PointCollection();
+        for (var y = 0.0; y <= height; y += height / 6)
+            points.Add(new Point(((int)(y / (height / 6)) % 2 == 0) ? 0 : 7, y));
+        for (var y = height; y >= 0; y -= height / 6)
+            points.Add(new Point(width - (((int)(y / (height / 6)) % 2 == 0) ? 0 : 7), y));
+        return new Polygon
+        {
+            Points = points, Fill = Brush(Alpha(color, 150)), Stroke = Brush(Alpha(Darken(color, .8), 60)), StrokeThickness = 1,
+            RenderTransformOrigin = new Point(.5, .5), RenderTransform = new RotateTransform(angle),
+        };
+    }
+
+    /// <summary>A bookmark ribbon hanging from the top edge, its end cut in a V.</summary>
+    private static FrameworkElement Ribbon(Color color, double width, double length, HorizontalAlignment align, Thickness margin) => new Path
+    {
+        Data = Geometry.Parse(FormattableString.Invariant($"M0,0 L{width},0 L{width},{length} L{width / 2},{length - (width * .55)} L0,{length} Z")),
+        Fill = new LinearGradientBrush(Lighten(color, .08), Darken(color, .78), 0),
+        HorizontalAlignment = align, VerticalAlignment = VerticalAlignment.Top, Margin = margin,
+        Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 10, ShadowDepth = 3, Direction = 315, Opacity = .3 },
+    };
+
+    /// <summary>Fine interlaced curves, like the security print on tickets.</summary>
+    private static FrameworkElement Guilloche(Color color, double width, double height)
+    {
+        var geometry = new StreamGeometry();
+        using (var c = geometry.Open())
+        {
+            for (var k = 0; k < 14; k++)
+            {
+                c.BeginFigure(new Point(0, height / 2), false, false);
+                for (var x = 0.0; x <= width; x += 6)
+                {
+                    var y = (height / 2) + (Math.Sin((x / 70) + (k * .45)) * (height * .38)) * Math.Cos((x / 230) + (k * .2));
+                    c.LineTo(new Point(x, y), true, false);
+                }
+            }
+        }
+        geometry.Freeze();
+        return new Path { Data = geometry, Stroke = Brush(color), StrokeThickness = 1.1, Width = width, Height = height };
+    }
+
+    private static double MeasureWidth(string text, FontFamily font, double size)
+    {
+        var block = new TextBlock { Text = text, FontFamily = font, FontSize = size };
+        block.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        return block.DesiredSize.Width;
     }
 
     // ======================= Shared pieces =======================
