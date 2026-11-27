@@ -52,7 +52,7 @@ public sealed class TourWindow : Window
     private bool _useA = true;
     private int _index = -1;
 
-    private sealed record Step(string Key, Func<FrameworkElement> Build, Brush Background, bool CustomActions = false)
+    private sealed record Step(string Key, Func<FrameworkElement> Build, Brush Background, bool CustomActions = false, bool Bar = false, bool Mini = false)
     {
         public FrameworkElement? View;
         public List<DispatcherTimer> Timers { get; } = [];
@@ -80,11 +80,11 @@ public sealed class TourWindow : Window
         _skip = Link(T("Skip"), Close);
         _skip.ToolTip = T("SkipHint");
 
-        _steps.Add(new("Welcome", BuildWelcome, Atmosphere("#0D2230", "#173F4F", "#8C8A66"), CustomActions: true));
+        _steps.Add(new("Welcome", BuildWelcome, Atmosphere("#0D2230", "#173F4F", "#8C8A66"), CustomActions: true, Bar: true, Mini: true));
         _steps.Add(new("Sources", BuildSources, Atmosphere("#0F1E2E", "#1C3A4A", "#2F5E5A")));
-        _steps.Add(new("Taskbar", BuildTaskbar, Atmosphere("#0B1C27", "#16384A", "#356B79")));
-        _steps.Add(new("Adapt", BuildAdapt, Atmosphere("#101B2A", "#22364F", "#6E5A72")));
-        _steps.Add(new("Mini", BuildMini, Photo("matterhorn.jpg", .55)));
+        _steps.Add(new("Taskbar", BuildTaskbar, Atmosphere("#0B1C27", "#16384A", "#356B79"), Bar: true, Mini: true));
+        _steps.Add(new("Adapt", BuildAdapt, Atmosphere("#101B2A", "#22364F", "#6E5A72"), Bar: true));
+        _steps.Add(new("Mini", BuildMini, Photo("matterhorn.jpg", .55), Mini: true));
         _steps.Add(new("Minimal", BuildMinimal, Atmosphere("#0A1420", "#14283A", "#3A4C66")));
         _steps.Add(new("Studio", BuildStudio, Atmosphere("#1A1622", "#3A2E3A", "#9A7B52")));
         _steps.Add(new("Privacy", BuildPrivacy, Atmosphere("#0C1A20", "#163037", "#2E5A55")));
@@ -183,6 +183,7 @@ public sealed class TourWindow : Window
         _index = index;
         var step = _steps[index];
         step.View ??= step.Build();
+        _stage.Use(step.Bar, step.Mini);
         foreach (var timer in step.Timers)
             timer.Start();
 
@@ -190,18 +191,18 @@ public sealed class TourWindow : Window
         var (show, hide) = _useA ? (_backB, _backA) : (_backA, _backB);
         _useA = !_useA;
         show.Background = step.Background;
-        Fade(show, 1, 420);
-        Fade(hide, 0, 420);
+        Fade(show, 1, 260);
+        Fade(hide, 0, 260);
 
         if (old is not null)
             _content.Children.Remove(old);
         if (!_content.Children.Contains(step.View))
             _content.Children.Add(step.View);
         step.View.Opacity = 0;
-        var slide = new TranslateTransform(forward ? 36 : -36, 0);
+        var slide = new TranslateTransform(forward ? 18 : -18, 0);
         step.View.RenderTransform = slide;
-        Fade(step.View, 1, 320);
-        Animate(slide, TranslateTransform.XProperty, 0, 380);
+        Fade(step.View, 1, 220);
+        Animate(slide, TranslateTransform.XProperty, 0, 240);
 
         for (var i = 0; i < _dots.Children.Count; i++)
         {
@@ -260,15 +261,12 @@ public sealed class TourWindow : Window
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 30, 0, 0) };
         var tour = Primary(T("WelcomeTour"), () => Go(1));
         buttons.Children.Add(tour);
-        var later = Ghost(T("WelcomeLater"), Close);
-        later.Margin = new Thickness(12, 0, 0, 0);
-        buttons.Children.Add(later);
         text.Children.Add(buttons);
         Loaded += (_, _) => tour.Focus();
         grid.Children.Add(text);
 
         var visual = new Grid { Margin = new Thickness(36, 0, 0, 0) };
-        var mini = Live(Current("Welcome"), () => _stage.Mini(2), 560);
+        var mini = Live(Current("Welcome"), () => _stage.MiniVisual(), 560);
         mini.VerticalAlignment = VerticalAlignment.Top;
         mini.Margin = new Thickness(0, 10, 0, 0);
         visual.Children.Add(mini);
@@ -294,7 +292,8 @@ public sealed class TourWindow : Window
 
         var foot = Stack(Body(T("SourcesReady"), 16, brush: CreamBrush));
         ((TextBlock)foot.Children[0]).TextAlignment = TextAlignment.Center;
-        var connect = Link(T("SourcesConnect") + "  ", () => _openSettings(SettingsPage.Lyrics));
+        var connect = Ghost("\uE713  " + T("SourcesConnect"), () => _openSettings(SettingsPage.Lyrics));
+        connect.Margin = new Thickness(0, 14, 0, 0);
         connect.HorizontalAlignment = HorizontalAlignment.Center;
         foot.Children.Add(connect);
         foot.HorizontalAlignment = HorizontalAlignment.Center;
@@ -335,10 +334,9 @@ public sealed class TourWindow : Window
         return new Border
         {
             Margin = new Thickness(9), Padding = new Thickness(24, 24, 22, 22), CornerRadius = new CornerRadius(18),
-            Background = Frozen(active ? Color.FromRgb(0x1B, 0x2C, 0x37) : Color.FromRgb(0x15, 0x23, 0x2D)),
-            BorderBrush = active ? Frozen(Color.FromArgb(0xB0, accent.R, accent.G, accent.B)) : SurfaceLine,
+            Background = active ? Frozen(Color.FromRgb(0x1A, 0x2B, 0x36)) : Card,
+            BorderBrush = active ? Frozen(Color.FromArgb(0xB0, accent.R, accent.G, accent.B)) : CardLine,
             BorderThickness = new Thickness(active ? 1.5 : 1), Child = stack,
-            Effect = new DropShadowEffect { BlurRadius = 30, ShadowDepth = 10, Direction = 270, Opacity = .35, Color = Colors.Black },
         };
     }
 
@@ -369,7 +367,7 @@ public sealed class TourWindow : Window
         Toggle(T("ElementProgress"), b => b.ShowProgress, (b, v) => b.ShowProgress = v);
         stagePanel.Children.Add(chips);
 
-        var popup = Live(step, () => _stage.Mini(1.6), 380);
+        var popup = Live(step, () => _stage.MiniVisual(), 380);
         popup.HorizontalAlignment = HorizontalAlignment.Right;
         popup.VerticalAlignment = VerticalAlignment.Bottom;
         popup.Margin = new Thickness(0, 0, 190, 84);
@@ -416,7 +414,7 @@ public sealed class TourWindow : Window
             left.Children.Add(new TextBlock { Text = glyph, FontFamily = Icons, FontSize = 18, Width = 40, TextAlignment = TextAlignment.Center, Foreground = Frozen((Color)ColorConverter.ConvertFromString(color)) });
         bar.Children.Add(left);
         var right = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 14, 0) };
-        var player = Live(step, () => _stage.Bar(2), double.NaN, height: 48);
+        var player = LiveImage(step, () => _stage.Bar(1.75), 48);
         player.Cursor = onPlayerClick is null ? null : Cursors.Hand;
         if (onPlayerClick is not null)
             player.MouseLeftButtonUp += (_, _) => onPlayerClick();
@@ -426,7 +424,7 @@ public sealed class TourWindow : Window
         var slot = new Grid();
         slot.Children.Add(weather);
         slot.Children.Add(player);
-        Every(step, 120, () => weather.Visibility = player.Source is null ? Visibility.Visible : Visibility.Collapsed);
+        Every(step, 200, () => weather.Visibility = player.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible);
         right.Children.Add(slot);
         foreach (var glyph in new[] { "", "", "", "" })
             right.Children.Add(new TextBlock { Text = glyph, FontFamily = Icons, FontSize = 13, Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
@@ -570,7 +568,7 @@ public sealed class TourWindow : Window
         left.Children.Add(songs);
         grid.Children.Add(left);
 
-        var mini = Live(step, () => _stage.Mini(2), double.NaN);
+        var mini = Live(step, () => _stage.MiniVisual(), double.NaN);
         mini.MaxWidth = 600;
         mini.MaxHeight = 540;
         mini.Margin = new Thickness(30, 0, 0, 0);
@@ -713,6 +711,15 @@ public sealed class TourWindow : Window
 
     // ---- 07 Lyrics Studio ------------------------------------------------------------------------
 
+    private static readonly DropShadowEffect FrontShadow = Shadow();
+
+    private static DropShadowEffect Shadow()
+    {
+        var effect = new DropShadowEffect { BlurRadius = 24, ShadowDepth = 8, Direction = 270, Opacity = .45, Color = Colors.Black };
+        effect.Freeze();
+        return effect;
+    }
+
     private FrameworkElement BuildStudio()
     {
         var step = Current("Studio");
@@ -760,7 +767,7 @@ public sealed class TourWindow : Window
                 Width = 216, Height = 384, CornerRadius = new CornerRadius(14), ClipToBounds = true,
                 Background = new ImageBrush(image) { Stretch = Stretch.UniformToFill },
                 RenderTransformOrigin = new Point(.5, .9), RenderTransform = new TransformGroup { Children = { size, turn, move } },
-                Effect = new DropShadowEffect { BlurRadius = 26, ShadowDepth = 8, Direction = 270, Opacity = .45, Color = Colors.Black },
+                BorderBrush = Frozen(Color.FromArgb(0x30, 0, 0, 0)), BorderThickness = new Thickness(1),
                 Cursor = Cursors.Hand, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
                 ToolTip = style.ToString(),
             };
@@ -777,6 +784,7 @@ public sealed class TourWindow : Window
                 if (offset < -cards.Count / 2) offset += cards.Count;
                 var (card, turn, move, size) = cards[i];
                 Panel.SetZIndex(card, 100 - Math.Abs(offset) * 10);
+                card.Effect = offset == 0 ? FrontShadow : null;
                 var ms = animate ? 520 : 0;
                 Animate(turn, RotateTransform.AngleProperty, offset * 7, ms);
                 Animate(move, TranslateTransform.XProperty, offset * 84, ms);
@@ -827,7 +835,7 @@ public sealed class TourWindow : Window
             values.Children.Add(new Border
             {
                 Margin = new Thickness(0, 0, 0, 10), Padding = new Thickness(16, 11, 18, 12), CornerRadius = new CornerRadius(10), HorizontalAlignment = HorizontalAlignment.Left,
-                Background = Surface, BorderBrush = SurfaceLine, BorderThickness = new Thickness(1), Child = row,
+                Background = Card, BorderBrush = CardLine, BorderThickness = new Thickness(1), Child = row,
             });
         }
         Grid.SetColumn(values, 1);
@@ -852,15 +860,11 @@ public sealed class TourWindow : Window
                 Width = 104, Height = 104, CornerRadius = new CornerRadius(12), Opacity = .5,
                 Background = new ImageBrush(TourSong.All[i].Cover(256)),
                 RenderTransform = new RotateTransform(angle, 64, 64),
-                Effect = new DropShadowEffect { BlurRadius = 24, ShadowDepth = 8, Direction = 270, Opacity = .4, Color = Colors.Black },
             };
             Canvas.SetLeft(cover, x);
             Canvas.SetTop(cover, y);
             covers.Children.Add(cover);
-            var drift = new TranslateTransform();
-            cover.RenderTransform = new TransformGroup { Children = { new RotateTransform(angle, 52, 52), drift } };
-            var phase = i * 1.3;
-            Every(step, 40, () => drift.Y = Math.Sin(DateTime.Now.TimeOfDay.TotalSeconds * .6 + phase) * 8);
+            cover.RenderTransform = new RotateTransform(angle, 52, 52);
         }
         root.Children.Add(covers);
 
@@ -922,7 +926,6 @@ public sealed class TourWindow : Window
     {
         Text = text, FontFamily = Display, FontWeight = FontWeights.Bold, FontSize = size, TextWrapping = TextWrapping.Wrap, LineHeight = size * 1.08,
         LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
-        Effect = new DropShadowEffect { BlurRadius = 18, ShadowDepth = 2, Direction = 270, Opacity = .3, Color = Colors.Black },
     };
 
     private static TextBlock Body(string text, double size, double top = 0, Brush? brush = null, bool center = false) => new()
@@ -970,15 +973,26 @@ public sealed class TourWindow : Window
         var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
         presenter.SetValue(ContentPresenter.HorizontalAlignmentProperty, HorizontalAlignment.Center);
         presenter.SetValue(ContentPresenter.VerticalAlignmentProperty, VerticalAlignment.Center);
+        // A light layer over the fill: lighter on hover, darker on press.
+        var root = new FrameworkElementFactory(typeof(Grid));
+        var shine = new FrameworkElementFactory(typeof(Border), "Shine");
+        shine.SetValue(Border.CornerRadiusProperty, new CornerRadius(radius));
+        shine.SetValue(Border.BackgroundProperty, Brushes.White);
+        shine.SetValue(UIElement.OpacityProperty, 0.0);
+        shine.SetValue(UIElement.IsHitTestVisibleProperty, false);
         border.AppendChild(presenter);
-        template.VisualTree = border;
+        root.AppendChild(border);
+        root.AppendChild(shine);
+        template.VisualTree = root;
         var hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
-        hover.Setters.Add(new Setter(UIElement.OpacityProperty, .86));
+        hover.Setters.Add(new Setter(UIElement.OpacityProperty, .14, "Shine"));
         var focus = new Trigger { Property = UIElement.IsKeyboardFocusedProperty, Value = true };
         focus.Setters.Add(new Setter(Border.BorderBrushProperty, Turquoise, "Chrome"));
         focus.Setters.Add(new Setter(Border.BorderThicknessProperty, new Thickness(2), "Chrome"));
         var pressed = new Trigger { Property = ButtonBase.IsPressedProperty, Value = true };
-        pressed.Setters.Add(new Setter(UIElement.OpacityProperty, .7));
+        pressed.Setters.Add(new Setter(UIElement.OpacityProperty, .22, "Shine"));
+        pressed.Setters.Add(new Setter(UIElement.RenderTransformProperty, new ScaleTransform(.97, .97)));
+        pressed.Setters.Add(new Setter(UIElement.RenderTransformOriginProperty, new Point(.5, .5)));
         template.Triggers.Add(hover);
         template.Triggers.Add(focus);
         template.Triggers.Add(pressed);
@@ -998,15 +1012,31 @@ public sealed class TourWindow : Window
         return template;
     }
 
-    private static Button Primary(string text, Action click) => Make(text, click, CreamBrush, Frozen(Color.FromRgb(0x10, 0x20, 0x2A)), null);
+    private static Button Primary(string text, Action click)
+    {
+        var button = Make(text, click, CreamBrush, Frozen(Color.FromRgb(0x10, 0x20, 0x2A)), null, 15.5, new Thickness(26, 12, 26, 13));
+        button.Effect = PrimaryShadow;
+        return button;
+    }
 
-    private static readonly Brush Surface = Frozen(Color.FromRgb(0x18, 0x26, 0x31));
-    private static readonly Brush SurfaceLine = Frozen(Color.FromRgb(0x2C, 0x3D, 0x49));
+    private static readonly DropShadowEffect PrimaryShadow = Glow();
+
+    private static DropShadowEffect Glow()
+    {
+        var effect = new DropShadowEffect { BlurRadius = 18, ShadowDepth = 4, Direction = 270, Opacity = .35, Color = Colors.Black };
+        effect.Freeze();
+        return effect;
+    }
+
+    private static readonly Brush Surface = Frozen(Color.FromRgb(0x1E, 0x2E, 0x3A));
+    private static readonly Brush SurfaceLine = Frozen(Color.FromRgb(0x46, 0x5C, 0x6B));
+    private static readonly Brush Card = Frozen(Color.FromRgb(0x15, 0x23, 0x2D));
+    private static readonly Brush CardLine = Frozen(Color.FromRgb(0x2A, 0x3B, 0x47));
 
     private static Button Ghost(string text, Action click) => Make(text, click, Surface, CreamBrush, SurfaceLine);
 
     private static Button Link(string text, Action click) =>
-        Make(text, click, Brushes.Transparent, Muted, null, 13.5, new Thickness(10, 6, 10, 7), FontWeights.Normal, radius: 8);
+        Make(text, click, Brushes.Transparent, CreamBrush, null, 13.5, new Thickness(12, 7, 12, 8), FontWeights.SemiBold, radius: 8);
 
     private static Button Segment(string text, Action click) =>
         Make(text, click, Surface, Muted, SurfaceLine, 13.5, new Thickness(14, 7, 14, 8), radius: 16);
@@ -1014,29 +1044,92 @@ public sealed class TourWindow : Window
     private static void Select(Button button, bool on)
     {
         button.Background = on ? CreamBrush : Surface;
-        button.Foreground = on ? Frozen(Color.FromRgb(0x10, 0x20, 0x2A)) : Muted;
+        button.Foreground = on ? Frozen(Color.FromRgb(0x10, 0x20, 0x2A)) : CreamBrush;
+        button.BorderBrush = on ? CreamBrush : SurfaceLine;
     }
 
     private static Button Chip(string text, Func<bool> isOn, Action<bool> set)
     {
         Button chip = null!;
-        chip = Segment(text, () => { set(!isOn()); Select(chip, isOn()); });
+        var label = (TextBlock)null!;
+        var check = new System.Windows.Documents.Run("\uE73E  ") { FontFamily = Icons, FontSize = 11 };
+        chip = Segment(text, () => { set(!isOn()); Mark(); });
+        label = (TextBlock)chip.Content;
+        void Mark()
+        {
+            Select(chip, isOn());
+            if (isOn() && !label.Inlines.Contains(check)) label.Inlines.InsertBefore(label.Inlines.FirstInline, check);
+            if (!isOn()) label.Inlines.Remove(check);
+        }
         chip.Margin = new Thickness(4);
-        Select(chip, isOn());
+        Mark();
         return chip;
     }
 
-    /// <summary>An image refreshed from a live source while its step is on screen.</summary>
-    private Image Live(Step step, Func<BitmapSource?> source, double width, double height = double.NaN)
+    /// <summary>The taskbar player, copied into one reused bitmap 15 times a second (it is small and cheap to draw).</summary>
+    private Image LiveImage(Step step, Func<BitmapSource?> source, double height)
     {
-        var image = new Image { Stretch = Stretch.Uniform, Width = width, Height = height, SnapsToDevicePixels = true };
+        var image = new Image { Stretch = Stretch.Uniform, Height = height, SnapsToDevicePixels = true };
         RenderOptions.SetBitmapScalingMode(image, BitmapScalingMode.HighQuality);
         Every(step, 66, () =>
         {
-            try { image.Source = source(); }
+            try
+            {
+                var next = source();
+                if (!ReferenceEquals(image.Source, next))
+                    image.Source = next;
+                image.Visibility = next is null ? Visibility.Collapsed : Visibility.Visible;
+            }
             catch (Exception ex) { Log.Error("Tour preview", ex); }
         });
         return image;
+    }
+
+    /// <summary>
+    /// A live view of one of the real players: a VisualBrush of its content, composed by the GPU as
+    /// the player animates. Nothing is copied per frame; a slow timer only follows its size.
+    /// </summary>
+    private FrameworkElement Live(Step step, Func<FrameworkElement?> source, double width, double height = double.NaN)
+    {
+        var view = new Rectangle { Width = width, Height = height, Stretch = Stretch.Uniform };
+        RenderOptions.SetBitmapScalingMode(view, BitmapScalingMode.HighQuality);
+        FrameworkElement? shown = null;
+        var brush = new VisualBrush { Stretch = Stretch.Uniform };
+        view.Fill = brush;
+        void Follow()
+        {
+            try
+            {
+                var visual = source();
+                if (!ReferenceEquals(visual, shown))
+                {
+                    shown = visual;
+                    brush.Visual = visual;
+                }
+                view.Visibility = visual is null ? Visibility.Collapsed : Visibility.Visible;
+                if (visual is { ActualWidth: > 0, ActualHeight: > 0 })
+                {
+                    // Frame the player's own box, not everything it draws (its scrolling text runs past it).
+                    var box = new Rect(0, 0, visual.ActualWidth, visual.ActualHeight);
+                    if (brush.Viewbox != box)
+                    {
+                        brush.Viewbox = box;
+                        brush.ViewboxUnits = BrushMappingMode.Absolute;
+                    }
+                    // Keep the view in the player's proportions (it changes width with its layout).
+                    if (double.IsNaN(width) && !double.IsNaN(height))
+                        view.Width = height * visual.ActualWidth / visual.ActualHeight;
+                    else if (!double.IsNaN(width) && double.IsNaN(height))
+                        view.Height = width * visual.ActualHeight / visual.ActualWidth;
+                    else if (double.IsNaN(width) && double.IsNaN(height))
+                        view.Height = Math.Min(view.MaxHeight, (view.ActualWidth > 0 ? view.ActualWidth : 560) * visual.ActualHeight / visual.ActualWidth);
+                }
+            }
+            catch (Exception ex) { Log.Error("Tour preview", ex); }
+        }
+        Every(step, 200, Follow);
+        view.Loaded += (_, _) => Follow();
+        return view;
     }
 
     /// <summary>
@@ -1061,7 +1154,19 @@ public sealed class TourWindow : Window
             dc.Pop();
         }
         group.Freeze();
-        var brush = new DrawingBrush(group) { Stretch = Stretch.Fill, Viewbox = rect, ViewboxUnits = BrushMappingMode.Absolute };
+        return Baked(group, Stretch.Fill);
+    }
+
+    /// <summary>The drawing rendered once to a bitmap: crossfades and resizing then cost a texture, not gradients.</summary>
+    private static Brush Baked(DrawingGroup drawing, Stretch stretch)
+    {
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+            dc.DrawDrawing(drawing);
+        var bitmap = new RenderTargetBitmap((int)(DesignWidth * 1.5), (int)(DesignHeight * 1.5), 144, 144, PixelFormats.Pbgra32);
+        bitmap.Render(visual);
+        bitmap.Freeze();
+        var brush = new ImageBrush(bitmap) { Stretch = stretch };
         brush.Freeze();
         return brush;
     }
@@ -1092,9 +1197,7 @@ public sealed class TourWindow : Window
             dc.Pop();
         }
         group.Freeze();
-        var brush = new DrawingBrush(group) { Stretch = Stretch.UniformToFill, Viewbox = rect, ViewboxUnits = BrushMappingMode.Absolute };
-        brush.Freeze();
-        return brush;
+        return Baked(group, Stretch.UniformToFill);
     }
 
     private static Brush PhotoBrush(string name, double darken, Stretch stretch)

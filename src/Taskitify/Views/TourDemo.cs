@@ -182,6 +182,39 @@ internal sealed class TourStage : IDisposable
             _bar.Width = Settings.Current.Layout(!Monitor.IsPlaying).Width;
     }
 
+    private RenderTargetBitmap? _barBitmap, _miniBitmap;
+
+    /// <summary>
+    /// Wake only the players a step shows. A hidden player stops its own animations and timers
+    /// (its lyric ink and scrolling check visibility), so steps without them cost nothing.
+    /// </summary>
+    public void Use(bool bar, bool mini)
+    {
+        if (!bar && _bar is { IsVisible: true })
+            _bar.Hide();
+        if (!mini && _mini is { IsVisible: true })
+            _mini.Hide();
+        if (bar && _bar is { IsVisible: false })
+            _bar.Show();
+        if (mini && _mini is { IsVisible: false })
+            _mini.ShowOffscreen();
+    }
+
+    /// <summary>The taskbar player's content, shown live (GPU) by a VisualBrush; null while it hides.</summary>
+    public FrameworkElement? BarVisual()
+    {
+        Bar(1);
+        return !Monitor.IsPlaying && Settings.Current.PausedBehavior == PausedBehavior.Hide ? null : (FrameworkElement?)_bar?.Content;
+    }
+
+    /// <summary>The mini player window's content, shown live by a VisualBrush.</summary>
+    public FrameworkElement? MiniVisual()
+    {
+        if (_mini is null)
+            Mini(1);
+        return (FrameworkElement?)_mini?.Content;
+    }
+
     /// <summary>The taskbar player as it looks now; null while it hides (paused, "give the space back").</summary>
     public BitmapSource? Bar(double scale)
     {
@@ -194,7 +227,7 @@ internal sealed class TourStage : IDisposable
         }
         if (!Monitor.IsPlaying && Settings.Current.PausedBehavior == PausedBehavior.Hide)
             return null;
-        return Snapshot(_bar, scale);
+        return Snapshot(_bar, scale, ref _barBitmap);
     }
 
     public BitmapSource Mini(double scale)
@@ -205,16 +238,19 @@ internal sealed class TourStage : IDisposable
             _mini = new MiniPlayerWindow(_miniVm, () => true, () => true) { ShowActivated = false };
             _mini.ShowOffscreen();
         }
-        return Snapshot(_mini, scale);
+        return Snapshot(_mini, scale, ref _miniBitmap);
     }
 
-    private static BitmapSource Snapshot(Window window, double scale)
+    /// <summary>Renders into the same bitmap while the size holds: no new bitmap every frame.</summary>
+    private static BitmapSource Snapshot(Window window, double scale, ref RenderTargetBitmap? bitmap)
     {
         var w = Math.Max(1, (int)Math.Round(window.ActualWidth * scale));
         var h = Math.Max(1, (int)Math.Round(window.ActualHeight * scale));
-        var bitmap = new RenderTargetBitmap(w, h, 96 * scale, 96 * scale, PixelFormats.Pbgra32);
+        if (bitmap is null || bitmap.PixelWidth != w || bitmap.PixelHeight != h)
+            bitmap = new RenderTargetBitmap(w, h, 96 * scale, 96 * scale, PixelFormats.Pbgra32);
+        else
+            bitmap.Clear();
         bitmap.Render(window);
-        bitmap.Freeze();
         return bitmap;
     }
 
