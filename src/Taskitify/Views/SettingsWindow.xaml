@@ -248,20 +248,80 @@
                         </StackPanel>
                     </Border>
 
-                    <Border Style="{StaticResource Group}" Margin="0,12,0,0">
-                        <Border Style="{StaticResource FirstRow}">
-                            <DockPanel>
-                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.WebsiteOpen}" Command="{Binding OpenWebsiteCommand}" Margin="0,0,8,0" />
-                                    <Button Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.CommunityOpen}" Command="{Binding OpenCommunityCommand}" Margin="0,0,8,0" />
-                                    <Button Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.TourOpen}" Command="{Binding OpenTourCommand}" />
-                                </StackPanel>
-                                <StackPanel Style="{StaticResource RowText}">
-                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.WebsiteTitle}" />
-                                    <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.WebsiteHint}" />
-                                </StackPanel>
-                            </DockPanel>
-                        </Border>
+                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.WebsiteTitle}" />
+                    <Border Style="{StaticResource Group}">
+                        <StackPanel>
+                            <Border Style="{StaticResource FirstRow}">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Style="{StaticResource FlatButton}" Command="{Binding OpenWebsiteCommand}" Margin="0" AutomationProperties.Name="{DynamicResource Loc.WebsiteOpen}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE774;" FontFamily="{StaticResource IconFont}" FontSize="13" Margin="0,1,8,0" VerticalAlignment="Center" />
+                                                <TextBlock Text="{DynamicResource Loc.WebsiteOpen}" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.WebSiteLabel}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.WebSiteHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Style="{StaticResource FlatButton}" Command="{Binding OpenPlaylistCommand}" Margin="0,0,8,0" AutomationProperties.Name="{DynamicResource Loc.WebPlaylistListen}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE8D6;" FontFamily="{StaticResource IconFont}" FontSize="13" Margin="0,1,8,0" VerticalAlignment="Center" />
+                                                <TextBlock Text="{DynamicResource Loc.WebPlaylistListen}" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Style="{StaticResource AccentButton}" Command="{Binding SuggestSongCommand}" Margin="0" AutomationProperties.Name="{DynamicResource Loc.WebPlaylistAdd}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" FontSize="13" Margin="0,1,8,0" VerticalAlignment="Center" />
+                                                <TextBlock Text="{DynamicResource Loc.WebPlaylistAdd}" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.WebPlaylistLabel}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.WebPlaylistHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Style="{StaticResource FlatButton}" Command="{Binding OpenCommunityCommand}" Margin="0" AutomationProperties.Name="{DynamicResource Loc.CommunityOpen}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE716;" FontFamily="{StaticResource IconFont}" FontSize="13" Margin="0,1,8,0" VerticalAlignment="Center" />
+                                                <TextBlock Text="{DynamicResource Loc.CommunityOpen}" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.WebCommunityLabel}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.WebCommunityHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Style="{StaticResource FlatButton}" Command="{Binding OpenTourCommand}" Margin="0" AutomationProperties.Name="{DynamicResource Loc.TourOpen}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE7BE;" FontFamily="{StaticResource IconFont}" FontSize="13" Margin="0,1,8,0" VerticalAlignment="Center" />
+                                                <TextBlock Text="{DynamicResource Loc.TourOpen}" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.WebTourLabel}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.WebTourHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </StackPanel>
                     </Border>
                 </StackPanel>
             </ScrollViewer>
@@ -1002,6 +1062,22 @@
                                     <StackPanel Style="{StaticResource RowText}">
                                         <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.AppData}" />
                                         <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.AppDataHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Style="{StaticResource FlatButton}" Command="{Binding OpenRepositoryCommand}" Margin="0" AutomationProperties.Name="{DynamicResource Loc.RepositoryOpen}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#xE943;" FontFamily="{StaticResource IconFont}" FontSize="13" Margin="0,1,8,0" VerticalAlignment="Center" />
+                                                <TextBlock Text="{DynamicResource Loc.RepositoryOpen}" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.RepositoryLabel}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.RepositoryHint}" />
                                     </StackPanel>
                                 </DockPanel>
                             </Border>

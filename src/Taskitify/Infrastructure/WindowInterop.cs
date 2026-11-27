@@ -236,6 +236,73 @@ internal static class FocusHelper
 }
 
 /// <summary>
+/// Shift + Alt + left click on a window that lets clicks through (Minimal Mode): the click is
+/// caught, never reaches what is underneath, and gives the window its clicks back. A low-level
+/// mouse hook, installed only while clicks pass through; it answers at once and polls nothing.
+/// </summary>
+internal sealed class ModifierClickWatcher : IDisposable
+{
+    private const int VK_SHIFT = 0x10;
+    private const int VK_MENU = 0x12;
+    private const int WM_LBUTTONUP = 0x0202;
+    private readonly LowLevelMouseProc _proc; // kept alive for the native side
+    private readonly Func<int, int, bool> _inside;
+    private readonly Action _onClick;
+    private IntPtr _hook;
+    private bool _swallowUp;
+
+    public ModifierClickWatcher(Func<int, int, bool> inside, Action onClick)
+    {
+        _inside = inside;
+        _onClick = onClick;
+        _proc = HookProc;
+    }
+
+    public bool IsRunning => _hook != IntPtr.Zero;
+
+    public void Start()
+    {
+        if (_hook == IntPtr.Zero)
+            _hook = SetWindowsHookEx(WH_MOUSE_LL, _proc, GetModuleHandle(null), 0);
+    }
+
+    public void Stop()
+    {
+        if (_hook != IntPtr.Zero)
+        {
+            UnhookWindowsHookEx(_hook);
+            _hook = IntPtr.Zero;
+        }
+    }
+
+    public void Dispose() => Stop();
+
+    private IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode >= 0)
+        {
+            var message = (int)wParam;
+            if (message == WM_LBUTTONDOWN && GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_MENU) < 0)
+            {
+                var data = System.Runtime.InteropServices.Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
+                if (_inside(data.X, data.Y))
+                {
+                    _swallowUp = true;
+                    _onClick();
+                    return new IntPtr(1);
+                }
+            }
+            else if (message == WM_LBUTTONUP && _swallowUp)
+            {
+                _swallowUp = false;
+                return new IntPtr(1);
+            }
+        }
+        return CallNextHookEx(_hook, nCode, wParam, lParam);
+    }
+}
+
+/// <summary>
 /// Low-level mouse hook used only while the mini player is open, to close it on a click
 /// outside even if it could not take activation. Runs in this process; nothing is injected.
 /// </summary>

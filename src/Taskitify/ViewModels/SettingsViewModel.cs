@@ -190,6 +190,12 @@ public sealed class SettingsViewModel : ObservableObject
 
     public ICommand OpenCommunityCommand { get; } = new RelayCommand(() => Infrastructure.OfficialLinks.Open(Infrastructure.OfficialLinks.Community));
 
+    public ICommand OpenPlaylistCommand { get; } = new RelayCommand(() => Infrastructure.OfficialLinks.Open(Infrastructure.OfficialLinks.Playlist));
+
+    public ICommand SuggestSongCommand { get; } = new RelayCommand(() => Infrastructure.OfficialLinks.Open(Infrastructure.OfficialLinks.SuggestSong));
+
+    public ICommand OpenRepositoryCommand { get; } = new RelayCommand(() => Infrastructure.OfficialLinks.Open(Infrastructure.OfficialLinks.Repository));
+
     public ICommand OpenTourCommand { get; } = new RelayCommand(() => ((App)System.Windows.Application.Current).ShowTour());
 
     /// <summary>Folder for the user's own .lrc files, which take precedence over LRCLIB.</summary>

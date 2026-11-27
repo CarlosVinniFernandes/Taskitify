@@ -10,13 +10,15 @@ Branch `t3/personalization-expansion`, from `t3/release-candidate` (aca354f). No
 | Personal looks | Save / name / apply / update / delete mini player looks beside the templates |
 | Background intensity | Atmosphere, darken and blur for the existing mini player backgrounds |
 | Per-song sync | An adjustment for the song playing, added to the global one |
+| Settings > General / Advanced | "Taskitify on the web" as rows (site, Community Soundtrack with Listen + Add a song, community, tour); repository link in Advanced |
 | Tour | Minimal Mode step shows the real feature; last card has two playlist buttons side by side |
 
 ### Minimal Mode
-- Defaults (game-friendly, per review): five verses graduated in size (small, medium, current, medium, small), no background, outline for legibility, no title/controls/buttons, clicks pass through, topmost. Off until turned on.
+- Defaults (game-friendly, per review): three verses, the ones around the current one smaller (graduated sizes, can be turned off), no background, outline for legibility, no title/controls/buttons, clicks pass through (a small crossed-out pointer marks it), topmost. Off until turned on.
+- Shift + Alt + left click on the lyrics while clicks pass through gives the clicks back (low-level mouse hook installed only in that state; that click is swallowed, never reaches the game).
 - Options: verses shown (1, current+next, 3, 5), graduated sizes on/off, highlight, motion, alignment, typeface, size, spacing, background (clear/soft/album) + opacity, text colour (white/warm/album/dark), legibility (none/shadow/outline), title+artist, playback controls, keep the taskbar player, topmost, lock, click-through.
-- Window: drag anywhere, resize from 10 px edges or an always-visible corner grip; position/size persist in physical px and come back on screen when a monitor/resolution is gone (`FloatingPlacement`). Toolbar (mini player, settings, lock, close) is always visible while clicks are caught, never hover-only.
-- Click-through: `WS_EX_TRANSPARENT`, no polling; turned off from the tray item or Settings (the window's buttons hide while it is on).
+- Window: drag anywhere, resize by hand from 10 px edges or the always-visible corner grip (the window has no system sizing frame, so the system hit test could not size it); position/size persist in physical px and come back on screen when a monitor/resolution is gone (`FloatingPlacement`). Toolbar (mini player, settings, lock, close) is always visible while clicks are caught, never hover-only.
+- Click-through: `WS_EX_TRANSPARENT`, no polling; turned off with Shift + Alt + click, the tray item or Settings (the window's buttons hide while it is on).
 - Games: never takes focus (`WS_EX_NOACTIVATE`, tool window); topmost is reasserted on foreground changes (WinEvent hook + one delayed retry), so it stays over borderless full-screen games.
 - Taskbar player hides while it is on (new hide reason; its layout settings untouched) unless "keep the taskbar player" is on; the mini player opens from the lyrics' toolbar or the tray.
 - Sync: same `LyricsSyncService` (track change, pause, seek, offsets, Lyric Flow by line and by word, no lyrics). No timer of its own; hidden = unsubscribed. Nothing shown while nothing plays; only the song when there are no synced lyrics.
@@ -40,13 +42,13 @@ Branch `t3/personalization-expansion`, from `t3/release-candidate` (aca354f). No
 ## Verification
 - `dotnet test tests/Taskitify.Tests`: 240 passed (new: placement recovery, defaults/compatibility, presets apply/persist, intensity mapping/limits, per-song key/sum/limits/persistence; localization completeness covers the 6 languages).
 - Build: Debug, 0 errors.
+- Shift + Alt + click (simulated input) turned click-through off; grip and left edge resized the window (840x280, then 920x280 moved left), saved.
 - Real app runs on a throwaway copy of the user's data (`TASKITIFY_DATA_DIR`, English for screenshots): Minimal Mode over the desktop with real songs (track changes, Lyric Flow ink, 1/3/5 verses, left/centre, album/soft/clear, outline), window ex-style checked (`TRANSPARENT|LAYERED|TOPMOST|NOACTIVATE|TOOLWINDOW`), placement on first run and after a lost position, taskbar player hidden, settings pages (Minimal, mini player templates with a personal look, background sliders, sync section), tour steps in en/pt/it.
 
 ## Known limitations
 - Exclusive full-screen games (the game owns the display) show no other window; borderless/windowed full screen works.
 - Graduated sizes are a render scale: every verse keeps the same slot, so spacing is even rather than tight.
 - Per-song key is artist + title: Windows gives no Spotify id, and the id Spotify's lookup learns is missing for cached/local/LRCLIB lyrics. Two different songs with identical names share an adjustment.
-- Tray/Settings are the only way back from click-through by design (nothing on the window can be clicked).
 - The Lyrics page's Lyric Flow hint still names only the bar and the mini player (the Minimal page says it follows that setting).
 
 ## Pending

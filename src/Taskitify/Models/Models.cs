@@ -706,8 +706,8 @@ public enum MinimalLegibility
 /// <summary>
 /// Minimal Mode's settings. Its look (type, highlight, motion...) is its own, not the mini
 /// player's, so the two can differ; the position is in physical pixels (0 width: not placed yet).
-/// By default it is minimal indeed: the verse being sung, two before and two after it in smaller
-/// sizes, no background, no buttons, and
+/// By default it is minimal indeed: the verse being sung between a smaller one before and after
+/// it, no background, no buttons, and
 /// every click going through to what is underneath (a game keeps all of its input).
 /// </summary>
 public sealed class MinimalModeSettings
@@ -736,7 +736,7 @@ public sealed class MinimalModeSettings
     /// <summary>The current verse's size in DIPs.</summary>
     public double FontSize { get; set; } = 30;
 
-    public MinimalLines Lines { get; set; } = MinimalLines.Five;
+    public MinimalLines Lines { get; set; } = MinimalLines.Three;
 
     /// <summary>Verses get smaller the further they are from the current one (small, medium, current, medium, small).</summary>
     public bool GraduatedSizes { get; set; } = true;

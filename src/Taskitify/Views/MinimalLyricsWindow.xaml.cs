@@ -95,6 +95,12 @@ public partial class MinimalLyricsWindow : Window
     private bool _inkQueued;
     private TextBlock? _activeText;
     private ForegroundWatcher? _foreground;
+    private readonly ModifierClickWatcher _unlockClick;
+    // A resize in progress: which edges move, from which bounds and cursor position (physical px).
+    private (bool Left, bool Top, bool Right, bool Bottom) _resizeEdges;
+    private PixelRect _resizeFrom;
+    private NativeMethods.POINT _resizeStart;
+    private bool _resizing;
     private DispatcherTimer? _topmostAgain;
     // What the window's height was fitted to; the user's own resizing is kept until one of these changes.
     private (MinimalLines, double, double, bool, bool)? _fittedTo;
@@ -143,6 +149,17 @@ public partial class MinimalLyricsWindow : Window
             try { DragMove(); }
             catch (InvalidOperationException) { }
         };
+        // Shift + Alt + click while clicks pass through: they come back, and so do the buttons and the grip.
+        _unlockClick = new ModifierClickWatcher(
+            (x, y) => IsVisible && Contains(WindowInterop.GetBounds(_hwnd), x, y),
+            () => Dispatcher.BeginInvoke(() => _settings.Update(s => s.Minimal.ClickThrough = false)));
+        Closed += (_, _) => _unlockClick.Dispose();
+
+        // Resizing by hand, from the edges and the corner grip (the window has no system frame).
+        Root.PreviewMouseLeftButtonDown += OnResizeStart;
+        Root.PreviewMouseMove += OnResizeMove;
+        Root.PreviewMouseLeftButtonUp += (_, _) => EndResize();
+        Root.LostMouseCapture += (_, _) => EndResize();
         Root.MouseEnter += (_, _) => Toolbar.Opacity = ResizeGrip.Opacity = 1;
         Root.MouseLeave += (_, _) => Toolbar.Opacity = ResizeGrip.Opacity = 0.6;
 
@@ -165,6 +182,7 @@ public partial class MinimalLyricsWindow : Window
             {
                 _monitor.ThumbnailChanged -= OnCoverChanged;
                 UpdateTopmostWatch();
+                _unlockClick.Stop();
                 _lyricInk.Invalidate();
                 _activeText = null;
                 LyricsOffset.BeginAnimation(TranslateTransform.YProperty, null);
@@ -259,6 +277,11 @@ public partial class MinimalLyricsWindow : Window
         UpdateTopmostWatch();
         Cursor = s.Locked ? null : Cursors.SizeAll;
         ResizeGrip.Visibility = s.Locked || s.ClickThrough ? Visibility.Collapsed : Visibility.Visible;
+        ClickThroughMark.Visibility = s.ClickThrough ? Visibility.Visible : Visibility.Collapsed;
+        if (s.ClickThrough && IsVisible)
+            _unlockClick.Start();
+        else
+            _unlockClick.Stop();
         // Clicks through: nothing to click, so the buttons go too (the tray and the settings turn it off).
         Toolbar.Visibility = s.ClickThrough ? Visibility.Collapsed : Visibility.Visible;
         if (_hwnd != IntPtr.Zero)
@@ -377,41 +400,6 @@ public partial class MinimalLyricsWindow : Window
     {
         switch (msg)
         {
-            // The edges resize the window (Windows does the rest, smoothly); not when locked.
-            case NativeMethods.WM_NCHITTEST when !_settings.Current.Minimal.Locked:
-                var x = (short)(lParam.ToInt64() & 0xFFFF);
-                var y = (short)((lParam.ToInt64() >> 16) & 0xFFFF);
-                var r = WindowInterop.GetBounds(hwnd);
-                var scale = WindowInterop.GetScale(hwnd);
-                var edge = (int)Math.Round(ResizeBorder * scale);
-                var grip = (int)Math.Round(GripSize * scale);
-                if (!_settings.Current.Minimal.ClickThrough && x >= r.Right - grip && y >= r.Bottom - grip)
-                {
-                    handled = true;
-                    return new IntPtr(NativeMethods.HTBOTTOMRIGHT);
-                }
-                var left = x < r.Left + edge;
-                var right = x >= r.Right - edge;
-                var top = y < r.Top + edge;
-                var bottom = y >= r.Bottom - edge;
-                var hit = (top, bottom, left, right) switch
-                {
-                    (true, _, true, _) => NativeMethods.HTTOPLEFT,
-                    (true, _, _, true) => NativeMethods.HTTOPRIGHT,
-                    (_, true, true, _) => NativeMethods.HTBOTTOMLEFT,
-                    (_, true, _, true) => NativeMethods.HTBOTTOMRIGHT,
-                    (true, _, _, _) => NativeMethods.HTTOP,
-                    (_, true, _, _) => NativeMethods.HTBOTTOM,
-                    (_, _, true, _) => NativeMethods.HTLEFT,
-                    (_, _, _, true) => NativeMethods.HTRIGHT,
-                    _ => 0,
-                };
-                if (hit != 0)
-                {
-                    handled = true;
-                    return new IntPtr(hit);
-                }
-                break;
             case NativeMethods.WM_EXITSIZEMOVE:
                 SaveBounds();
                 break;
@@ -421,6 +409,74 @@ public partial class MinimalLyricsWindow : Window
                 break;
         }
         return IntPtr.Zero;
+    }
+
+    private static bool Contains(PixelRect r, int x, int y) => x >= r.Left && x < r.Right && y >= r.Top && y < r.Bottom;
+
+    /// <summary>The edges (10 px) and the corner grip (bottom right, 24 px) under a point, if any.</summary>
+    private (bool Left, bool Top, bool Right, bool Bottom) EdgesAt(Point p)
+    {
+        var w = Root.ActualWidth;
+        var h = Root.ActualHeight;
+        if (p.X >= w - GripSize && p.Y >= h - GripSize)
+            return (false, false, true, true);
+        return (p.X < ResizeBorder, p.Y < ResizeBorder, p.X >= w - ResizeBorder, p.Y >= h - ResizeBorder);
+    }
+
+    private static Cursor? CursorFor((bool Left, bool Top, bool Right, bool Bottom) e) => e switch
+    {
+        (true, true, _, _) or (_, _, true, true) => Cursors.SizeNWSE,
+        (true, _, _, true) or (_, true, true, _) => Cursors.SizeNESW,
+        (true, _, _, _) or (_, _, true, _) => Cursors.SizeWE,
+        (_, true, _, _) or (_, _, _, true) => Cursors.SizeNS,
+        _ => null,
+    };
+
+    private void OnResizeStart(object sender, MouseButtonEventArgs e)
+    {
+        var s = _settings.Current.Minimal;
+        if (s.Locked || s.ClickThrough || e.OriginalSource is DependencyObject source && IsInButton(source))
+            return;
+        var edges = EdgesAt(e.GetPosition(Root));
+        if (edges == default)
+            return;
+        NativeMethods.GetCursorPos(out _resizeStart);
+        _resizeFrom = WindowInterop.GetBounds(_hwnd);
+        _resizeEdges = edges;
+        _resizing = Root.CaptureMouse();
+        e.Handled = _resizing;
+    }
+
+    private void OnResizeMove(object sender, MouseEventArgs e)
+    {
+        if (!_resizing)
+        {
+            var s = _settings.Current.Minimal;
+            Root.Cursor = s.Locked || s.ClickThrough ? null : CursorFor(EdgesAt(e.GetPosition(Root)));
+            return;
+        }
+        NativeMethods.GetCursorPos(out var now);
+        var dx = now.X - _resizeStart.X;
+        var dy = now.Y - _resizeStart.Y;
+        var scale = WindowInterop.GetScale(_hwnd);
+        var minW = (int)Math.Round(MinWidth * scale);
+        var minH = (int)Math.Round(MinHeight * scale);
+        var (left, top, right, bottom) = (_resizeFrom.Left, _resizeFrom.Top, _resizeFrom.Right, _resizeFrom.Bottom);
+        if (_resizeEdges.Left) left = Math.Min(left + dx, right - minW);
+        if (_resizeEdges.Right) right = Math.Max(right + dx, left + minW);
+        if (_resizeEdges.Top) top = Math.Min(top + dy, bottom - minH);
+        if (_resizeEdges.Bottom) bottom = Math.Max(bottom + dy, top + minH);
+        SetBounds(PixelRect.FromLTRB(left, top, right, bottom));
+    }
+
+    private void EndResize()
+    {
+        if (!_resizing)
+            return;
+        _resizing = false;
+        if (Root.IsMouseCaptured)
+            Root.ReleaseMouseCapture();
+        SaveBounds();
     }
 
     private static SolidColorBrush Frozen(Color c)

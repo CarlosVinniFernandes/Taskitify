@@ -849,7 +849,7 @@ public sealed class TourWindow : Window
         grid.Children.Add(left);
 
         // A desktop with the floating lyrics as the real window draws them by default: the verse
-        // being sung, two before and two after it in smaller sizes, outlined, with no background and no
+        // being sung between a smaller one before and after it, outlined, with no background and no
         // buttons (clicks go to the game under it). It can be dragged and given a soft background here.
         var screen = new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Background = PhotoBrush("fuji.jpg", 0, Stretch.UniformToFill), Margin = new Thickness(36, 0, 0, 0) };
         var canvas = new Canvas { ClipToBounds = true, Background = Brushes.Transparent };
@@ -867,6 +867,7 @@ public sealed class TourWindow : Window
         var next = Verse(23, .55);
         var after2 = Verse(19, .32);
         var verses = new StackPanel { Width = 470, Margin = new Thickness(0, 2, 0, 0) };
+        before2.Visibility = after2.Visibility = Visibility.Collapsed;
         foreach (var verse in new[] { before2, previous, lyric, next, after2 })
             verses.Children.Add(verse);
         var toolbar = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Opacity = .6, Visibility = Visibility.Collapsed };
