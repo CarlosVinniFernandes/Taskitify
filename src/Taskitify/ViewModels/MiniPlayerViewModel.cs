@@ -286,7 +286,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     public double MotionLineHeight => LyricsFontSize * 1.12;
 
-    public double LyricsFontSize => (IsCinema ? 28 : 23) * Math.Clamp(Look.LyricsScale, .8, 1.4) * (DisplayType ? 1 : .86) * _fitScale;
+    public double LyricsFontSize => (IsCinema ? 28 : 23) * Math.Clamp(Look.LyricsScale, .7, 2.2) * (DisplayType ? 1 : .86) * _fitScale;
 
     private double _fitScale = 1;
 

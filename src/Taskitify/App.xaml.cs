@@ -195,6 +195,8 @@ public partial class App : Application
         _miniPlayer = new MiniPlayerWindow(_miniPlayerVm, () => _settings.Current.EnableAnimations,
             () => _settings.Current.Background == Models.OverlayBackground.AlbumGradient);
         // The popup's hover buttons.
+        _miniPlayer.LyricsSizeRequested += (_, step) => _settings.Update(s =>
+            s.MiniPlayerLook.LyricsScale = Math.Clamp(Math.Round((s.MiniPlayerLook.LyricsScale + (step * 0.1)) * 10) / 10, 0.7, 2.2));
         _miniPlayer.FloatRequested += (_, _) => _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, true));
         _miniPlayer.MinimalRequested += (_, _) =>
         {

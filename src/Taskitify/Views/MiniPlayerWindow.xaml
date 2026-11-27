@@ -73,7 +73,7 @@
                         </Border>
                     </Grid>
                     <StackPanel x:Name="TitlePart" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Title}" FontFamily="{Binding TitleFont}" FontSize="{Binding TitleFontSize}" FontWeight="{Binding TitleWeight}"
+                        <TextBlock x:Name="TitleText" Text="{Binding Title}" FontFamily="{Binding TitleFont}" FontSize="{Binding TitleFontSize}" FontWeight="{Binding TitleWeight}"
                                    Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"
                                    ToolTip="{Binding Title}" Visibility="{Binding ShowTitle, Converter={StaticResource BoolToVisibility}}" />
                         <TextBlock Text="{Binding Artist}" FontSize="13.5" Margin="0,3,0,0" FontFamily="{Binding TitleFont}" FontWeight="Medium"
@@ -252,6 +252,12 @@
                     ToolTip="{DynamicResource Loc.FloatPlayer}" AutomationProperties.Name="{DynamicResource Loc.FloatPlayer}" />
             <Button x:Name="PinnedSwitch" Style="{StaticResource PinnedTool}" Content="&#xE8D6;"
                     ToolTip="{DynamicResource Loc.SwitchToMinimal}" AutomationProperties.Name="{DynamicResource Loc.SwitchToMinimal}" />
+            <Button x:Name="LyricsSmaller" Style="{StaticResource PinnedTool}" Content="&#xE8E7;"
+                    ToolTip="{DynamicResource Loc.LyricsSmaller}" AutomationProperties.Name="{DynamicResource Loc.LyricsSmaller}" />
+            <Button x:Name="LyricsBigger" Style="{StaticResource PinnedTool}" Content="&#xE8E8;"
+                    ToolTip="{DynamicResource Loc.LyricsBigger}" AutomationProperties.Name="{DynamicResource Loc.LyricsBigger}" />
+            <Button x:Name="PinnedMaximize" Style="{StaticResource PinnedTool}" Content="&#xE740;"
+                    ToolTip="{DynamicResource Loc.FillScreen}" AutomationProperties.Name="{DynamicResource Loc.FillScreen}" />
             <Button x:Name="PinnedSettings" Style="{StaticResource PinnedTool}" Content="&#xE713;"
                     ToolTip="{DynamicResource Loc.MinimalSettings}" AutomationProperties.Name="{DynamicResource Loc.MinimalSettings}" />
             <Button x:Name="PinnedClickThrough" Style="{StaticResource PinnedTool}"

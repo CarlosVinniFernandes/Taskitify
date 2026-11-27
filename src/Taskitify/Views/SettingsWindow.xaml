@@ -624,7 +624,7 @@
                                         <TextBlock DockPanel.Dock="Right" Style="{StaticResource ValueText}" Text="{Binding MiniLook.LyricsPercent, StringFormat={}{0:0}%}" />
                                         <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookLyricsSize}" />
                                     </DockPanel>
-                                    <Slider Minimum="80" Maximum="140" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,8,0,0"
+                                    <Slider Minimum="70" Maximum="220" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,8,0,0"
                                             Value="{Binding MiniLook.LyricsPercent}" AutomationProperties.Name="{DynamicResource Loc.LookLyricsSize}" />
                                 </StackPanel>
                             </Border>
@@ -1474,7 +1474,7 @@
                                         <TextBlock DockPanel.Dock="Right" Style="{StaticResource ValueText}" Text="{Binding MiniLook.LyricsPercent, StringFormat={}{0:0}%}" />
                                         <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookLyricsSize}" />
                                     </DockPanel>
-                                    <Slider Minimum="80" Maximum="140" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,8,0,0"
+                                    <Slider Minimum="70" Maximum="220" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,8,0,0"
                                             Value="{Binding MiniLook.LyricsPercent}" AutomationProperties.Name="{DynamicResource Loc.LookLyricsSize}" />
                                 </StackPanel>
                             </Border>

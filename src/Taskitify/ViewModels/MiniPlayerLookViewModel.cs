@@ -351,7 +351,7 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     public double LyricsPercent
     {
         get => Math.Round(Look.LyricsScale * 100);
-        set => Change(s => s.MiniPlayerLook.LyricsScale = Math.Clamp(Math.Round(value / 5) * 5, 80, 140) / 100);
+        set => Change(s => s.MiniPlayerLook.LyricsScale = Math.Clamp(Math.Round(value / 5) * 5, 70, 220) / 100);
     }
 
     private void UpdatePictures()

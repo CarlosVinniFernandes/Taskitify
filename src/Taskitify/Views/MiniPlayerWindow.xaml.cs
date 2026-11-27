@@ -118,6 +118,9 @@ public partial class MiniPlayerWindow : Window
         };
         PinnedSettings.Click += (_, _) => (Application.Current as App)?.ShowSettings(IsPinned ? SettingsPage.NotMinimal : SettingsPage.MiniPlayer);
         PopupFloat.Click += (_, _) => FloatRequested?.Invoke(this, EventArgs.Empty);
+        LyricsSmaller.Click += (_, _) => LyricsSizeRequested?.Invoke(this, -1);
+        LyricsBigger.Click += (_, _) => LyricsSizeRequested?.Invoke(this, 1);
+        PinnedMaximize.Click += (_, _) => ToggleFillScreen();
         PopupKeepOpen.Click += (_, _) =>
         {
             _keepOpen = !_keepOpen;
@@ -325,6 +328,12 @@ public partial class MiniPlayerWindow : Window
     public event EventHandler? FloatRequested;
     public event EventHandler? MinimalRequested;
 
+    /// <summary>The hover buttons' A- (-1) and A+ (+1): the lyrics' size, one step.</summary>
+    public event EventHandler<int>? LyricsSizeRequested;
+
+    // Floating and filling its screen: the place and shape to go back to.
+    private (PixelRect Bounds, double Width, double Lyrics)? _beforeFill;
+
     private bool _pointerOver;
 
     // The popup kept open with its pin: clicks elsewhere and losing the focus no longer close it;
@@ -472,7 +481,44 @@ public partial class MiniPlayerWindow : Window
     }
 
     /// <summary>Floating, the player resizes further than as a popup.</summary>
-    private static (double Min, double Max) PinnedWidthRange(bool cinema) => cinema ? (400, 1400) : (280, 900);
+    private static (double Min, double Max) PinnedWidthRange(bool cinema) => cinema ? (400, 4000) : (280, 4000);
+
+    /// <summary>Floating: fills the screen it is on (the card up to the work area's edges), or goes back.</summary>
+    private void ToggleFillScreen()
+    {
+        if (!IsPinned || _hwnd == IntPtr.Zero)
+            return;
+        if (_beforeFill is { } before)
+        {
+            _beforeFill = null;
+            SetBaseWidth(before.Width);
+            ResizeLyrics(before.Lyrics);
+            UpdateFit();
+            AdaptToSize();
+            UpdateLayout();
+            WindowInterop.SetPosition(_hwnd, before.Bounds.X, before.Bounds.Y);
+            UpdatePinnedToolbar();
+            SavePinned();
+            return;
+        }
+        var bounds = WindowInterop.GetBounds(_hwnd);
+        if (WindowInterop.MonitorForRect(bounds) is not { } monitor)
+            return;
+        _beforeFill = (bounds, _baseWidth, _lyricsBase);
+        var scale = WindowInterop.GetScale(_hwnd);
+        var work = monitor.WorkArea;
+        var margin = ShadowRoom / 2;
+        // Everything but the lyrics keeps its height; the lyrics take the rest of the screen.
+        var others = ActualHeight - _lyricsBase;
+        SetBaseWidth((work.Width / scale) + ShadowRoom);
+        ResizeLyrics(Math.Max(70, (work.Height / scale) + ShadowRoom - others));
+        UpdateFit();
+        AdaptToSize();
+        UpdateLayout();
+        WindowInterop.SetPosition(_hwnd, work.X - (int)Math.Round(margin * scale), work.Y - (int)Math.Round(margin * scale));
+        UpdatePinnedToolbar();
+        SavePinned();
+    }
 
     /// <summary>
     /// Floating, sized with the grip: the cover follows the room (the lyrics' height in the wide
@@ -485,6 +531,8 @@ public partial class MiniPlayerWindow : Window
         if (!IsPinned)
         {
             PlayPauseButton.Margin = new Thickness(8, 0, 8, 0);
+            TitleText.TextWrapping = TextWrapping.NoWrap;
+            TitleText.MaxHeight = double.PositiveInfinity;
             return;
         }
         if (_vm.IsCinema)
@@ -493,8 +541,10 @@ public partial class MiniPlayerWindow : Window
             {
                 // The song's column is the cover plus its 28 DIPs (196 for the usual 168): it widens
                 // and narrows with it, and the lyrics keep at least two thirds of the width.
-                var cover = Math.Clamp(_lyricsBase * 168 / 268, 72, 320);
+                var cover = Math.Clamp(_lyricsBase * 168 / 268, 72, 560);
                 cover = Math.Round(Math.Min(cover, Math.Max(72, (content * 0.34) - 28)));
+                // The song's column (cover, title, actions) never taller than the lyrics beside it.
+                cover = Math.Max(72, Math.Min(cover, _lyricsBase - 100));
                 CoverPart.Width = CoverPart.Height = cover;
                 if (LayoutRoot.ColumnDefinitions.Count == 2)
                     LayoutRoot.ColumnDefinitions[0].Width = new GridLength(cover + 28);
@@ -504,6 +554,10 @@ public partial class MiniPlayerWindow : Window
         {
             CoverPart.Width = CoverPart.Height = Math.Round(Math.Clamp(content * 64 / 320, 48, 120));
         }
+        // A narrow song column: the title takes two lines rather than being cut short.
+        var narrow = _vm.IsCinema && LayoutRoot.ColumnDefinitions.Count == 2 && LayoutRoot.ColumnDefinitions[0].Width.Value < 170;
+        TitleText.TextWrapping = narrow ? TextWrapping.Wrap : TextWrapping.NoWrap;
+        TitleText.MaxHeight = narrow ? Math.Ceiling(TitleText.FontSize * 1.34 * 2) : double.PositiveInfinity;
         var gap = Math.Clamp((content - 300) / 14, 2, 28);
         PlayPauseButton.Margin = new Thickness(gap, 0, gap, 0);
     }
@@ -567,8 +621,17 @@ public partial class MiniPlayerWindow : Window
         var dy = (now.Y - _gripStart.Y) / scale;
         // A real resize: the corner follows the pointer and the layout adapts (shorter progress
         // bar, closer buttons, a smaller cover); text and buttons keep their size.
+        // Up to the whole screen it is on (the shadow margin may go past its edges).
         var (min, max) = PinnedWidthRange(_vm.IsCinema);
-        _gripPending = (Math.Clamp(_gripFrom.Width + dx, min, max), Math.Clamp(_gripFrom.Lyrics + dy, 70, 900), 1);
+        var maxLyrics = 900.0;
+        var bounds = WindowInterop.GetBounds(_hwnd);
+        if (WindowInterop.MonitorForRect(bounds) is { } monitor)
+        {
+            max = Math.Max(min, ((monitor.WorkArea.Right - bounds.Left) / scale) + (ShadowRoom / 2));
+            maxLyrics = Math.Max(70, _gripFrom.Lyrics + ((monitor.WorkArea.Bottom - bounds.Bottom) / scale) + (ShadowRoom / 2));
+        }
+        _beforeFill = null;
+        _gripPending = (Math.Clamp(_gripFrom.Width + dx, min, max), Math.Clamp(_gripFrom.Lyrics + dy, 70, maxLyrics), 1);
     }
 
     /// <summary>Once per frame while the grip moves: one layout per frame, however fast the mouse.</summary>
@@ -1042,7 +1105,11 @@ public partial class MiniPlayerWindow : Window
             PopupKeepOpen.SetResourceReference(ForegroundProperty, "AccentBrush");
         else
             PopupKeepOpen.ClearValue(ForegroundProperty);
-        PinnedClickThrough.Visibility = PinnedLock.Visibility = PinnedClose.Visibility = pinnedOnly;
+        PinnedClickThrough.Visibility = PinnedLock.Visibility = PinnedClose.Visibility = PinnedMaximize.Visibility = pinnedOnly;
+        PinnedMaximize.Content = _beforeFill is null ? "\uE740" : "\uE73F";
+        PinnedMaximize.ToolTip = LocalizationService.Get(_beforeFill is null ? "FillScreen" : "RestoreSize");
+        System.Windows.Automation.AutomationProperties.SetName(PinnedMaximize, (string)PinnedMaximize.ToolTip);
+        System.Windows.Automation.AutomationProperties.SetName(PopupKeepOpen, (string)PopupKeepOpen.ToolTip);
         PinnedSettings.ToolTip = LocalizationService.Get(IsPinned ? "MinimalSettings" : "MiniPlayerSettings");
         var target = available && (_pointerOver || _gripping || (IsPinned && o is { PlayerButtonsOnHover: false })) ? 1.0 : 0.0;
         if (IsPinned && o is { } p)
