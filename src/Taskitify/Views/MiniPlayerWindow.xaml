@@ -168,22 +168,22 @@
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Style="{StaticResource ModeButton}" Command="{Binding ShuffleCommand}" Content="&#xE8B1;" Tag="{Binding IsShuffleActive}"
-                                ToolTip="{DynamicResource Loc.Shuffle}" Visibility="{Binding ShowShuffle, Converter={StaticResource BoolToVisibility}}" />
-                        <Button x:Name="PreviousButton" Style="{StaticResource RowButton}" Command="{Binding PreviousCommand}" Content="&#xE892;" ToolTip="{DynamicResource Loc.Previous}"
+                                AutomationProperties.Name="{DynamicResource Loc.Shuffle}" ToolTip="{DynamicResource Loc.Shuffle}" Visibility="{Binding ShowShuffle, Converter={StaticResource BoolToVisibility}}" />
+                        <Button x:Name="PreviousButton" Style="{StaticResource RowButton}" Command="{Binding PreviousCommand}" Content="&#xE892;" AutomationProperties.Name="{DynamicResource Loc.Previous}" ToolTip="{DynamicResource Loc.Previous}"
                                 Visibility="{Binding ShowPrevious, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
 
                     <Button Grid.Column="1" Style="{StaticResource PlayButton}" Command="{Binding PlayPauseCommand}" Margin="8,0" x:Name="PlayPauseButton"
-                            ToolTip="{DynamicResource Loc.PlayPause}" Visibility="{Binding ShowPlayPause, Converter={StaticResource BoolToVisibility}}">
+                            AutomationProperties.Name="{DynamicResource Loc.PlayPause}" ToolTip="{DynamicResource Loc.PlayPause}" Visibility="{Binding ShowPlayPause, Converter={StaticResource BoolToVisibility}}">
                         <TextBlock x:Name="PlayPauseGlyph" Text="&#xE768;" FontFamily="{StaticResource IconFont}"
                                    Foreground="{DynamicResource WindowBackgroundBrush}" />
                     </Button>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Left">
-                        <Button x:Name="NextButton" Style="{StaticResource RowButton}" Command="{Binding NextCommand}" Content="&#xE893;" ToolTip="{DynamicResource Loc.Next}"
+                        <Button x:Name="NextButton" Style="{StaticResource RowButton}" Command="{Binding NextCommand}" Content="&#xE893;" AutomationProperties.Name="{DynamicResource Loc.Next}" ToolTip="{DynamicResource Loc.Next}"
                                 Visibility="{Binding ShowNext, Converter={StaticResource BoolToVisibility}}" />
                         <Button Style="{StaticResource ModeButton}" Command="{Binding RepeatCommand}" Content="{Binding RepeatGlyph}" Tag="{Binding IsRepeatActive}"
-                                ToolTip="{DynamicResource Loc.Repeat}" Visibility="{Binding ShowRepeat, Converter={StaticResource BoolToVisibility}}" />
+                                AutomationProperties.Name="{DynamicResource Loc.Repeat}" ToolTip="{DynamicResource Loc.Repeat}" Visibility="{Binding ShowRepeat, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
                     <Button x:Name="VolumeButton" Grid.Column="2" Style="{StaticResource ModeButton}" Command="{Binding Volume.ToggleOpenCommand}"
                             Content="{Binding Volume.Glyph}" HorizontalAlignment="Right" Tag="{Binding Volume.IsOpen}" ToolTip="{Binding Volume.Tip}"

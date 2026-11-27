@@ -244,7 +244,8 @@
                             <DockPanel>
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                     <Button Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.WebsiteOpen}" Command="{Binding OpenWebsiteCommand}" Margin="0,0,8,0" />
-                                    <Button Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.CommunityOpen}" Command="{Binding OpenCommunityCommand}" />
+                                    <Button Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.CommunityOpen}" Command="{Binding OpenCommunityCommand}" Margin="0,0,8,0" />
+                                    <Button Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.TourOpen}" Command="{Binding OpenTourCommand}" />
                                 </StackPanel>
                                 <StackPanel Style="{StaticResource RowText}">
                                     <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.WebsiteTitle}" />
