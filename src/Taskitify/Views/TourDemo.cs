@@ -145,7 +145,7 @@ internal sealed class TourStage : IDisposable
     private MiniPlayerViewModel? _miniVm;
     private MiniPlayerWindow? _mini;
 
-    public TourStage()
+    public TourStage(AppSettings? start = null)
     {
         Settings = SettingsService.InMemory(new AppSettings
         {
@@ -159,10 +159,42 @@ internal sealed class TourStage : IDisposable
                 Motion = LyricMotionMode.Expressive, Typeface = LyricsTypeface.Modern,
             },
         });
+        if (start is not null)
+        {
+            // A copy of the user's own layout and look: changing the demonstration never changes them.
+            var s = Settings.Current;
+            s.Bar = Copy(start.Bar);
+            s.MinimizedBar = Copy(start.MinimizedBar);
+            s.PausedBehavior = start.PausedBehavior;
+            s.Background = start.Background;
+            s.TaskbarLyricFlow = start.TaskbarLyricFlow == LyricFlowMode.Off ? LyricFlowMode.Automatic : start.TaskbarLyricFlow;
+            var look = start.MiniPlayerLook;
+            s.MiniPlayerLook = new MiniPlayerStyle
+            {
+                Layout = look.Layout, Background = look.Background == MiniPlayerBackground.Default ? MiniPlayerBackground.BlurredCover : look.Background,
+                Highlight = look.Highlight, Motion = look.Motion, Typeface = look.Typeface, Alignment = look.Alignment, Controls = look.Controls,
+                LyricsScale = look.LyricsScale, Flow = look.Flow,
+            };
+        }
         Monitor = new TourMonitor(TourSong.All[0], 3 * TourSong.LineSeconds + 1.2);
         _sync = new LyricsSyncService(Monitor, new TourLyrics(Monitor), Settings);
         _sync.Reload();
         _likes = new SpotifyLikeService(Monitor, _sync, Settings, liked: true);
+    }
+
+    private static BarLayout Copy(BarLayout b) => new()
+    {
+        ShowCover = b.ShowCover, ShowText = b.ShowText, ShowCaption = b.ShowCaption, ShowShuffle = b.ShowShuffle, ShowPrevious = b.ShowPrevious,
+        ShowPlayPause = b.ShowPlayPause, ShowNext = b.ShowNext, ShowRepeat = b.ShowRepeat, ShowVolume = b.ShowVolume, ShowLike = b.ShowLike,
+        ShowProgress = b.ShowProgress, Width = b.Width,
+    };
+
+    /// <summary>Plays or pauses the demonstration; the player takes the paused layout's width, as on the taskbar.</summary>
+    public void SetPlaying(bool playing)
+    {
+        Monitor.SetPlaying(playing);
+        if (_bar is not null)
+            _bar.Width = Settings.Current.Layout(!playing).Width;
     }
 
     public SettingsService Settings { get; }
@@ -212,7 +244,7 @@ internal sealed class TourStage : IDisposable
     {
         if (_mini is null)
             Mini(1);
-        return (FrameworkElement?)_mini?.Content;
+        return _mini?.ContentCard; // the card itself: no shadow margin around it
     }
 
     /// <summary>The taskbar player as it looks now; null while it hides (paused, "give the space back").</summary>

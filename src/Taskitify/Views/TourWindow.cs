@@ -43,7 +43,8 @@ public sealed class TourWindow : Window
 
     private readonly Func<SettingsPage, bool> _openSettings;
     private readonly bool _spotifyConnected;
-    private readonly TourStage _stage = new();
+    private readonly TourStage _stage;
+    private readonly SettingsService _real;
     private readonly List<Step> _steps = [];
     private readonly Grid _content = new();
     private readonly Border _backA = new(), _backB = new();
@@ -58,10 +59,13 @@ public sealed class TourWindow : Window
         public List<DispatcherTimer> Timers { get; } = [];
     }
 
-    public TourWindow(Func<SettingsPage, bool> openSettings, bool spotifyConnected)
+    public TourWindow(Func<SettingsPage, bool> openSettings, SettingsService settings)
     {
         _openSettings = openSettings;
-        _spotifyConnected = spotifyConnected;
+        _real = settings;
+        _spotifyConnected = settings.Current.SpotifyLyricsEnabled;
+        // The demonstrations start from the user's own choices.
+        _stage = new TourStage(settings.Current);
         Title = T("WindowTitle");
         Background = Frozen(Color.FromRgb(0x0D, 0x1E, 0x29));
         FontFamily = (FontFamily)Application.Current.Resources["UiFont"];
@@ -84,7 +88,7 @@ public sealed class TourWindow : Window
         _steps.Add(new("Sources", BuildSources, Atmosphere("#0F1E2E", "#1C3A4A", "#2F5E5A")));
         _steps.Add(new("Taskbar", BuildTaskbar, Atmosphere("#0B1C27", "#16384A", "#356B79"), Bar: true, Mini: true));
         _steps.Add(new("Adapt", BuildAdapt, Atmosphere("#101B2A", "#22364F", "#6E5A72"), Bar: true));
-        _steps.Add(new("Mini", BuildMini, Photo("matterhorn.jpg", .55), Mini: true));
+        _steps.Add(new("Mini", BuildMini, Atmosphere("#0E1A26", "#1E3346", "#5A4A6A"), Mini: true));
         _steps.Add(new("Minimal", BuildMinimal, Atmosphere("#0A1420", "#14283A", "#3A4C66")));
         _steps.Add(new("Studio", BuildStudio, Atmosphere("#1A1622", "#3A2E3A", "#9A7B52")));
         _steps.Add(new("Privacy", BuildPrivacy, Atmosphere("#0C1A20", "#163037", "#2E5A55")));
@@ -185,6 +189,7 @@ public sealed class TourWindow : Window
         var step = _steps[index];
         step.View ??= step.Build();
         _stage.Use(step.Bar, step.Mini);
+        _stage.SetPlaying(step.Key != "Adapt");
         foreach (var timer in step.Timers)
             timer.Start();
 
@@ -341,63 +346,426 @@ public sealed class TourWindow : Window
         };
     }
 
-    // ---- 03 The taskbar ------------------------------------------------------------------------
+    // ---- 03–05 Guided setup: taskbar, paused, mini player ------------------------------------------
+    // The stage starts from the user's own settings. Choices change the demonstration at once; only
+    // "Save" writes them, and only what differs, to the real settings. "Undo" goes back to them.
+
+    private static readonly Brush CalloutBack = Frozen(Color.FromRgb(0x12, 0x25, 0x2E));
+    private static readonly Brush CalloutLine = Frozen(Color.FromArgb(0x99, 0x5C, 0xD2, 0xE0));
+    private static readonly Brush Dim = Frozen(Color.FromArgb(0x8C, 0x05, 0x0B, 0x11));
+    private Grid? _lastSlot;
+    private Image? _lastPlayer;
+
+    private static BarLayout CopyBar(BarLayout b) => new()
+    {
+        ShowCover = b.ShowCover, ShowText = b.ShowText, ShowCaption = b.ShowCaption, ShowShuffle = b.ShowShuffle, ShowPrevious = b.ShowPrevious,
+        ShowPlayPause = b.ShowPlayPause, ShowNext = b.ShowNext, ShowRepeat = b.ShowRepeat, ShowVolume = b.ShowVolume, ShowLike = b.ShowLike,
+        ShowProgress = b.ShowProgress, Width = b.Width,
+    };
+
+    private static bool SameBar(BarLayout a, BarLayout b) =>
+        a.ShowCover == b.ShowCover && a.ShowText == b.ShowText && a.ShowCaption == b.ShowCaption && a.ShowPrevious == b.ShowPrevious
+        && a.ShowPlayPause == b.ShowPlayPause && a.ShowNext == b.ShowNext && a.ShowLike == b.ShowLike && a.ShowProgress == b.ShowProgress;
+
+    /// <summary>The dimmed stage with a lit window around one element, a ring and a callout with an arrow.</summary>
+    private sealed class Spotlight
+    {
+        private readonly Grid _host;
+        private readonly Path _dim = new() { Fill = Dim, IsHitTestVisible = false };
+        private readonly Border _ring = new() { BorderBrush = Turquoise, BorderThickness = new Thickness(2), CornerRadius = new CornerRadius(12), IsHitTestVisible = false };
+        private readonly Polygon _arrow = new() { Fill = CalloutBack, Stroke = CalloutLine, StrokeThickness = 1 };
+        private readonly Canvas _layer = new();
+        private readonly bool _above;
+        private Rect _last = Rect.Empty;
+
+        public Spotlight(Grid host, FrameworkElement callout, bool above)
+        {
+            _host = host;
+            _above = above;
+            Callout = callout;
+            _layer.Children.Add(_dim);
+            _layer.Children.Add(_ring);
+            _layer.Children.Add(Callout);
+            _layer.Children.Add(_arrow);
+            Grid.SetRow(_layer, 1);
+            Grid.SetColumnSpan(_layer, 4);
+            host.Children.Add(_layer);
+        }
+
+        public FrameworkElement Callout { get; }
+
+        /// <summary>The space the spotlight covers: target rectangles are given relative to it.</summary>
+        public Visual Layer => _layer;
+
+        public Func<Rect?> Target { get; set; } = () => null;
+
+        public void Update()
+        {
+            if (!_layer.IsLoaded || _layer.ActualWidth <= 0 || Target() is not { } target)
+                return;
+            target.Inflate(6, 6);
+            if (target == _last && Callout.ActualHeight > 0)
+                return;
+            _last = target;
+            var all = new Rect(0, 0, _layer.ActualWidth, _layer.ActualHeight);
+            _dim.Data = new CombinedGeometry(GeometryCombineMode.Exclude, new RectangleGeometry(all), new RectangleGeometry(target, 12, 12));
+            Canvas.SetLeft(_ring, target.X);
+            Canvas.SetTop(_ring, target.Y);
+            _ring.Width = target.Width;
+            _ring.Height = target.Height;
+            Callout.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            var (w, h) = (Callout.DesiredSize.Width, Callout.DesiredSize.Height);
+            if (_above)
+            {
+                var left = Math.Clamp(target.X + target.Width / 2 - w / 2, 8, Math.Max(8, all.Width - w - 8));
+                var top = Math.Max(8, target.Y - 16 - h);
+                Canvas.SetLeft(Callout, left);
+                Canvas.SetTop(Callout, top);
+                var x = Math.Clamp(target.X + target.Width / 2, left + 24, left + w - 24);
+                var y = top + h - 1;
+                _arrow.Points = [new Point(x - 11, y), new Point(x + 11, y), new Point(x, y + 12)];
+            }
+            else
+            {
+                var left = Math.Min(all.Width - w - 8, target.Right + 22);
+                var top = Math.Clamp(target.Y + target.Height / 2 - h / 2, 8, Math.Max(8, all.Height - h - 8));
+                Canvas.SetLeft(Callout, left);
+                Canvas.SetTop(Callout, top);
+                var y = Math.Clamp(target.Y + target.Height / 2, top + 24, top + h - 24);
+                var x = left + 1;
+                _arrow.Points = [new Point(x, y - 11), new Point(x, y + 11), new Point(x - 12, y)];
+            }
+        }
+    }
+
+    private static Rect? Bounds(FrameworkElement? element, Visual host)
+    {
+        if (element is not { IsVisible: true, ActualWidth: > 0, ActualHeight: > 0 })
+            return null;
+        try { return element.TransformToVisual(host).TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight)); }
+        catch (InvalidOperationException) { return null; }
+    }
+
+    /// <summary>A compact panel in the style of the reference: eyebrow, title, a line of text, controls, actions.</summary>
+    private static Border Callout(string eyebrow, string title, string body, UIElement content, UIElement actions, double width = 420)
+    {
+        var stack = new StackPanel();
+        stack.Children.Add(new TextBlock { Text = eyebrow.ToUpperInvariant(), FontSize = 11.5, FontWeight = FontWeights.SemiBold, Foreground = Turquoise });
+        stack.Children.Add(new TextBlock { Text = title, FontFamily = Display, FontWeight = FontWeights.Bold, FontSize = 24, Margin = new Thickness(0, 8, 0, 0), TextWrapping = TextWrapping.Wrap });
+        var text = Body(body, 13.5, top: 6);
+        stack.Children.Add(text);
+        stack.Children.Add(new Border { Margin = new Thickness(0, 14, 0, 0), Child = content });
+        stack.Children.Add(new Border { Margin = new Thickness(0, 16, 0, 0), Child = actions });
+        return new Border
+        {
+            Width = width, Padding = new Thickness(22, 18, 22, 18), CornerRadius = new CornerRadius(14),
+            Background = CalloutBack, BorderBrush = CalloutLine, BorderThickness = new Thickness(1), Child = stack,
+        };
+    }
+
+    /// <summary>A check box row in the tour's style; returns a refresh for when the value changes elsewhere (undo).</summary>
+    private static (Button Row, Action Refresh) Check(string text, Func<bool> isOn, Action<bool> set)
+    {
+        var box = new Border { Width = 18, Height = 18, CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1.5), Margin = new Thickness(0, 0, 10, 0) };
+        var mark = new TextBlock { Text = "", FontFamily = Icons, FontSize = 11, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Foreground = Frozen(Color.FromRgb(0x10, 0x20, 0x2A)) };
+        box.Child = mark;
+        var row = new StackPanel { Orientation = Orientation.Horizontal };
+        row.Children.Add(box);
+        row.Children.Add(new TextBlock { Text = text, FontSize = 14, VerticalAlignment = VerticalAlignment.Center });
+        void Refresh()
+        {
+            var on = isOn();
+            box.Background = on ? Turquoise : Brushes.Transparent;
+            box.BorderBrush = on ? Turquoise : SurfaceLineStatic;
+            mark.Visibility = on ? Visibility.Visible : Visibility.Hidden;
+        }
+        var button = Make("", () => { }, Brushes.Transparent, CreamBrush, null, 14, new Thickness(6, 6, 10, 6), FontWeights.Normal, radius: 8);
+        button.Content = row;
+        button.HorizontalAlignment = HorizontalAlignment.Left;
+        button.Click += (_, _) => { set(!isOn()); Refresh(); };
+        System.Windows.Automation.AutomationProperties.SetName(button, text);
+        Refresh();
+        return (button, Refresh);
+    }
+
+    private static readonly Brush SurfaceLineStatic = Frozen(Color.FromRgb(0x6A, 0x80, 0x8C));
+
+    private static StackPanel Actions(Button primary, Button? secondary, Button? undo)
+    {
+        var row = new DockPanel { LastChildFill = false };
+        if (undo is not null)
+        {
+            DockPanel.SetDock(undo, Dock.Left);
+            row.Children.Add(undo);
+        }
+        DockPanel.SetDock(primary, Dock.Right);
+        row.Children.Add(primary);
+        if (secondary is not null)
+        {
+            secondary.Margin = new Thickness(0, 0, 8, 0);
+            DockPanel.SetDock(secondary, Dock.Right);
+            row.Children.Add(secondary);
+        }
+        return new StackPanel { Children = { row } };
+    }
+
+    private static Button Small(Button button)
+    {
+        button.Padding = new Thickness(16, 8, 16, 9);
+        button.FontSize = 13.5;
+        return button;
+    }
+
+    private Grid SetupScene(Step step, out Border bar, Action? onPlayerClick = null)
+    {
+        var root = new Grid();
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition());
+        var desktop = new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Background = PhotoBrush("fuji.jpg", .45, Stretch.UniformToFill), Margin = new Thickness(0, 14, 0, 0) };
+        Grid.SetRow(desktop, 1);
+        root.Children.Add(desktop);
+        bar = TaskbarMock(step, 1008 / 1.32, compact: false, onPlayerClick);
+        bar.VerticalAlignment = VerticalAlignment.Bottom;
+        bar.LayoutTransform = new ScaleTransform(1.32, 1.32);
+        Grid.SetRow(bar, 1);
+        root.Children.Add(bar);
+        return root;
+    }
 
     private FrameworkElement BuildTaskbar()
     {
         var step = Current("Taskbar");
+        FrameworkElement? opened = null;
+        var root = SetupScene(step, out _, onPlayerClick: () => { if (opened is not null) Fade(opened, opened.Opacity < .5 ? 1 : 0, 200); });
+        root.Children.Add(Stack(Eyebrow(T("TaskbarEyebrow")), Headline(T("TaskbarTitle"), 30)));
+        var slot = _lastSlot!;
+        var player = _lastPlayer!;
+
+        var popup = Live(step, () => _stage.MiniVisual(), 360);
+        popup.HorizontalAlignment = HorizontalAlignment.Right;
+        popup.VerticalAlignment = VerticalAlignment.Bottom;
+        popup.Margin = new Thickness(0, 0, 150, 84);
+        popup.Opacity = 0;
+        popup.IsHitTestVisible = false;
+        Grid.SetRow(popup, 1);
+        opened = popup;
+
+        var checks = new List<Action>();
+        var grid = new UniformGrid { Columns = 2 };
+        void Add(string label, Func<BarLayout, bool> get, Action<BarLayout, bool> set)
+        {
+            var (row, refresh) = Check(label, () => get(_stage.Settings.Current.Bar), on => _stage.Update(s => set(s.Bar, on)));
+            checks.Add(refresh);
+            grid.Children.Add(row);
+        }
+        Add(T("ElementCover"), b => b.ShowCover, (b, v) => b.ShowCover = v);
+        Add(T("ElementLyrics"), b => b.ShowText, (b, v) => b.ShowText = v);
+        Add(T("ElementSong"), b => b.ShowCaption, (b, v) => b.ShowCaption = v);
+        Add(T("ElementControls"), b => b.ShowPlayPause, (b, v) => { b.ShowPrevious = v; b.ShowPlayPause = v; b.ShowNext = v; });
+        Add(T("ElementLike"), b => b.ShowLike, (b, v) => b.ShowLike = v);
+        Add(T("ElementProgress"), b => b.ShowProgress, (b, v) => b.ShowProgress = v);
+
+        var content = new StackPanel();
+        content.Children.Add(grid);
+        var hint = IconText("  " + T("TaskbarClick"));
+        hint.FontSize = 12.5;
+        hint.Foreground = Muted;
+        hint.Margin = new Thickness(6, 10, 0, 0);
+        content.Children.Add(hint);
+
+        var save = Small(Primary(T("SetupSave"), () =>
+        {
+            if (!SameBar(_stage.Settings.Current.Bar, _real.Current.Bar))
+                _real.Update(s => s.Bar = CopyBar(_stage.Settings.Current.Bar) is var b ? Keep(b, s.Bar.Width) : s.Bar);
+            Go(_index + 1);
+        }));
+        var undo = Link(T("SetupUndo"), () => { _stage.Update(s => s.Bar = CopyBar(_real.Current.Bar)); checks.ForEach(c => c()); });
+        var skip = Link(T("SetupSkip"), () => Go(_steps.FindIndex(s => s.Key == "Minimal")));
+        var callout = Callout(T("SetupStep1"), T("SetupBarTitle"), T("SetupBarBody"), content, Actions(save, null, undo));
+        ((StackPanel)callout.Child).Children.Add(skip);
+        skip.HorizontalAlignment = HorizontalAlignment.Left;
+        skip.Margin = new Thickness(-10, 6, 0, -6);
+        var spot = new Spotlight(root, callout, above: true);
+        spot.Target = () => Bounds(player.IsVisible ? player : slot, spot.Layer);
+        Every(step, 150, spot.Update);
+        root.Children.Add(popup);
+        Panel.SetZIndex(popup, 50);
+        return root;
+    }
+
+    private static BarLayout Keep(BarLayout bar, int width)
+    {
+        bar.Width = width;
+        return bar;
+    }
+
+    private FrameworkElement BuildAdapt()
+    {
+        var step = Current("Adapt");
+        var root = SetupScene(step, out _);
+        root.Children.Add(Stack(Eyebrow(T("AdaptEyebrow")), Headline(T("SetupPausedHeading"), 30)));
+        var slot = _lastSlot!;
+
+        var explain = Body("", 13.5);
+        Button keep = null!, give = null!, play = null!;
+        void Show()
+        {
+            var compact = _stage.Settings.Current.PausedBehavior == PausedBehavior.Minimize;
+            Select(keep, compact);
+            Select(give, !compact);
+            explain.Text = T(compact ? "SetupPausedKeepText" : "SetupPausedGiveText");
+            ((TextBlock)play.Content).Inlines.Clear();
+            ((TextBlock)play.Content).Inlines.AddRange(IconText(_stage.Monitor.IsPlaying ? "  " + T("SetupPause") : "  " + T("SetupPlay")).Inlines.ToList());
+        }
+        void Choose(PausedBehavior behavior)
+        {
+            _stage.Update(s => s.PausedBehavior = behavior);
+            _stage.SetPlaying(false);
+            Show();
+        }
+        keep = Segment(T("PausedKeep"), () => Choose(PausedBehavior.Minimize));
+        give = Segment(T("PausedGive"), () => Choose(PausedBehavior.Hide));
+        play = Segment("", () => { _stage.SetPlaying(!_stage.Monitor.IsPlaying); Show(); });
+        var options = new WrapPanel();
+        foreach (var b in new[] { keep, give }) { b.Margin = new Thickness(0, 0, 8, 8); options.Children.Add(b); }
+        var content = Stack(options, explain);
+        play.Margin = new Thickness(0, 12, 0, 0);
+        play.HorizontalAlignment = HorizontalAlignment.Left;
+        content.Children.Add(play);
+
+        var save = Small(Primary(T("SetupSave"), () =>
+        {
+            if (_stage.Settings.Current.PausedBehavior != _real.Current.PausedBehavior)
+                _real.Update(s => s.PausedBehavior = _stage.Settings.Current.PausedBehavior);
+            Go(_index + 1);
+        }));
+        var undo = Link(T("SetupUndo"), () => { _stage.Update(s => s.PausedBehavior = _real.Current.PausedBehavior); Show(); });
+        var callout = Callout(T("SetupStep2"), T("SetupPausedTitle"), T("SetupPausedBody"), content, Actions(save, null, undo));
+        var spot = new Spotlight(root, callout, above: true);
+        spot.Target = () => Bounds(slot, spot.Layer);
+        Every(step, 150, spot.Update);
+        Loaded += (_, _) => Show();
+        root.Loaded += (_, _) => Show();
+        return root;
+    }
+
+    private FrameworkElement BuildMini()
+    {
+        var step = Current("Mini");
         var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition());
-        var head = Stack(Eyebrow(T("TaskbarEyebrow")), Headline(T("TaskbarTitle"), 40), Body(T("TaskbarBody"), 16, top: 10));
-        root.Children.Add(head);
+        root.Children.Add(Stack(Eyebrow(T("MiniEyebrow")), Headline(T("MiniTitle"), 30)));
+        var stageArea = new Grid { Margin = new Thickness(0, 14, 0, 0) };
+        stageArea.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(560) });
+        stageArea.ColumnDefinitions.Add(new ColumnDefinition());
+        Grid.SetRow(stageArea, 1);
+        root.Children.Add(stageArea);
+        var mini = Live(step, () => _stage.MiniVisual(), double.NaN);
+        mini.MaxWidth = 540;
+        mini.MaxHeight = 440;
+        mini.VerticalAlignment = VerticalAlignment.Center;
+        stageArea.Children.Add(mini);
 
-        var stagePanel = new Grid { Margin = new Thickness(0, 18, 0, 0) };
-        Grid.SetRow(stagePanel, 1);
-        var desktop = new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Background = PhotoBrush("fuji.jpg", .15, Stretch.UniformToFill) };
-        stagePanel.Children.Add(desktop);
-
-        var chips = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 22, 0, 0) };
-        void Toggle(string label, Func<BarLayout, bool> get, Action<BarLayout, bool> set) =>
-            chips.Children.Add(Chip(label, () => get(_stage.Settings.Current.Bar), on => _stage.Update(s => set(s.Bar, on))));
-        Toggle(T("ElementCover"), b => b.ShowCover, (b, v) => b.ShowCover = v);
-        Toggle(T("ElementLyrics"), b => b.ShowText, (b, v) => b.ShowText = v);
-        Toggle(T("ElementSong"), b => b.ShowCaption, (b, v) => b.ShowCaption = v);
-        Toggle(T("ElementControls"), b => b.ShowPlayPause, (b, v) => { b.ShowPrevious = v; b.ShowPlayPause = v; b.ShowNext = v; });
-        Toggle(T("ElementLike"), b => b.ShowLike, (b, v) => b.ShowLike = v);
-        Toggle(T("ElementProgress"), b => b.ShowProgress, (b, v) => b.ShowProgress = v);
-        stagePanel.Children.Add(chips);
-
-        var popup = Live(step, () => _stage.MiniVisual(), 380);
-        popup.HorizontalAlignment = HorizontalAlignment.Right;
-        popup.VerticalAlignment = VerticalAlignment.Bottom;
-        popup.Margin = new Thickness(0, 0, 190, 84);
-        popup.Opacity = 0;
-        popup.IsHitTestVisible = false;
-        var scale = new ScaleTransform(.92, .92);
-        popup.RenderTransformOrigin = new Point(.5, 1);
-        popup.RenderTransform = scale;
-        stagePanel.Children.Add(popup);
-
-        var bar = TaskbarMock(step, 1008 / 1.32, compact: false, onPlayerClick: () =>
+        MiniPlayerStyle Look() => _stage.Settings.Current.MiniPlayerLook;
+        void Change(Action<MiniPlayerStyle> change) => _stage.Update(s => change(s.MiniPlayerLook));
+        var parts = new (string Title, string Body, (string Text, Func<bool> On, Action Apply)[] Options, bool Lyrics)[]
         {
-            var open = popup.Opacity < .5;
-            Fade(popup, open ? 1 : 0, 220);
-            Animate(scale, ScaleTransform.ScaleXProperty, open ? 1 : .92, 260);
-            Animate(scale, ScaleTransform.ScaleYProperty, open ? 1 : .92, 260);
+            (T("SetupMiniLayoutTitle"), T("SetupMiniLayoutBody"), [
+                (T("LayoutCinema"), () => Look().Layout == MiniPlayerLayout.Cinema, () => Change(l => l.Layout = MiniPlayerLayout.Cinema)),
+                (T("LayoutVertical"), () => Look().Layout == MiniPlayerLayout.Vertical, () => Change(l => l.Layout = MiniPlayerLayout.Vertical))], false),
+            (T("SetupMiniBackTitle"), T("SetupMiniBackBody"), [
+                (T("BackBlur"), () => Look().Background == MiniPlayerBackground.BlurredCover, () => Change(l => l.Background = MiniPlayerBackground.BlurredCover)),
+                (T("BackAurora"), () => Look().Background == MiniPlayerBackground.Aurora, () => Change(l => l.Background = MiniPlayerBackground.Aurora)),
+                (T("BackVelvet"), () => Look().Background == MiniPlayerBackground.Velvet, () => Change(l => l.Background = MiniPlayerBackground.Velvet)),
+                (T("BackAtmosphere"), () => Look().Background == MiniPlayerBackground.Atmosphere, () => Change(l => l.Background = MiniPlayerBackground.Atmosphere))], false),
+            (T("SetupMiniTypeTitle"), T("SetupMiniTypeBody"), [
+                ("Inter Display", () => Look().Typeface == LyricsTypeface.Modern, () => Change(l => l.Typeface = LyricsTypeface.Modern)),
+                ("Serif", () => Look().Typeface == LyricsTypeface.Serif, () => Change(l => l.Typeface = LyricsTypeface.Serif)),
+                ("Figtree", () => Look().Typeface == LyricsTypeface.Geometric, () => Change(l => l.Typeface = LyricsTypeface.Geometric)),
+                ("Segoe UI", () => Look().Typeface == LyricsTypeface.System, () => Change(l => l.Typeface = LyricsTypeface.System))], true),
+            (T("SetupMiniHighTitle"), T("SetupMiniHighBody"), [
+                (T("HighExpressive"), () => Look().Highlight == LyricsHighlight.Expressive, () => Change(l => l.Highlight = LyricsHighlight.Expressive)),
+                (T("HighClassic"), () => Look().Highlight == LyricsHighlight.Classic, () => Change(l => l.Highlight = LyricsHighlight.Classic)),
+                (T("HighProgressive"), () => Look().Highlight == LyricsHighlight.Progressive, () => Change(l => l.Highlight = LyricsHighlight.Progressive))], true),
+        };
+
+        var part = 0;
+        var eyebrow = new TextBlock { FontSize = 11.5, FontWeight = FontWeights.SemiBold, Foreground = Turquoise };
+        var title = new TextBlock { FontFamily = Display, FontWeight = FontWeights.Bold, FontSize = 24, Margin = new Thickness(0, 8, 0, 0), TextWrapping = TextWrapping.Wrap };
+        var body = Body("", 13.5, top: 6);
+        var options = new WrapPanel { Margin = new Thickness(0, 14, 0, 0) };
+        Button prev = null!, next = null!;
+        void Render()
+        {
+            var p = parts[part];
+            eyebrow.Text = $"{T("SetupStep3")} · {part + 1}/{parts.Length}".ToUpperInvariant();
+            title.Text = p.Title;
+            body.Text = p.Body;
+            options.Children.Clear();
+            var buttons = new List<Button>();
+            foreach (var o in p.Options)
+            {
+                var b = Segment(o.Text, () => { });
+                b.Margin = new Thickness(0, 0, 8, 8);
+                b.Click += (_, _) => { o.Apply(); for (var i = 0; i < buttons.Count; i++) Select(buttons[i], p.Options[i].On()); };
+                Select(b, o.On());
+                buttons.Add(b);
+                options.Children.Add(b);
+            }
+            prev.Visibility = part > 0 ? Visibility.Visible : Visibility.Collapsed;
+            var label = part < parts.Length - 1 ? T("SetupNext") : T("SetupSave");
+            ((TextBlock)next.Content).Text = label;
+            System.Windows.Automation.AutomationProperties.SetName(next, label);
+        }
+        prev = Small(Ghost(T("SetupPrev"), () => { part--; Render(); }));
+        next = Small(Primary(T("SetupNext"), () =>
+        {
+            if (part < parts.Length - 1) { part++; Render(); return; }
+            var draft = Look();
+            var real = _real.Current.MiniPlayerLook;
+            if (draft.Layout != real.Layout || draft.Background != real.Background || draft.Typeface != real.Typeface || draft.Highlight != real.Highlight)
+                _real.Update(s =>
+                {
+                    s.MiniPlayerLook.Layout = draft.Layout;
+                    s.MiniPlayerLook.Background = draft.Background;
+                    s.MiniPlayerLook.Typeface = draft.Typeface;
+                    s.MiniPlayerLook.Highlight = draft.Highlight;
+                });
+            Go(_index + 1);
+        }));
+        var undo = Link(T("SetupUndo"), () =>
+        {
+            var real = _real.Current.MiniPlayerLook;
+            Change(l => { l.Layout = real.Layout; l.Background = real.Background; l.Typeface = real.Typeface; l.Highlight = real.Highlight; });
+            Render();
         });
-        bar.VerticalAlignment = VerticalAlignment.Bottom;
-        bar.LayoutTransform = new ScaleTransform(1.32, 1.32);
-        stagePanel.Children.Add(bar);
-        var hint = IconText("  " + T("TaskbarClick"));
-        hint.FontSize = 13;
-        hint.Foreground = CreamBrush;
-        hint.HorizontalAlignment = HorizontalAlignment.Right;
-        hint.VerticalAlignment = VerticalAlignment.Bottom;
-        hint.Margin = new Thickness(0, 0, 24, 84);
-        hint.Effect = new DropShadowEffect { BlurRadius = 8, ShadowDepth = 0, Opacity = .7, Color = Colors.Black };
-        stagePanel.Children.Add(hint);
-        root.Children.Add(stagePanel);
+        var panel = new StackPanel();
+        panel.Children.Add(eyebrow);
+        panel.Children.Add(title);
+        panel.Children.Add(body);
+        panel.Children.Add(options);
+        panel.Children.Add(new Border { Margin = new Thickness(0, 10, 0, 0), Child = Actions(next, prev, undo) });
+        var callout = new Border
+        {
+            Width = 380, Padding = new Thickness(22, 18, 22, 18), CornerRadius = new CornerRadius(14),
+            Background = CalloutBack, BorderBrush = CalloutLine, BorderThickness = new Thickness(1), Child = panel,
+        };
+        Render();
+
+        var spot = new Spotlight(root, callout, above: false);
+        spot.Target = () =>
+        {
+            if (Bounds(mini, spot.Layer) is not { } box || _stage.MiniVisual() is not { ActualWidth: > 0 } visual)
+                return null;
+            var drawn = box;
+            if (!parts[part].Lyrics)
+                return drawn;
+            return Look().Layout == MiniPlayerLayout.Cinema
+                ? new Rect(drawn.X + drawn.Width * .36, drawn.Y + drawn.Height * .03, drawn.Width * .62, drawn.Height * .66)
+                : new Rect(drawn.X + drawn.Width * .04, drawn.Y + drawn.Height * .24, drawn.Width * .92, drawn.Height * .48);
+        };
+        Every(step, 150, spot.Update);
         return root;
     }
 
@@ -423,6 +791,8 @@ public sealed class TourWindow : Window
         weather.Children.Add(new TextBlock { Text = "", FontFamily = Icons, FontSize = 18, Foreground = Frozen(Color.FromRgb(0xE8, 0xC4, 0x68)), VerticalAlignment = VerticalAlignment.Center });
         weather.Children.Add(new TextBlock { Text = "22°", FontSize = 13, Margin = new Thickness(6, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
         var slot = new Grid();
+        _lastSlot = slot;
+        _lastPlayer = player;
         slot.Children.Add(weather);
         slot.Children.Add(player);
         Every(step, 200, () => weather.Visibility = player.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible);
@@ -439,169 +809,6 @@ public sealed class TourWindow : Window
             Width = width, Background = Frozen(Color.FromArgb(0xEE, 0x14, 0x20, 0x2A)), CornerRadius = new CornerRadius(0, 0, 16, 16),
             BorderBrush = Frozen(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF)), BorderThickness = new Thickness(0, 1, 0, 0), Child = bar,
         };
-    }
-
-    // ---- 04 As little or as much -----------------------------------------------------------------
-
-    private FrameworkElement BuildAdapt()
-    {
-        var step = Current("Adapt");
-        var root = new Grid();
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.RowDefinitions.Add(new RowDefinition());
-        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        var head = Stack(Eyebrow(T("AdaptEyebrow")), Headline(T("AdaptTitle"), 40), Body(T("AdaptBody"), 16, top: 10));
-        root.Children.Add(head);
-
-        var presets = new (string Label, Action<BarLayout> Apply)[]
-        {
-            (T("PresetFull"), b => Set(b, cover: true, text: true, caption: true, controls: true, like: true, progress: true, width: 320)),
-            (T("PresetLyrics"), b => Set(b, cover: true, text: true, caption: true, controls: false, like: false, progress: true, width: 280)),
-            (T("PresetCompact"), b => Set(b, cover: true, text: true, caption: true, controls: false, like: false, progress: false, width: 190, play: true)),
-            (T("PresetMinimal"), b => Set(b, cover: true, text: true, caption: false, controls: false, like: false, progress: false, width: 170)),
-        };
-        var segment = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 22, 0, 0) };
-        var choice = 0;
-        var auto = true;
-        void Pick(int i)
-        {
-            choice = i;
-            _stage.Monitor.SetPlaying(true);
-            _stage.Update(s => presets[i].Apply(s.Bar));
-            for (var k = 0; k < segment.Children.Count; k++)
-                Select((Button)segment.Children[k], k == i);
-        }
-        for (var i = 0; i < presets.Length; i++)
-        {
-            var index = i;
-            segment.Children.Add(Segment(presets[i].Label, () => { auto = false; Pick(index); }));
-        }
-        Every(step, 2800, () => { if (auto) Pick((choice + 1) % presets.Length); });
-        Grid.SetRow(segment, 1);
-        segment.VerticalAlignment = VerticalAlignment.Top;
-        root.Children.Add(segment);
-
-        var stage = new Grid { Margin = new Thickness(0, 74, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-        var desktop = new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Background = PhotoBrush("fuji.jpg", .35, Stretch.UniformToFill), Height = 150, VerticalAlignment = VerticalAlignment.Bottom };
-        stage.Children.Add(desktop);
-        var bar = TaskbarMock(step, 1008 / 1.4, compact: false);
-        bar.VerticalAlignment = VerticalAlignment.Bottom;
-        bar.LayoutTransform = new ScaleTransform(1.4, 1.4);
-        stage.Children.Add(bar);
-        Grid.SetRow(stage, 1);
-        root.Children.Add(stage);
-
-        // When the music pauses: the compact player, or Windows' own widget back.
-        var paused = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 16, 0, 0) };
-        paused.Children.Add(new TextBlock { Text = T("PausedLabel"), FontSize = 14, Foreground = Muted, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) });
-        Button keep = null!, give = null!;
-        void Paused(PausedBehavior behavior)
-        {
-            auto = false;
-            _stage.Update(s => s.PausedBehavior = behavior);
-            _stage.Monitor.SetPlaying(false);
-            Select(keep, behavior == PausedBehavior.Minimize);
-            Select(give, behavior == PausedBehavior.Hide);
-            for (var k = 0; k < segment.Children.Count; k++)
-                Select((Button)segment.Children[k], false);
-        }
-        keep = Segment(T("PausedKeep"), () => Paused(PausedBehavior.Minimize));
-        give = Segment(T("PausedGive"), () => Paused(PausedBehavior.Hide));
-        paused.Children.Add(keep);
-        paused.Children.Add(give);
-        var note = Body(T("AdaptNote"), 13, top: 10);
-        note.TextAlignment = TextAlignment.Center;
-        note.Foreground = Faint;
-        var foot = Stack(paused, note);
-        foot.HorizontalAlignment = HorizontalAlignment.Center;
-        Grid.SetRow(foot, 2);
-        root.Children.Add(foot);
-        return root;
-    }
-
-    private static void Set(BarLayout b, bool cover, bool text, bool caption, bool controls, bool like, bool progress, int width, bool play = false)
-    {
-        b.ShowCover = cover; b.ShowText = text; b.ShowCaption = caption;
-        b.ShowPrevious = controls; b.ShowNext = controls; b.ShowPlayPause = controls || play;
-        b.ShowLike = like; b.ShowProgress = progress; b.ShowShuffle = b.ShowRepeat = b.ShowVolume = false; b.Width = width;
-    }
-
-    // ---- 05 The mini player ----------------------------------------------------------------------
-
-    private FrameworkElement BuildMini()
-    {
-        var step = Current("Mini");
-        var grid = Columns(404);
-        var left = Stack(Eyebrow(T("MiniEyebrow")), Headline(T("MiniTitle"), 38), Body(T("MiniBody"), 15, top: 10));
-        MiniPlayerStyle Look() => _stage.Settings.Current.MiniPlayerLook;
-        void Change(Action<MiniPlayerStyle> change) => _stage.Update(s => change(s.MiniPlayerLook));
-        left.Children.Add(Group(T("GroupLayout"),
-            (T("LayoutCinema"), () => Look().Layout == MiniPlayerLayout.Cinema, () => Change(l => l.Layout = MiniPlayerLayout.Cinema)),
-            (T("LayoutVertical"), () => Look().Layout == MiniPlayerLayout.Vertical, () => Change(l => l.Layout = MiniPlayerLayout.Vertical))));
-        left.Children.Add(Group(T("GroupBackground"),
-            (T("BackBlur"), () => Look().Background == MiniPlayerBackground.BlurredCover, () => Change(l => l.Background = MiniPlayerBackground.BlurredCover)),
-            (T("BackAurora"), () => Look().Background == MiniPlayerBackground.Aurora, () => Change(l => l.Background = MiniPlayerBackground.Aurora)),
-            (T("BackVelvet"), () => Look().Background == MiniPlayerBackground.Velvet, () => Change(l => l.Background = MiniPlayerBackground.Velvet)),
-            (T("BackAtmosphere"), () => Look().Background == MiniPlayerBackground.Atmosphere, () => Change(l => l.Background = MiniPlayerBackground.Atmosphere))));
-        left.Children.Add(Group(T("GroupType"),
-            ("Inter Display", () => Look().Typeface == LyricsTypeface.Modern, () => Change(l => l.Typeface = LyricsTypeface.Modern)),
-            ("Serif", () => Look().Typeface == LyricsTypeface.Serif, () => Change(l => l.Typeface = LyricsTypeface.Serif)),
-            ("Figtree", () => Look().Typeface == LyricsTypeface.Geometric, () => Change(l => l.Typeface = LyricsTypeface.Geometric)),
-            ("Segoe UI", () => Look().Typeface == LyricsTypeface.System, () => Change(l => l.Typeface = LyricsTypeface.System))));
-        left.Children.Add(Group(T("GroupHighlight"),
-            (T("HighExpressive"), () => Look().Highlight == LyricsHighlight.Expressive, () => Change(l => l.Highlight = LyricsHighlight.Expressive)),
-            (T("HighClassic"), () => Look().Highlight == LyricsHighlight.Classic, () => Change(l => l.Highlight = LyricsHighlight.Classic)),
-            (T("HighProgressive"), () => Look().Highlight == LyricsHighlight.Progressive, () => Change(l => l.Highlight = LyricsHighlight.Progressive))));
-
-        var songs = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0) };
-        songs.Children.Add(new TextBlock { Text = T("GroupSong"), FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = Muted, VerticalAlignment = VerticalAlignment.Center, Width = 96 });
-        foreach (var song in TourSong.All)
-        {
-            var b = new Button
-            {
-                Width = 38, Height = 38, Margin = new Thickness(0, 0, 8, 0), Cursor = Cursors.Hand, ToolTip = song.Title, Padding = new Thickness(0),
-                Template = CoverButtonTemplate(), Content = new Image { Source = song.Cover(96), Stretch = Stretch.UniformToFill },
-            };
-            System.Windows.Automation.AutomationProperties.SetName(b, song.Title);
-            b.Click += (_, _) => _stage.Play(song);
-            songs.Children.Add(b);
-        }
-        left.Children.Add(songs);
-        grid.Children.Add(left);
-
-        var mini = Live(step, () => _stage.MiniVisual(), double.NaN);
-        mini.MaxWidth = 600;
-        mini.MaxHeight = 540;
-        mini.Margin = new Thickness(30, 0, 0, 0);
-        Grid.SetColumn(mini, 1);
-        grid.Children.Add(mini);
-        return grid;
-    }
-
-    private StackPanel Group(string label, params (string Text, Func<bool> IsOn, Action Apply)[] options)
-    {
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0) };
-        row.Children.Add(new TextBlock { Text = label, FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = Muted, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 6, 0, 0), Width = 96 });
-        var wrap = new WrapPanel { MaxWidth = 300 };
-        var buttons = new List<Button>();
-        foreach (var option in options)
-        {
-            var b = Segment(option.Text, () => { });
-            b.Click += (_, _) =>
-            {
-                option.Apply();
-                for (var i = 0; i < buttons.Count; i++)
-                    Select(buttons[i], options[i].IsOn());
-            };
-            b.Margin = new Thickness(0, 0, 6, 6);
-            b.Padding = new Thickness(11, 5, 11, 6);
-            b.FontSize = 12.5;
-            Select(b, option.IsOn());
-            buttons.Add(b);
-            wrap.Children.Add(b);
-        }
-        row.Children.Add(wrap);
-        return row;
     }
 
     // ---- 06 Minimal Mode (concept) ---------------------------------------------------------------
@@ -1127,7 +1334,7 @@ public sealed class TourWindow : Window
     /// </summary>
     private FrameworkElement Live(Step step, Func<FrameworkElement?> source, double width, double height = double.NaN)
     {
-        var view = new Rectangle { Width = width, Height = height, Stretch = Stretch.Uniform };
+        var view = new Rectangle { Width = width, Height = height }; // a Rectangle with Uniform stretch draws a square
         RenderOptions.SetBitmapScalingMode(view, BitmapScalingMode.HighQuality);
         FrameworkElement? shown = null;
         var brush = new VisualBrush { Stretch = Stretch.Uniform };
@@ -1158,7 +1365,12 @@ public sealed class TourWindow : Window
                     else if (!double.IsNaN(width) && double.IsNaN(height))
                         view.Height = width * visual.ActualHeight / visual.ActualWidth;
                     else if (double.IsNaN(width) && double.IsNaN(height))
-                        view.Height = Math.Min(view.MaxHeight, (view.ActualWidth > 0 ? view.ActualWidth : 560) * visual.ActualHeight / visual.ActualWidth);
+                    {
+                        var fit = Math.Min((double.IsInfinity(view.MaxWidth) ? 560 : view.MaxWidth) / visual.ActualWidth,
+                            (double.IsInfinity(view.MaxHeight) ? 480 : view.MaxHeight) / visual.ActualHeight);
+                        view.Width = visual.ActualWidth * fit;
+                        view.Height = visual.ActualHeight * fit;
+                    }
                 }
             }
             catch (Exception ex) { Log.Error("Tour preview", ex); }

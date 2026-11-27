@@ -284,7 +284,7 @@ public partial class App : Application
             return;
         }
         _miniPlayer?.HidePopup();
-        _tour = new TourWindow(page => { ShowSettings(page); return true; }, _settings!.Current.SpotifyLyricsEnabled);
+        _tour = new TourWindow(page => { ShowSettings(page); return true; }, _settings!);
         _tour.Closed += (_, _) => _tour = null;
         WindowInterop.SetDarkTitleBar(_tour, true);
         _tour.Show();
