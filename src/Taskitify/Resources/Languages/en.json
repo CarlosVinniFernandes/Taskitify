@@ -436,5 +436,6 @@
   "CardSharePrivacy": "Anyone with the link can see the card, the lyrics and your message: the link itself carries them, readable by anyone (it is not encrypted). Images and album art are not included.",
   "CardShareCopy": "Copy link",
   "CardShareCopied": "Link copied.",
-  "CardShareTooLong": "Too much to fit in a link: choose fewer lines or a shorter message."
+  "CardShareTooLong": "Too much to fit in a link: choose fewer lines or a shorter message.",
+  "CardShareSurprise": "Reveal as a surprise"
 }

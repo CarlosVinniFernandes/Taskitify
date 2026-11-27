@@ -436,5 +436,6 @@
   "CardSharePrivacy": "Toute personne ayant le lien peut voir la carte, les paroles et votre message : le lien lui-même les contient, lisibles par tous (il n'est pas chiffré). Les images et pochettes ne sont pas incluses.",
   "CardShareCopy": "Copier le lien",
   "CardShareCopied": "Lien copié.",
-  "CardShareTooLong": "Trop de contenu pour un lien : choisissez moins de lignes ou un message plus court."
+  "CardShareTooLong": "Trop de contenu pour un lien : choisissez moins de lignes ou un message plus court.",
+  "CardShareSurprise": "Révéler comme une surprise"
 }

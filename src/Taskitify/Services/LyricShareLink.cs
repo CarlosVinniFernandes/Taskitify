@@ -57,13 +57,19 @@ public static class LyricShareLink
         [property: JsonPropertyName("o")] Look? Look,
         [property: JsonPropertyName("x")] IReadOnlyDictionary<string, string>? Fields,
         [property: JsonPropertyName("d")] Dedication? Dedication,
-        [property: JsonPropertyName("c")] string? Created = null);
+        [property: JsonPropertyName("c")] string? Created = null,
+        [property: JsonPropertyName("r")] string? Reveal = null,
+        [property: JsonPropertyName("lang")] string? Language = null);
+
+    /// <summary>How the page opens the card: at once (default, also for links without <c>r</c>) or as a surprise to reveal.</summary>
+    public const string RevealDirect = "direct", RevealSurprise = "surprise";
 
     public sealed record SongInfo(
         [property: JsonPropertyName("t")] string Title,
         [property: JsonPropertyName("a")] string Artist,
         [property: JsonPropertyName("b")] string? Album = null,
-        [property: JsonPropertyName("sp")] string? SpotifyId = null);
+        [property: JsonPropertyName("sp")] string? SpotifyId = null,
+        [property: JsonPropertyName("dur")] long? DurationMs = null);
 
     public sealed record Line(
         [property: JsonPropertyName("x")] string Text,
@@ -87,7 +93,7 @@ public static class LyricShareLink
         [property: JsonPropertyName("msg")] string? Message = null);
 
     /// <summary>The payload for a composition as the Studio shows it. Images are never included.</summary>
-    public static Payload Create(LyricCardContent content, LyricCardOptions options, string? spotifyId, string? from, string? to, string? message, DateTime? created = null)
+    public static Payload Create(LyricCardContent content, LyricCardOptions options, string? spotifyId, string? from, string? to, string? message, DateTime? created = null, bool surprise = false, string? language = null)
     {
         options.Variants.TryGetValue(options.Style, out var variant);
         var look = new Look(
@@ -110,13 +116,22 @@ public static class LyricShareLink
             options.Style.ToString(),
             options.Format == LyricCardFormat.Story ? null : Lower(options.Format),
             new SongInfo(Cut(content.Title, MaxText) ?? "", Cut(content.Artist, MaxText) ?? "", Cut(content.Album, MaxText),
-                IsSpotifyId(spotifyId) ? spotifyId : null),
+                IsSpotifyId(spotifyId) ? spotifyId : null, content.Duration is { } d ? (long)d.TotalMilliseconds : null),
             content.Lines.Select(l => new Line(Cut(l.Text, MaxLine) ?? "", l.Time is { } t ? (long)t.TotalMilliseconds : null)).ToList(),
             look == new Look() ? null : look,
             fields,
             dedication == new Dedication() ? null : dedication,
-            (created ?? DateTime.Now).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+            (created ?? DateTime.Now).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            surprise ? RevealSurprise : null,
+            LanguageTag(language ?? LocalizationService.Language));
     }
+
+    /// <summary>The app's language as a BCP 47 tag (the interface language of the sender, not of the lyrics).</summary>
+    public static string LanguageTag(string code) => code switch
+    {
+        "pt" => "pt-BR",
+        _ => code,
+    };
 
     public static string ToJson(Payload payload) => JsonSerializer.Serialize(payload, Json);
 

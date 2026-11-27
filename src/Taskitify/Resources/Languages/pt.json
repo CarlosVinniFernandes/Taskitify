@@ -436,5 +436,6 @@
   "CardSharePrivacy": "Qualquer pessoa com o link pode ver o cartão, a letra e a sua mensagem: o próprio link os carrega, legíveis por qualquer um (não é criptografado). Imagens e capas não são incluídas.",
   "CardShareCopy": "Copiar link",
   "CardShareCopied": "Link copiado.",
-  "CardShareTooLong": "Conteúdo demais para um link: escolha menos versos ou uma mensagem mais curta."
+  "CardShareTooLong": "Conteúdo demais para um link: escolha menos versos ou uma mensagem mais curta.",
+  "CardShareSurprise": "Revelar como surpresa"
 }

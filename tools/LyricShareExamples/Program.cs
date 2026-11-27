@@ -11,17 +11,20 @@ Console.OutputEncoding = Encoding.UTF8;
 var date = new DateTime(2026, 11, 27);
 
 LyricCardContent Song(string title, string artist, string? album, params (string Text, double? At)[] lines) =>
+    SongOf(title, artist, album, null, lines);
+
+LyricCardContent SongOf(string title, string artist, string? album, double? seconds, params (string Text, double? At)[] lines) =>
     new(title, artist, album, lines.Select(l => new LyricCardLine(l.Text, l.At is { } s ? TimeSpan.FromSeconds(s) : null)).ToList(),
-        null, Colors.Teal, Colors.Black, Colors.Teal);
+        null, Colors.Teal, Colors.Black, Colors.Teal, seconds is { } total ? TimeSpan.FromSeconds(total) : null);
 
 var examples = new List<(string Name, LyricShareLink.Payload Payload)>();
 
 // 1. The composition alone, everything at its defaults.
 examples.Add(("composition-only", LyricShareLink.Create(
     Song("After the Rain", "Demo Artist", "Evening Studies", ("Every little moment", 13), ("Some moments stay with us.", 19)),
-    new LyricCardOptions { Style = LyricCardStyle.Paint98 }, null, null, null, null, date)));
+    new LyricCardOptions { Style = LyricCardStyle.Paint98 }, null, null, null, null, date, language: "en")));
 
-// 2. Customized template, square format, a Spotify id and a full dedication.
+// 2. Customized template, square format, a Spotify id, the song's length, a full dedication, revealed as a surprise.
 var receipt = new LyricCardOptions
 {
     Style = LyricCardStyle.LyricReceipt, Format = LyricCardFormat.Square, Font = LyricCardFont.Mono, FontScale = 1.1,
@@ -32,17 +35,21 @@ receipt.Variants[LyricCardStyle.LyricReceipt] = new LyricCardVariant
     Fields = new(StringComparer.Ordinal) { ["paper"] = "Aged thermal", ["title"] = "SONGS FOR YOU", ["note"] = "Keep the change, keep the song" },
 };
 examples.Add(("customized-with-dedication", LyricShareLink.Create(
-    Song("Golden Hour", "Demo Artist", "Coastline", ("Let the world slow down", 6), ("Golden hour on the avenue", 12), ("Every color sounds like you", 18)),
-    receipt, "1a2B3c4D5e6F7g8H9i0J1k", "Carlos", "Ana", "This one always makes me think of our walks by the sea.", date)));
+    SongOf("Golden Hour", "Demo Artist", "Coastline", 187, ("Let the world slow down", 6), ("Golden hour on the avenue", 12), ("Every color sounds like you", 18)),
+    receipt, "1a2B3c4D5e6F7g8H9i0J1k", "Carlos", "Ana", "This one always makes me think of our walks by the sea.", date, surprise: true, language: "en")));
 
-// 3. Accents and emoji, portrait format, a personal photo replaced by nothing (images never travel).
+// 3. Sent from the app in Portuguese (lang pt-BR), a surprise; accents and emoji, portrait format, a personal photo replaced by nothing (images never travel).
 var polaroid = new LyricCardOptions { Style = LyricCardStyle.Polaroid, Format = LyricCardFormat.Portrait, ShowCover = false };
 polaroid.Variants[LyricCardStyle.Polaroid] = new LyricCardVariant { ImageSource = StudioImageSource.Personal, Typeface = LyricCardFont.Handwritten };
 examples.Add(("unicode-dedication", LyricShareLink.Create(
     Song("Canção do Caminho", "Artista de Demonstração", null, ("Café quente na janela", null), ("o céu de outono em mim", null)),
-    polaroid, null, "João", "Zoë 🌙", "Feliz aniversário! ✨ Que essa música te acompanhe.", date)));
+    polaroid, null, "João", "Zoë 🌙", "Feliz aniversário! ✨ Que essa música te acompanhe.", date, surprise: true, language: "pt")));
 
 var ok = true;
+var legacy = LyricShareLink.Parse("{\"v\":1,\"t\":\"Classic\",\"s\":{\"t\":\"After the Rain\",\"a\":\"Demo Artist\"},\"l\":[{\"x\":\"Somewhere in time\"}]}")!;
+var legacyOk = legacy.Reveal is null && legacy.Language is null && legacy.Song.DurationMs is null;
+ok &= legacyOk;
+Console.WriteLine($"### legacy v1 payload without r/lang/dur: {(legacyOk ? "parses, reveal falls back to direct" : "FAILED")}\n");
 foreach (var (name, payload) in examples)
 {
     var json = LyricShareLink.ToJson(payload);

@@ -536,6 +536,8 @@
                         <TextBox Style="{StaticResource Field}" Text="{Binding ShareMessage, UpdateSourceTrigger=PropertyChanged}" MaxLength="280"
                                  TextWrapping="Wrap" AcceptsReturn="True" MinHeight="54" VerticalContentAlignment="Top"
                                  AutomationProperties.Name="{DynamicResource Loc.CardShareMessage}" />
+                        <CheckBox Style="{StaticResource StudioToggle}" IsChecked="{Binding ShareSurprise}" Margin="0,8,0,0"
+                                  Content="{DynamicResource Loc.CardShareSurprise}" Foreground="{DynamicResource TextPrimaryBrush}" />
                         <TextBlock Text="{DynamicResource Loc.CardSharePrivacy}" Style="{StaticResource Hint}" TextWrapping="Wrap" Margin="0,8,0,8" />
                         <Button Style="{StaticResource AccentButton}" Command="{Binding CopyLinkCommand}" Padding="8,8" FontSize="12" HorizontalAlignment="Stretch">
                             <StackPanel Orientation="Horizontal">

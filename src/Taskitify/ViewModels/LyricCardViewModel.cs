@@ -233,6 +233,10 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
     public string ShareTo { get => _shareTo; set { if (Set(ref _shareTo, value)) ShareLink = null; } }
     public string ShareMessage { get => _shareMessage; set { if (Set(ref _shareMessage, value)) ShareLink = null; } }
 
+    private bool _shareSurprise;
+    /// <summary>The recipient reveals the card (a surprise) instead of seeing it at once.</summary>
+    public bool ShareSurprise { get => _shareSurprise; set { if (Set(ref _shareSurprise, value)) ShareLink = null; } }
+
     private string? _shareLink;
     /// <summary>The last link copied, shown so it can be checked before sending.</summary>
     public string? ShareLink { get => _shareLink; private set => Set(ref _shareLink, value); }
@@ -243,7 +247,7 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
 
     private void CopyLink()
     {
-        var payload = LyricShareLink.Create(Content(_options.Style), _options, _source.SpotifyTrackId, ShareFrom, ShareTo, ShareMessage);
+        var payload = LyricShareLink.Create(Content(_options.Style), _options, _source.SpotifyTrackId, ShareFrom, ShareTo, ShareMessage, surprise: ShareSurprise);
         var link = LyricShareLink.Link(payload);
         if (link is null)
         {

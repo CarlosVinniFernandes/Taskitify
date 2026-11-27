@@ -436,5 +436,6 @@
   "CardSharePrivacy": "Jeder mit dem Link kann Karte, Songtext und deine Nachricht sehen: Der Link selbst enthält sie, für alle lesbar (er ist nicht verschlüsselt). Bilder und Albumcover sind nicht enthalten.",
   "CardShareCopy": "Link kopieren",
   "CardShareCopied": "Link kopiert.",
-  "CardShareTooLong": "Zu viel für einen Link: Wähle weniger Zeilen oder eine kürzere Nachricht."
+  "CardShareTooLong": "Zu viel für einen Link: Wähle weniger Zeilen oder eine kürzere Nachricht.",
+  "CardShareSurprise": "Als Überraschung enthüllen"
 }
