@@ -44,7 +44,7 @@
         </Grid.RenderTransform>
 
         <!-- Shadow lives on its own layer so the content keeps ClearType-sharp text. -->
-        <Border CornerRadius="12" Background="{DynamicResource PopupBackgroundBrush}">
+        <Border x:Name="ShadowLayer" CornerRadius="12" Background="{DynamicResource PopupBackgroundBrush}">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="24" ShadowDepth="6" Direction="270" Opacity="0.35" Color="Black" />
             </Border.Effect>
@@ -76,7 +76,7 @@
                         <TextBlock x:Name="TitleText" Text="{Binding Title}" FontFamily="{Binding TitleFont}" FontSize="{Binding TitleFontSize}" FontWeight="{Binding TitleWeight}"
                                    Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"
                                    ToolTip="{Binding Title}" Visibility="{Binding ShowTitle, Converter={StaticResource BoolToVisibility}}" />
-                        <TextBlock Text="{Binding Artist}" FontSize="13.5" Margin="0,3,0,0" FontFamily="{Binding TitleFont}" FontWeight="Medium"
+                        <TextBlock x:Name="ArtistText" Text="{Binding Artist}" FontSize="13.5" Margin="0,3,0,0" FontFamily="{Binding TitleFont}" FontWeight="Medium"
                                    Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis"
                                    ToolTip="{Binding Artist}" Visibility="{Binding ShowArtist, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
@@ -252,10 +252,15 @@
                     ToolTip="{DynamicResource Loc.FloatPlayer}" AutomationProperties.Name="{DynamicResource Loc.FloatPlayer}" />
             <Button x:Name="PinnedSwitch" Style="{StaticResource PinnedTool}" Content="&#xE8D6;"
                     ToolTip="{DynamicResource Loc.SwitchToMinimal}" AutomationProperties.Name="{DynamicResource Loc.SwitchToMinimal}" />
-            <Button x:Name="LyricsSmaller" Style="{StaticResource PinnedTool}" Content="&#xE8E7;"
-                    ToolTip="{DynamicResource Loc.LyricsSmaller}" AutomationProperties.Name="{DynamicResource Loc.LyricsSmaller}" />
-            <Button x:Name="LyricsBigger" Style="{StaticResource PinnedTool}" Content="&#xE8E8;"
-                    ToolTip="{DynamicResource Loc.LyricsBigger}" AutomationProperties.Name="{DynamicResource Loc.LyricsBigger}" />
+            <!-- A small A and a large A: which is which shows at a glance. -->
+            <Button x:Name="LyricsSmaller" Style="{StaticResource PinnedTool}"
+                    ToolTip="{DynamicResource Loc.LyricsSmaller}" AutomationProperties.Name="{DynamicResource Loc.LyricsSmaller}">
+                <TextBlock FontFamily="{StaticResource UiFont}" FontWeight="SemiBold" VerticalAlignment="Center"><Run Text="A" FontSize="10" /><Run Text="−" FontSize="10" /></TextBlock>
+            </Button>
+            <Button x:Name="LyricsBigger" Style="{StaticResource PinnedTool}"
+                    ToolTip="{DynamicResource Loc.LyricsBigger}" AutomationProperties.Name="{DynamicResource Loc.LyricsBigger}">
+                <TextBlock FontFamily="{StaticResource UiFont}" FontWeight="SemiBold" VerticalAlignment="Center"><Run Text="A" FontSize="16" /><Run Text="+" FontSize="11" /></TextBlock>
+            </Button>
             <Button x:Name="PinnedMaximize" Style="{StaticResource PinnedTool}" Content="&#xE740;"
                     ToolTip="{DynamicResource Loc.FillScreen}" AutomationProperties.Name="{DynamicResource Loc.FillScreen}" />
             <Button x:Name="PinnedSettings" Style="{StaticResource PinnedTool}" Content="&#xE713;"
@@ -273,6 +278,65 @@
                     ToolTip="{DynamicResource Loc.MinimalClose}" AutomationProperties.Name="{DynamicResource Loc.MinimalClose}" />
             </StackPanel>
         </Border>
+        <!-- Full screen: the window buttons of any app (minimize, back to a window, close). -->
+        <StackPanel x:Name="CaptionButtons" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed">
+            <StackPanel.Resources>
+                <Style x:Key="Caption" TargetType="Button">
+                    <Setter Property="Width" Value="46" />
+                    <Setter Property="Height" Value="32" />
+                    <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+                    <Setter Property="FontSize" Value="10" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="Focusable" Value="False" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Back" Background="{TemplateBinding Background}">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Back" Property="Background" Value="#26FFFFFF" />
+                                    </Trigger>
+                                    <Trigger Property="IsPressed" Value="True">
+                                        <Setter TargetName="Back" Property="Background" Value="#3DFFFFFF" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </StackPanel.Resources>
+            <Button x:Name="CaptionMinimize" Style="{StaticResource Caption}" Content="&#xE921;"
+                    ToolTip="{DynamicResource Loc.WindowMinimize}" AutomationProperties.Name="{DynamicResource Loc.WindowMinimize}" />
+            <Button x:Name="CaptionRestore" Style="{StaticResource Caption}" Content="&#xE923;"
+                    ToolTip="{DynamicResource Loc.RestoreSize}" AutomationProperties.Name="{DynamicResource Loc.RestoreSize}" />
+            <Button x:Name="CaptionClose" Content="&#xE8BB;"
+                    ToolTip="{DynamicResource Loc.MinimalClose}" AutomationProperties.Name="{DynamicResource Loc.MinimalClose}">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource Caption}">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="Back" Background="Transparent">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Back" Property="Background" Value="#C42B1C" />
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="Back" Property="Background" Value="#B22A1B" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </StackPanel>
         <Grid x:Name="PinnedMark" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10,0,0,8"
               Opacity="0.6" IsHitTestVisible="False" Visibility="Collapsed">
             <Path Data="M5,3 L5,15 L8,12 L10.5,17 L12.5,16 L10,11 L14,11 Z" Fill="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />

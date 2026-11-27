@@ -264,9 +264,30 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     public void SetBackground(MiniPlayerBackground background) => _settings.Update(s => s.MiniPlayerLook.Background = background);
 
     public System.Windows.TextAlignment LyricsTextAlignment =>
-        Look.Alignment == LyricsAlignment.Left ? System.Windows.TextAlignment.Left : System.Windows.TextAlignment.Center;
+        IsPresenting || Look.Alignment == LyricsAlignment.Left ? System.Windows.TextAlignment.Left : System.Windows.TextAlignment.Center;
 
-    public System.Windows.Point LyricsScaleOrigin => Look.Alignment == LyricsAlignment.Left ? new(0, 0.5) : new(0.5, 0.5);
+    public System.Windows.Point LyricsScaleOrigin => IsPresenting || Look.Alignment == LyricsAlignment.Left ? new(0, 0.5) : new(0.5, 0.5);
+
+    private double _presentationHeight;
+
+    private bool IsPresenting => _presentationHeight > 0;
+
+    /// <summary>
+    /// Full screen: the screen's height in DIPs (0 otherwise). The lyrics and the title are sized
+    /// from it, so every resolution gets the same proportions; the lyrics' own size still applies.
+    /// </summary>
+    public double PresentationHeight
+    {
+        get => _presentationHeight;
+        set
+        {
+            if (Math.Abs(value - _presentationHeight) < 0.5)
+                return;
+            _presentationHeight = value;
+            foreach (var name in new[] { nameof(LyricsFontSize), nameof(MotionLineHeight), nameof(TitleFontSize), nameof(LyricsTextAlignment), nameof(LyricsScaleOrigin) })
+                OnPropertyChanged(name);
+        }
+    }
 
     /// <summary>Room at the sides for a line drawn larger.</summary>
     public System.Windows.Thickness LyricsLinePadding => new(4, 7, 5, 7);
@@ -286,7 +307,9 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     public double MotionLineHeight => LyricsFontSize * 1.12;
 
-    public double LyricsFontSize => (IsCinema ? 28 : 23) * Math.Clamp(Look.LyricsScale, .7, 2.2) * (DisplayType ? 1 : .86) * _fitScale;
+    public double LyricsFontSize => IsPresenting
+        ? _presentationHeight * 0.046 * Math.Clamp(Look.LyricsScale, .7, 2.2) * (DisplayType ? 1 : .86)
+        : (IsCinema ? 28 : 23) * Math.Clamp(Look.LyricsScale, .7, 2.2) * (DisplayType ? 1 : .86) * _fitScale;
 
     private double _fitScale = 1;
 
@@ -308,7 +331,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     /// <summary>The song's title in the same type as the lyrics.</summary>
     public FontFamily TitleFont => DisplayType ? LyricsFont : (FontFamily)System.Windows.Application.Current.FindResource("UiDisplayFont");
 
-    public double TitleFontSize => DisplayType ? (IsCinema ? 18 : 17) : 16;
+    public double TitleFontSize => IsPresenting ? Math.Round(_presentationHeight * 0.03) : DisplayType ? (IsCinema ? 18 : 17) : 16;
 
     public System.Windows.FontWeight TitleWeight => DisplayType ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.SemiBold;
 

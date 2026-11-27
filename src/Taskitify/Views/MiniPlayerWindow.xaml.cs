@@ -121,6 +121,20 @@ public partial class MiniPlayerWindow : Window
         LyricsSmaller.Click += (_, _) => LyricsSizeRequested?.Invoke(this, -1);
         LyricsBigger.Click += (_, _) => LyricsSizeRequested?.Invoke(this, 1);
         PinnedMaximize.Click += (_, _) => ToggleFillScreen();
+        CaptionRestore.Click += (_, _) => ExitPresentation();
+        CaptionClose.Click += (_, _) => _pinned?.TurnOff();
+        CaptionMinimize.Click += (_, _) => WindowState = WindowState.Minimized;
+        // Back from the taskbar: full screen again, in front.
+        StateChanged += (_, _) =>
+        {
+            if (_presenting && WindowState == WindowState.Normal)
+                Dispatcher.BeginInvoke(() =>
+                {
+                    var margin = (int)Math.Round(ShadowRoom / 2 * WindowInterop.GetScale(_hwnd));
+                    WindowInterop.SetPosition(_hwnd, _presentMonitor.X - margin, _presentMonitor.Y - margin);
+                    WindowInterop.BringToTopmost(_hwnd);
+                });
+        };
         PopupKeepOpen.Click += (_, _) =>
         {
             _keepOpen = !_keepOpen;
@@ -411,6 +425,15 @@ public partial class MiniPlayerWindow : Window
     {
         if (!IsPinned)
             return;
+        _presentEsc?.Stop();
+        if (_presenting)
+        {
+            if (WindowState != WindowState.Normal)
+                WindowState = WindowState.Normal;
+            SetAppWindow(false);
+        }
+        _presenting = false;
+        _beforeFill = null;
         IsPinned = false;
         _pinned = null;
         _unpinClicks?.Stop();
@@ -442,7 +465,7 @@ public partial class MiniPlayerWindow : Window
         // Games keep the focus: the player never takes it while floating.
         SetExStyle(o.ClickThrough, noActivate: true);
         PinnedMark.Visibility = o.ClickThrough && o.ShowMark ? Visibility.Visible : Visibility.Collapsed;
-        PinnedGrip.Visibility = o.ClickThrough || o.Locked ? Visibility.Collapsed : Visibility.Visible;
+        PinnedGrip.Visibility = o.ClickThrough || o.Locked || _presenting ? Visibility.Collapsed : Visibility.Visible;
         _unpinClicks ??= new ModifierClickWatcher(
             (x, y) => IsVisible && IsPinned && Contains(WindowInterop.GetBounds(_hwnd), x, y),
             () => Dispatcher.BeginInvoke(() => _pinned?.SetClickThrough(false)));
@@ -483,41 +506,170 @@ public partial class MiniPlayerWindow : Window
     /// <summary>Floating, the player resizes further than as a popup.</summary>
     private static (double Min, double Max) PinnedWidthRange(bool cinema) => cinema ? (400, 4000) : (280, 4000);
 
-    /// <summary>Floating: fills the screen it is on (the card up to the work area's edges), or goes back.</summary>
+    // Full screen: the monitor (in pixels) and the room around the content.
+    private bool _presenting;
+    private PixelRect _presentMonitor;
+    private Thickness _presentPadding;
+    private DispatcherTimer? _presentEsc;
+
+    /// <summary>
+    /// Floating: full screen on the monitor it is on, at that monitor's own resolution (taskbar
+    /// included), laid out like a listening room: the cover and the song on the left, large lyrics
+    /// on the right, over a backdrop made from the cover. Again (or Esc): back where it was.
+    /// </summary>
     private void ToggleFillScreen()
     {
         if (!IsPinned || _hwnd == IntPtr.Zero)
             return;
-        if (_beforeFill is { } before)
+        if (_beforeFill is not null)
         {
-            _beforeFill = null;
-            SetBaseWidth(before.Width);
-            ResizeLyrics(before.Lyrics);
-            UpdateFit();
-            AdaptToSize();
-            UpdateLayout();
-            WindowInterop.SetPosition(_hwnd, before.Bounds.X, before.Bounds.Y);
-            UpdatePinnedToolbar();
-            SavePinned();
+            ExitPresentation();
             return;
         }
         var bounds = WindowInterop.GetBounds(_hwnd);
         if (WindowInterop.MonitorForRect(bounds) is not { } monitor)
             return;
         _beforeFill = (bounds, _baseWidth, _lyricsBase);
-        var scale = WindowInterop.GetScale(_hwnd);
-        var work = monitor.WorkArea;
-        var margin = ShadowRoom / 2;
-        // Everything but the lyrics keeps its height; the lyrics take the rest of the screen.
-        var others = ActualHeight - _lyricsBase;
-        SetBaseWidth((work.Width / scale) + ShadowRoom);
-        ResizeLyrics(Math.Max(70, (work.Height / scale) + ShadowRoom - others));
+        _presentMonitor = monitor.Bounds;
+        _presenting = true;
+        SetAppWindow(true);
+        ApplyLayout();
+        ApplyBackground();
+        UpdateLayout();
+        var margin = (int)Math.Round(ShadowRoom / 2 * WindowInterop.GetScale(_hwnd));
+        WindowInterop.SetPosition(_hwnd, monitor.Bounds.X - margin, monitor.Bounds.Y - margin);
+        WindowInterop.BringToTopmost(_hwnd);
+        // The player never takes the focus, so Esc is watched rather than received.
+        _presentEsc ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(80) };
+        _presentEsc.Tick -= OnPresentEsc;
+        _presentEsc.Tick += OnPresentEsc;
+        NativeMethods.GetAsyncKeyState(NativeMethods.VK_ESCAPE);
+        _presentEsc.Start();
+        UpdatePinnedToolbar();
+        ScrollToCurrent(animate: false);
+        QueueLyrics(animate: false);
+    }
+
+    /// <summary>
+    /// Full screen, the player is an app window like any other: a taskbar button to come back to
+    /// after minimizing, and the focus. Floating again, it goes back to never taking the focus.
+    /// </summary>
+    private void SetAppWindow(bool app)
+    {
+        if (_hwnd == IntPtr.Zero)
+            return;
+        var ex = NativeMethods.GetWindowLong(_hwnd, NativeMethods.GWL_EXSTYLE);
+        ex = app
+            ? (ex | NativeMethods.WS_EX_APPWINDOW) & ~NativeMethods.WS_EX_TOOLWINDOW & ~NativeMethods.WS_EX_NOACTIVATE
+            : (ex | NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE) & ~NativeMethods.WS_EX_APPWINDOW;
+        NativeMethods.SetWindowLong(_hwnd, NativeMethods.GWL_EXSTYLE, ex);
+        ShowInTaskbar = app;
+        CaptionButtons.Visibility = app ? Visibility.Visible : Visibility.Collapsed;
+        if (!app && _pinned is { } o)
+            SetExStyle(o.ClickThrough, noActivate: true);
+    }
+
+    private void OnPresentEsc(object? sender, EventArgs e)
+    {
+        if (WindowState == WindowState.Minimized)
+            return;
+        if ((NativeMethods.GetAsyncKeyState(NativeMethods.VK_ESCAPE) & 0x8001) != 0)
+            ExitPresentation();
+    }
+
+    private void ExitPresentation()
+    {
+        _presentEsc?.Stop();
+        if (_beforeFill is not { } before)
+            return;
+        _beforeFill = null;
+        _presenting = false;
+        if (WindowState != WindowState.Normal)
+            WindowState = WindowState.Normal;
+        SetAppWindow(false);
+        _vm.PresentationHeight = 0;
+        ApplyLayout();
+        SetBaseWidth(before.Width);
+        ResizeLyrics(before.Lyrics);
         UpdateFit();
         AdaptToSize();
+        ApplyBackground();
         UpdateLayout();
-        WindowInterop.SetPosition(_hwnd, work.X - (int)Math.Round(margin * scale), work.Y - (int)Math.Round(margin * scale));
+        if (_hwnd != IntPtr.Zero)
+            WindowInterop.SetPosition(_hwnd, before.Bounds.X, before.Bounds.Y);
         UpdatePinnedToolbar();
-        SavePinned();
+        ScrollToCurrent(animate: false);
+        QueueLyrics(animate: false);
+    }
+
+    /// <summary>The full screen arrangement, after ApplyLayout has placed the usual one.</summary>
+    private void ApplyPresentation()
+    {
+        var scale = WindowInterop.GetScale(_hwnd);
+        double width = _presentMonitor.Width / scale, height = _presentMonitor.Height / scale;
+        _vm.PresentationHeight = height;
+        ShadowLayer.Visibility = Visibility.Collapsed;
+        ContentCard.CornerRadius = new CornerRadius(0);
+        ContentCard.BorderThickness = new Thickness(0);
+        var padX = Math.Round(width * 0.06);
+        var padY = Math.Round(height * 0.08);
+        _presentPadding = new Thickness(padX, padY, padX, padY);
+
+        // Left: the song, centred as a block; right: the lyrics, the full height.
+        LayoutRoot.RowDefinitions.Clear();
+        LayoutRoot.ColumnDefinitions.Clear();
+        LayoutRoot.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        for (var i = 0; i < 4; i++)
+            LayoutRoot.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        LayoutRoot.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        LayoutRoot.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(44, GridUnitType.Star) });
+        LayoutRoot.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(56, GridUnitType.Star) });
+        Place(HeaderPart, 1, 0);
+        Place(ProgressPart, 2, 0);
+        Place(ControlsPart, 3, 0);
+        Place(ConfirmPart, 4, 0);
+        Place(LyricsPart, 0, 1);
+        Grid.SetRowSpan(LyricsPart, 6);
+
+        var inner = width - (2 * padX);
+        var cover = Math.Round(Math.Min(height * 0.42, inner * 0.44 * 0.78));
+        CoverPart.Width = CoverPart.Height = cover;
+        CoverPart.Margin = new Thickness(0, 0, 0, Math.Round(height * 0.03));
+        CoverImage.CornerRadius = CoverPlaceholder.CornerRadius = new CornerRadius(Math.Round(cover * 0.025));
+        foreach (FrameworkElement part in new FrameworkElement[] { HeaderPart, ProgressPart, ControlsPart })
+        {
+            part.Width = cover;
+            part.HorizontalAlignment = HorizontalAlignment.Center;
+        }
+        ProgressPart.Margin = new Thickness(0, Math.Round(height * 0.02), 0, 0);
+        ArtistText.FontSize = Math.Round(height * 0.02);
+        TitleText.TextWrapping = TextWrapping.Wrap;
+        TitleText.MaxHeight = double.PositiveInfinity;
+        PlayPauseButton.Margin = new Thickness(18, 0, 18, 0);
+
+        _lyricsMargin = new Thickness(Math.Round(width * 0.03), 0, 0, 0);
+        _lyricsBase = height - (2 * padY);
+        PinnedGrip.Visibility = Visibility.Collapsed;
+        SetBaseWidth(width + ShadowRoom);
+        ApplyToolbarRoom();
+    }
+
+    /// <summary>What full screen changed, back to the usual (nothing to do when it did not).</summary>
+    private void ResetPresentation()
+    {
+        _vm.PresentationHeight = 0;
+        ShadowLayer.Visibility = Visibility.Visible;
+        ContentCard.CornerRadius = new CornerRadius(12);
+        ContentCard.BorderThickness = new Thickness(1);
+        CoverImage.CornerRadius = CoverPlaceholder.CornerRadius = new CornerRadius(8);
+        foreach (FrameworkElement part in new FrameworkElement[] { HeaderPart, ProgressPart, ControlsPart })
+        {
+            part.ClearValue(WidthProperty);
+            part.ClearValue(HorizontalAlignmentProperty);
+        }
+        ProgressPart.Margin = new Thickness(0, 2, 0, 0);
+        ArtistText.FontSize = 13.5;
+        Grid.SetRowSpan(LyricsPart, 1);
     }
 
     /// <summary>
@@ -527,6 +679,8 @@ public partial class MiniPlayerWindow : Window
     /// </summary>
     private void AdaptToSize()
     {
+        if (_presenting)
+            return;
         var content = _baseWidth - ShadowRoom - 32; // card padding
         if (!IsPinned)
         {
@@ -594,8 +748,13 @@ public partial class MiniPlayerWindow : Window
         SavePinned();
     }
 
-    private void SavePinned() =>
+    private void SavePinned()
+    {
+        // Full screen is not a size to come back to: the place and size before it stay saved.
+        if (_presenting)
+            return;
         _pinned?.Saved(WindowInterop.GetBounds(_hwnd), (int)Math.Round(_baseWidth), (int)Math.Round(_lyricsBase), Math.Round(_zoom, 3));
+    }
 
     private void OnGripDown(object sender, MouseButtonEventArgs e)
     {
@@ -666,7 +825,7 @@ public partial class MiniPlayerWindow : Window
     /// <summary>Pinned: dragged by any part that is not a control (buttons, progress, lyrics).</summary>
     private void OnPinnedDrag(object sender, MouseButtonEventArgs e)
     {
-        if (!IsPinned || _pinned is { Locked: true } || e.OriginalSource is not DependencyObject source)
+        if (!IsPinned || _presenting || _pinned is { Locked: true } || e.OriginalSource is not DependencyObject source)
             return;
         for (var node = source; node is not null && node != ContentCard; node = node is Visual ? VisualTreeHelper.GetParent(node) : null)
         {
@@ -866,7 +1025,10 @@ public partial class MiniPlayerWindow : Window
     {
         var keys = new[] { "TextPrimaryBrush", "TextSecondaryBrush", "TextTertiaryBrush", "TrackBrush", "SubtleFillBrush", "SubtleFillHoverBrush", "WindowBackgroundBrush" };
         var look = _vm.Look.Background;
-        var useGradient = look switch
+        // Full screen: always a backdrop from the cover (the player's own, if it is one).
+        if (_presenting && !MiniPlayerBackdrop.IsAtmospheric(look))
+            look = MiniPlayerBackground.Aurora;
+        var useGradient = _presenting || look switch
         {
             MiniPlayerBackground.Theme => false,
             MiniPlayerBackground.AlbumGradient => true,
@@ -885,7 +1047,7 @@ public partial class MiniPlayerWindow : Window
         if (MiniPlayerBackdrop.IsAtmospheric(look))
         {
             // A small image made once per cover and style, stretched: it is all soft gradients.
-            var (w, h) = _vm.IsCinema ? (192, 112) : (128, 176);
+            var (w, h) = _presenting ? (192, 108) : _vm.IsCinema ? (192, 112) : (128, 176);
             var image = MiniPlayerBackdrop.Render(_vm.Cover as BitmapSource, look, w, h, BackdropTuning.From(_vm.Look));
             var brush = new ImageBrush(image) { Stretch = Stretch.Fill };
             RenderOptions.SetBitmapScalingMode(brush, BitmapScalingMode.HighQuality);
@@ -967,6 +1129,7 @@ public partial class MiniPlayerWindow : Window
     /// </summary>
     private void ApplyLayout()
     {
+        ResetPresentation();
         var cinema = _vm.IsCinema;
         LayoutRoot.RowDefinitions.Clear();
         LayoutRoot.ColumnDefinitions.Clear();
@@ -1028,6 +1191,8 @@ public partial class MiniPlayerWindow : Window
             SetZoom(_zoom);
         SetBaseWidth(IsPinned && _pinned is { Width: > 0 } w ? Math.Clamp(w.Width, PinnedWidthRange(cinema).Min, PinnedWidthRange(cinema).Max) : _vm.WindowWidth);
         AdaptToSize();
+        if (_presenting && IsPinned)
+            ApplyPresentation();
     }
 
     private static void Place(UIElement element, int row, int column, int span = 1)
@@ -1075,7 +1240,12 @@ public partial class MiniPlayerWindow : Window
         LyricsFade.EndPoint = new Point(0, height);
         // Wide: the toolbar sits over the lyrics column, which gives it the room; vertical: over the
         // song's row, so everything moves down by what the lyrics give. Either way the size holds.
-        if (_vm.IsCinema)
+        if (_presenting)
+        {
+            ContentCard.Padding = _presentPadding;
+            LyricsPart.Margin = _lyricsMargin;
+        }
+        else if (_vm.IsCinema)
         {
             ContentCard.Padding = new Thickness(16, 16, 16, 10);
             LyricsPart.Margin = new Thickness(_lyricsMargin.Left, _lyricsMargin.Top + room, _lyricsMargin.Right, _lyricsMargin.Bottom);
@@ -1107,6 +1277,9 @@ public partial class MiniPlayerWindow : Window
             PopupKeepOpen.ClearValue(ForegroundProperty);
         PinnedClickThrough.Visibility = PinnedLock.Visibility = PinnedClose.Visibility = PinnedMaximize.Visibility = pinnedOnly;
         PinnedMaximize.Content = _beforeFill is null ? "\uE740" : "\uE73F";
+        if (_presenting)
+            PinnedMaximize.Visibility = PinnedClose.Visibility = PinnedLock.Visibility = PinnedClickThrough.Visibility = Visibility.Collapsed;
+        PinnedToolbar.Margin = _presenting ? new Thickness(0, 4, (46 * 3) + 8, 0) : new Thickness(0, 5, 6, 0);
         PinnedMaximize.ToolTip = LocalizationService.Get(_beforeFill is null ? "FillScreen" : "RestoreSize");
         System.Windows.Automation.AutomationProperties.SetName(PinnedMaximize, (string)PinnedMaximize.ToolTip);
         System.Windows.Automation.AutomationProperties.SetName(PopupKeepOpen, (string)PopupKeepOpen.ToolTip);
