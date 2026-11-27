@@ -80,11 +80,13 @@ public sealed class LyricMotionText : TextBlock
             element.SetCurrentValue(property, target);
             return;
         }
-        element.SetCurrentValue(property, target);
+        // The animation holds its end value. With FillBehavior.Stop the property fell back to its
+        // base value when the animation ended: SetCurrentValue does not survive an animation, so
+        // the mini player's list jumped back to the first line and lines lost their emphasis.
         visual.BeginAnimation(property, new DoubleAnimation(current, target, TimeSpan.FromMilliseconds(milliseconds))
         {
             EasingFunction = expressive ? Quartic : Cubic,
-            FillBehavior = FillBehavior.Stop,
+            FillBehavior = FillBehavior.HoldEnd,
         }, HandoffBehavior.SnapshotAndReplace);
     }
 }
