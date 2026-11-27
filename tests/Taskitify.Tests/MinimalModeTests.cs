@@ -47,8 +47,14 @@ public sealed class MinimalModeTests
         var settings = JsonSerializer.Deserialize<AppSettings>(json, options)!;
         Assert.False(settings.Minimal.Enabled);
         Assert.True(settings.Minimal.Topmost);
-        Assert.Equal(MinimalLines.Three, settings.Minimal.Lines);
-        Assert.Equal((1, 1), settings.Minimal.Around);
+        // Minimal indeed: five verses, small to large to small, no background, no buttons, clicks to the game below.
+        Assert.Equal(MinimalLines.Five, settings.Minimal.Lines);
+        Assert.Equal((2, 2), settings.Minimal.Around);
+        Assert.True(settings.Minimal.SizeAt(-2) < settings.Minimal.SizeAt(-1) && settings.Minimal.SizeAt(-1) < settings.Minimal.SizeAt(0));
+        Assert.Equal(settings.Minimal.SizeAt(1), settings.Minimal.SizeAt(-1));
+        Assert.Equal(MinimalBackdrop.Clear, settings.Minimal.Backdrop);
+        Assert.True(settings.Minimal.ClickThrough);
+        Assert.False(settings.Minimal.ShowSong || settings.Minimal.ShowControls);
         var restored = JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(settings, options), options)!;
         Assert.Equal(MiniPlayerBackground.Aurora, restored.MiniPlayerLook.Background);
         Assert.Equal(settings.Minimal.FontSize, restored.Minimal.FontSize);

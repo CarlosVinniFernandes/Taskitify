@@ -848,8 +848,9 @@ public sealed class TourWindow : Window
         left.Children.Add(setUp);
         grid.Children.Add(left);
 
-        // A desktop with the floating lyrics as the real window draws them: the verses around the
-        // one being sung, its own buttons and the corner grip. It can be dragged and restyled here.
+        // A desktop with the floating lyrics as the real window draws them by default: the verse
+        // being sung, two before and two after it in smaller sizes, outlined, with no background and no
+        // buttons (clicks go to the game under it). It can be dragged and given a soft background here.
         var screen = new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Background = PhotoBrush("fuji.jpg", 0, Stretch.UniformToFill), Margin = new Thickness(36, 0, 0, 0) };
         var canvas = new Canvas { ClipToBounds = true, Background = Brushes.Transparent };
         screen.Child = canvas;
@@ -860,21 +861,22 @@ public sealed class TourWindow : Window
             FontFamily = Display, FontWeight = FontWeights.Bold, FontSize = size, TextAlignment = TextAlignment.Center, Foreground = Brushes.White,
             Opacity = opacity, Margin = new Thickness(0, 3, 0, 3), TextTrimming = TextTrimming.CharacterEllipsis,
         };
-        var previous = Verse(24, .5);
+        var before2 = Verse(19, .32);
+        var previous = Verse(23, .55);
         var lyric = Verse(30, 1);
-        var next = Verse(24, .5);
+        var next = Verse(23, .55);
+        var after2 = Verse(19, .32);
         var verses = new StackPanel { Width = 470, Margin = new Thickness(0, 2, 0, 0) };
-        verses.Children.Add(previous);
-        verses.Children.Add(lyric);
-        verses.Children.Add(next);
-        var toolbar = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Opacity = .6 };
+        foreach (var verse in new[] { before2, previous, lyric, next, after2 })
+            verses.Children.Add(verse);
+        var toolbar = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Opacity = .6, Visibility = Visibility.Collapsed };
         foreach (var glyph in new[] { "\uE8A7", "\uE713", "\uE785", "\uE711" })
             toolbar.Children.Add(new TextBlock { Text = glyph, FontFamily = Icons, FontSize = 12, Foreground = Brushes.White, Width = 28, TextAlignment = TextAlignment.Center });
         var grip = new System.Windows.Shapes.Path
         {
             Data = Geometry.Parse("M16,4 L4,16 M16,9 L9,16 M16,14 L14,16"), Stroke = Brushes.White, StrokeThickness = 1.6, Opacity = .6,
             StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, -10, -4),
+            VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, -10, -4), Visibility = Visibility.Collapsed,
         };
         var body = new Grid();
         body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -884,7 +886,7 @@ public sealed class TourWindow : Window
         body.Children.Add(verses);
         Grid.SetRow(grip, 1);
         body.Children.Add(grip);
-        var shadow = new DropShadowEffect { BlurRadius = 12, ShadowDepth = 1.5, Direction = 270, Opacity = .7, Color = Colors.Black };
+        var shadow = new DropShadowEffect { BlurRadius = 3, ShadowDepth = 0, Opacity = .95, Color = Colors.Black };
         verses.Effect = shadow;
         var caption = new Border
         {
@@ -899,9 +901,11 @@ public sealed class TourWindow : Window
         void ShowLines()
         {
             var n = song.Lines.Length;
+            before2.Text = song.Lines[(line + n - 2) % n];
             previous.Text = song.Lines[(line + n - 1) % n];
             lyric.Text = song.Lines[line];
             next.Text = song.Lines[(line + 1) % n];
+            after2.Text = song.Lines[(line + 2) % n];
         }
         ShowLines();
         Every(step, 33, () =>
@@ -919,7 +923,7 @@ public sealed class TourWindow : Window
             stops[2].Offset = Math.Min(1, p + .06);
         });
 
-        var soft = true;
+        var soft = false;
         void Style()
         {
             caption.Background = soft ? Frozen(Color.FromArgb(0x8C, 0x0C, 0x10, 0x16)) : Brushes.Transparent;
@@ -930,7 +934,7 @@ public sealed class TourWindow : Window
         {
             caption.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             Canvas.SetLeft(caption, (canvas.ActualWidth - caption.DesiredSize.Width) / 2);
-            Canvas.SetTop(caption, canvas.ActualHeight * .5);
+            Canvas.SetTop(caption, Math.Max(0, (canvas.ActualHeight - caption.DesiredSize.Height) / 2 + 30));
         };
         Point? grab = null;
         caption.MouseLeftButtonDown += (_, e) => { grab = e.GetPosition(caption); caption.CaptureMouse(); };
@@ -947,7 +951,7 @@ public sealed class TourWindow : Window
         Button softB = null!, clearB = null!;
         softB = Segment(T("MinimalSoft"), () => { soft = true; Style(); Select(softB, true); Select(clearB, false); });
         clearB = Segment(T("MinimalClear"), () => { soft = false; Style(); Select(softB, false); Select(clearB, true); });
-        Select(softB, true);
+        Select(clearB, true);
         tools.Children.Add(softB);
         tools.Children.Add(clearB);
         var size = new Slider { Minimum = 22, Maximum = 40, Value = 30, Width = 110, Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, ToolTip = T("MinimalSize") };
@@ -955,7 +959,8 @@ public sealed class TourWindow : Window
         size.ValueChanged += (_, e) =>
         {
             lyric.FontSize = e.NewValue;
-            previous.FontSize = next.FontSize = e.NewValue * .8;
+            previous.FontSize = next.FontSize = e.NewValue * .78;
+            before2.FontSize = after2.FontSize = e.NewValue * .62;
         };
         tools.Children.Add(size);
         var hint = new TextBlock { Text = T("MinimalDrag"), FontSize = 12.5, Foreground = CreamBrush, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(18, 0, 0, 14) };
@@ -1172,9 +1177,9 @@ public sealed class TourWindow : Window
         center.Children.Add(new TextBlock { Text = T("HomeSignature"), FontSize = 14, FontStyle = FontStyles.Italic, Foreground = Muted, Margin = new Thickness(0, 8, 0, 0), TextAlignment = TextAlignment.Center });
         center.Children.Add(new Border { Width = 56, Height = 1, Background = SurfaceLine, Margin = new Thickness(0, 22, 0, 22), HorizontalAlignment = HorizontalAlignment.Center });
 
-        StackPanel Offer(string glyph, Brush accent, string heading, string text, Button action)
+        StackPanel Offer(string glyph, Brush accent, string heading, string text, Button action, FrameworkElement? actions = null)
         {
-            var offer = new StackPanel { Width = 280, HorizontalAlignment = HorizontalAlignment.Center };
+            var offer = new StackPanel { Width = 310, HorizontalAlignment = HorizontalAlignment.Center };
             offer.Children.Add(new TextBlock { Text = glyph, FontFamily = Icons, FontSize = 24, Foreground = accent, HorizontalAlignment = HorizontalAlignment.Center });
             offer.Children.Add(new TextBlock { Text = heading, FontFamily = Display, FontWeight = FontWeights.Bold, FontSize = 19, Margin = new Thickness(0, 10, 0, 0), TextAlignment = TextAlignment.Center });
             offer.Children.Add(Body(text, 13.5, top: 4, center: true));
@@ -1182,7 +1187,13 @@ public sealed class TourWindow : Window
             action.HorizontalAlignment = HorizontalAlignment.Stretch;
             action.BorderBrush = accent;
             action.Background = Frozen(Color.FromArgb(0x18, ((SolidColorBrush)accent).Color.R, ((SolidColorBrush)accent).Color.G, ((SolidColorBrush)accent).Color.B));
-            offer.Children.Add(action);
+            if (actions is not null)
+            {
+                // A pair of buttons: the margin goes above both, not inside the first.
+                actions.Margin = action.Margin;
+                action.Margin = new Thickness(0);
+            }
+            offer.Children.Add(actions ?? action);
             return offer;
         }
         var offers = new Grid();
@@ -1190,14 +1201,22 @@ public sealed class TourWindow : Window
         offers.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1) });
         offers.ColumnDefinitions.Add(new ColumnDefinition());
         var star = Offer("\uE735", gold, T("HomeFavor"), T("HomeStarShort"), Ghost("\uE735  " + T("HomeGitHub"), () => Open(ContactInfo.Repository)));
-        var playlist = Offer("\uE7F6", Turquoise, T("HomeDiscover"), T("HomeDiscoverBody"), Ghost("\uE8D6  " + T("CommunityListen"), () => OfficialLinks.Open(OfficialLinks.Playlist)));
-        // A second way in, right under the first: adding a song of one's own to the playlist.
-        var add = Ghost("\uE710  " + T("HomeAddSong"), () => OfficialLinks.Open(OfficialLinks.SuggestSong));
-        add.Margin = new Thickness(0, 8, 0, 0);
-        add.HorizontalAlignment = HorizontalAlignment.Stretch;
-        add.BorderBrush = Turquoise;
-        add.Background = Frozen(Color.FromArgb(0x18, ((SolidColorBrush)Turquoise).Color.R, ((SolidColorBrush)Turquoise).Color.G, ((SolidColorBrush)Turquoise).Color.B));
-        playlist.Children.Add(add);
+        // Two ways in, side by side: listening to the playlist and adding a song to it.
+        var listen = Make("\uE8D6  " + T("HomeListenShort"), () => OfficialLinks.Open(OfficialLinks.Playlist), Surface, CreamBrush, Turquoise, 13, new Thickness(8, 9, 8, 10));
+        var add = Make("\uE710  " + T("HomeAddSong"), () => OfficialLinks.Open(OfficialLinks.SuggestSong), Surface, CreamBrush, Turquoise, 13, new Thickness(8, 9, 8, 10));
+        var pair = new Grid();
+        pair.ColumnDefinitions.Add(new ColumnDefinition());
+        pair.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });
+        pair.ColumnDefinitions.Add(new ColumnDefinition());
+        var tint = Frozen(Color.FromArgb(0x18, ((SolidColorBrush)Turquoise).Color.R, ((SolidColorBrush)Turquoise).Color.G, ((SolidColorBrush)Turquoise).Color.B));
+        foreach (var (button, column) in new[] { (listen, 0), (add, 2) })
+        {
+            button.Background = tint;
+            button.HorizontalAlignment = HorizontalAlignment.Stretch;
+            Grid.SetColumn(button, column);
+            pair.Children.Add(button);
+        }
+        var playlist = Offer("\uE7F6", Turquoise, T("HomeDiscover"), T("HomeDiscoverBody"), listen, pair);
         star.Margin = new Thickness(0, 0, 32, 0);
         playlist.Margin = new Thickness(32, 0, 0, 0);
         offers.Children.Add(star);

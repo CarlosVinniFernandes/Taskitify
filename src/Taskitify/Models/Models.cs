@@ -706,6 +706,9 @@ public enum MinimalLegibility
 /// <summary>
 /// Minimal Mode's settings. Its look (type, highlight, motion...) is its own, not the mini
 /// player's, so the two can differ; the position is in physical pixels (0 width: not placed yet).
+/// By default it is minimal indeed: the verse being sung, two before and two after it in smaller
+/// sizes, no background, no buttons, and
+/// every click going through to what is underneath (a game keeps all of its input).
 /// </summary>
 public sealed class MinimalModeSettings
 {
@@ -719,8 +722,8 @@ public sealed class MinimalModeSettings
     /// <summary>The window can be neither moved nor resized.</summary>
     public bool Locked { get; set; }
 
-    /// <summary>Clicks go to whatever is under the lyrics (turned off from the tray or the settings).</summary>
-    public bool ClickThrough { get; set; }
+    /// <summary>Clicks go to whatever is under the lyrics (turned off from the tray or the settings, to move them).</summary>
+    public bool ClickThrough { get; set; } = true;
 
     public LyricsHighlight Highlight { get; set; } = LyricsHighlight.Progressive;
 
@@ -733,19 +736,22 @@ public sealed class MinimalModeSettings
     /// <summary>The current verse's size in DIPs.</summary>
     public double FontSize { get; set; } = 30;
 
-    public MinimalLines Lines { get; set; } = MinimalLines.Three;
+    public MinimalLines Lines { get; set; } = MinimalLines.Five;
+
+    /// <summary>Verses get smaller the further they are from the current one (small, medium, current, medium, small).</summary>
+    public bool GraduatedSizes { get; set; } = true;
 
     /// <summary>Room between verses, relative to the usual (0.6 to 1.8).</summary>
     public double LineSpacing { get; set; } = 1;
 
-    public MinimalBackdrop Backdrop { get; set; } = MinimalBackdrop.Soft;
+    public MinimalBackdrop Backdrop { get; set; } = MinimalBackdrop.Clear;
 
     /// <summary>The background's opacity (0 to 1); a clear background has none.</summary>
     public double BackdropOpacity { get; set; } = 0.55;
 
     public MinimalTextColor TextColor { get; set; } = MinimalTextColor.White;
 
-    public MinimalLegibility Legibility { get; set; } = MinimalLegibility.Shadow;
+    public MinimalLegibility Legibility { get; set; } = MinimalLegibility.Outline;
 
     /// <summary>The song's title and artist above the lyrics.</summary>
     public bool ShowSong { get; set; }
@@ -771,6 +777,14 @@ public sealed class MinimalModeSettings
     };
 
     public static double ClampFontSize(double size) => Math.Clamp(Math.Round(size), 18, 64);
+
+    /// <summary>A verse's size relative to the current one's, by its distance from it.</summary>
+    public double SizeAt(int distance) => !GraduatedSizes ? 1 : Math.Abs(distance) switch
+    {
+        0 => 1,
+        1 => 0.78,
+        _ => 0.62,
+    };
 
     public static double ClampSpacing(double spacing) => Math.Clamp(Math.Round(spacing * 10) / 10, 0.6, 1.8);
 }

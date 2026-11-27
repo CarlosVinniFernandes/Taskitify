@@ -187,14 +187,13 @@ public sealed class MinimalLyricsViewModel : ObservableObject, IDisposable
             for (var i = 0; i < timeline.Count; i++)
                 Lines.Add(new LyricLineViewModel(i, timeline.Lines[i].Time, timeline.Lines[i].Text));
         }
-        // Without synced lyrics the song itself is what there is to show.
-        StatusMessage = _monitor.Track is null ? LocalizationService.Get("NothingPlaying") : _sync.State switch
+        // Nothing at all while nothing plays or the lyrics load (over a game, silence is the point);
+        // without synced lyrics, the song itself, quietly.
+        StatusMessage = _monitor.Track is null ? null : _sync.State switch
         {
-            LyricsState.Synced => null,
-            LyricsState.Loading => LocalizationService.Get("LoadingLyrics"),
-            LyricsState.Instrumental => LocalizationService.Get("Instrumental"),
-            LyricsState.Error => LocalizationService.Get("LyricsError"),
-            _ => LocalizationService.Get("UnavailableLyrics"),
+            LyricsState.Synced or LyricsState.Loading or LyricsState.None => null,
+            LyricsState.Instrumental => "♪  " + SongLine,
+            _ => SongLine,
         };
         UpdateCurrentLine();
     }
@@ -222,6 +221,10 @@ public sealed class MinimalLyricsViewModel : ObservableObject, IDisposable
             line.IsCurrent = i == index;
             line.IsPast = i < index;
             line.Emphasize(S.Highlight, distance, started: index >= 0, heavy: DisplayType, motion: LayoutMotion);
+            // Smaller verses away from the current one: Minimal Mode's own composition, the same with
+            // motion on or off (motion only animates between sizes).
+            if (S.GraduatedSizes)
+                line.Scale = S.SizeAt(index < 0 ? distance + 1 : distance) * (distance == 0 && index >= 0 ? Math.Max(1, line.Scale) : 1);
             // Before the first verse, the first ones wait below the middle.
             if (index < 0 ? distance > before + after : distance < -before || distance > after)
                 line.Emphasis = 0;

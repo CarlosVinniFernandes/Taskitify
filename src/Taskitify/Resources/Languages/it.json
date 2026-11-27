@@ -386,9 +386,9 @@
   "TourGroupSong": "Brano",
   "TourMinimalEyebrow": "Solo tu e il testo.",
   "TourMinimalTitle": "A volte il testo è tutto ciò che serve.",
-  "TourMinimalBody": "Nessuna distrazione. Solo tu e la musica: i versi cantati, sospesi sul desktop.",
-  "TourMinimalMove": "Trascinalo ovunque; ridimensionalo dai bordi o dall'angolo.",
-  "TourMinimalAbove": "Sopra le altre finestre, anche i giochi a schermo intero senza bordi, con sfondo trasparente, morbido o dell'album.",
+  "TourMinimalBody": "Nessuna distrazione. Solo tu e la musica: il verso cantato e i suoi vicini, sospesi sul desktop o sul tuo gioco.",
+  "TourMinimalMove": "Per impostazione i clic passano al tuo gioco. Disattivalo per trascinarlo e ridimensionarlo.",
+  "TourMinimalAbove": "Sopra le altre finestre, anche i giochi a schermo intero senza bordi. Sfondo, titolo e controlli sono facoltativi.",
   "TourMinimalAlone": "Da solo per impostazione: il player della barra riposa mentre è attivo. Puoi tenerlo e aprire il mini player dai testi.",
   "TourMinimalOff": "Spento finché non lo attivi, nelle Impostazioni o dall'icona nell'area di notifica.",
   "TourMinimalSoft": "Sfondo morbido",
@@ -493,7 +493,7 @@
   "MinimalLocked": "Blocca posizione e dimensioni",
   "MinimalLockedHint": "Sbloccati, trascina i testi ovunque e ridimensionali dai bordi.",
   "MinimalClickThrough": "Lascia passare i clic attraverso i testi",
-  "MinimalClickThroughHint": "I pulsanti dei testi si nascondono mentre è attivo. Disattivalo qui o dall'icona nell'area di notifica.",
+  "MinimalClickThroughHint": "Attivo per impostazione: il gioco o l'app sotto i testi riceve ogni clic. Disattivalo per spostarli o ridimensionarli: compaiono i pulsanti e l'angolo. Anche dall'icona nell'area di notifica.",
   "MinimalPlace": "Posizione e dimensioni",
   "MinimalPlaceHint": "Ricordate tra i riavvii. Se quello schermo non c'è più, i testi tornano su quello principale.",
   "MinimalResetPlace": "Ripristina",
@@ -550,5 +550,6 @@
   "TrackOffsetsClearQuestion": "Rimuovere la regolazione di ogni brano ({0})? La regolazione generale resta.",
   "OffsetAll": "Tutti i brani",
   "TourMinimalSetUp": "Configura Minimal Mode",
-  "TourHomeAddSong": "Aggiungi un brano alla playlist"
+  "TourHomeAddSong": "Aggiungi brano",
+  "TourHomeListenShort": "Scopri la playlist"
 }

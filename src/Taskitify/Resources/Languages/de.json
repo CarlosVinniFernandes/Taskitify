@@ -386,9 +386,9 @@
   "TourGroupSong": "Song",
   "TourMinimalEyebrow": "Nur du und der Text.",
   "TourMinimalTitle": "Manchmal ist der Text alles, was du brauchst.",
-  "TourMinimalBody": "Keine Ablenkung. Nur du und die Musik: die gesungenen Zeilen, schwebend über deinem Desktop.",
-  "TourMinimalMove": "Zieh ihn überallhin; ändere die Größe an den Rändern oder der Ecke.",
-  "TourMinimalAbove": "Über anderen Fenstern, auch über Spielen im randlosen Vollbild, mit transparentem, dezentem oder Album-Hintergrund.",
+  "TourMinimalBody": "Keine Ablenkung. Nur du und die Musik: die gesungene Zeile und ihre Nachbarn, schwebend über deinem Desktop oder Spiel.",
+  "TourMinimalMove": "Klicks gehen standardmäßig an dein Spiel. Schalte das aus, um ihn zu verschieben und die Größe zu ändern.",
+  "TourMinimalAbove": "Über anderen Fenstern, auch über Spielen im randlosen Vollbild. Hintergrund, Titel und Steuerung sind optional.",
   "TourMinimalAlone": "Standardmäßig allein: Der Taskleisten-Player ruht, solange er an ist. Du kannst ihn behalten und den Mini-Player über den Songtext öffnen.",
   "TourMinimalOff": "Aus, bis du ihn einschaltest – in den Einstellungen oder über das Symbol im Infobereich.",
   "TourMinimalSoft": "Sanfter Hintergrund",
@@ -493,7 +493,7 @@
   "MinimalLocked": "Position und Größe sperren",
   "MinimalLockedHint": "Entsperrt kannst du den Songtext überallhin ziehen und an den Rändern die Größe ändern.",
   "MinimalClickThrough": "Klicks durch den Songtext durchlassen",
-  "MinimalClickThroughHint": "Die Schaltflächen am Songtext sind dann ausgeblendet. Hier oder über das Symbol im Infobereich ausschalten.",
+  "MinimalClickThroughHint": "Standardmäßig an: Spiel oder App unter dem Songtext erhalten jeden Klick. Zum Verschieben oder Ändern der Größe ausschalten – dann erscheinen die Schaltflächen und der Eckgriff. Auch über das Symbol im Infobereich.",
   "MinimalPlace": "Position und Größe",
   "MinimalPlaceHint": "Bleiben nach Neustarts erhalten. Fehlt dieser Bildschirm, kehrt der Songtext auf den Hauptbildschirm zurück.",
   "MinimalResetPlace": "Zurücksetzen",
@@ -550,5 +550,6 @@
   "TrackOffsetsClearQuestion": "Die Anpassung aller Songs ({0}) entfernen? Die allgemeine Einstellung bleibt.",
   "OffsetAll": "Alle Songs",
   "TourMinimalSetUp": "Minimal Mode einrichten",
-  "TourHomeAddSong": "Song zur Playlist hinzufügen"
+  "TourHomeAddSong": "Song hinzufügen",
+  "TourHomeListenShort": "Playlist ansehen"
 }

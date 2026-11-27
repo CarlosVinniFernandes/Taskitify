@@ -189,8 +189,9 @@ internal static class MiniPlayerLookThumbnails
             for (var i = 0; i < count; i++)
             {
                 var distance = i - before;
-                Line(dc, 14, top + (i * step), bounds.Width - 28, distance == 0 ? .9 : .66, TextAlignment.Center, color,
-                    distance == 0 ? (byte)0xFF : Math.Abs(distance) == 1 ? (byte)0x80 : (byte)0x48, distance == 0 ? 4 : 3);
+                var size = Math.Abs(distance) switch { 0 => .9, 1 => .66, _ => .46 };
+                Line(dc, 14, top + (i * step), bounds.Width - 28, size, TextAlignment.Center, color,
+                    distance == 0 ? (byte)0xFF : Math.Abs(distance) == 1 ? (byte)0x80 : (byte)0x48, Math.Abs(distance) switch { 0 => 4, 1 => 3, _ => 2 });
             }
         });
 

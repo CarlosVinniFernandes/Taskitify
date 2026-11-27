@@ -386,9 +386,9 @@
   "TourGroupSong": "Canción",
   "TourMinimalEyebrow": "Solo tú y la letra.",
   "TourMinimalTitle": "A veces, la letra es todo lo que necesitas.",
-  "TourMinimalBody": "Sin distracciones. Solo tú y la música: los versos que se cantan, flotando sobre tu escritorio.",
-  "TourMinimalMove": "Arrástralo a cualquier lugar; cambia su tamaño desde los bordes o la esquina.",
-  "TourMinimalAbove": "Sobre las demás ventanas, también juegos a pantalla completa sin bordes, con fondo transparente, suave o del álbum.",
+  "TourMinimalBody": "Sin distracciones. Solo tú y la música: el verso que se canta y sus vecinos, flotando sobre tu escritorio o tu juego.",
+  "TourMinimalMove": "Por defecto, los clics pasan a tu juego. Desactívalo para arrastrarlo y cambiar su tamaño.",
+  "TourMinimalAbove": "Sobre las demás ventanas, también juegos a pantalla completa sin bordes. Fondo, título y controles son opcionales.",
   "TourMinimalAlone": "Solo por defecto: el reproductor de la barra descansa mientras está activado. Puedes mantenerlo y abrir el mini reproductor desde las letras.",
   "TourMinimalOff": "Apagado hasta que lo actives, en Configuración o desde el icono del área de notificación.",
   "TourMinimalSoft": "Fondo suave",
@@ -493,7 +493,7 @@
   "MinimalLocked": "Bloquear posición y tamaño",
   "MinimalLockedHint": "Desbloqueadas, arrastra las letras a cualquier lugar y cambia su tamaño desde los bordes.",
   "MinimalClickThrough": "Dejar que los clics atraviesen las letras",
-  "MinimalClickThroughHint": "Los botones de las letras se ocultan mientras esté activado. Desactívalo aquí o desde el icono del área de notificación.",
+  "MinimalClickThroughHint": "Activado por defecto: el juego o la app bajo las letras recibe todos los clics. Desactívalo para moverlas o cambiar su tamaño: aparecen sus botones y la esquina. También desde el icono del área de notificación.",
   "MinimalPlace": "Posición y tamaño",
   "MinimalPlaceHint": "Se recuerdan entre reinicios. Si esa pantalla ya no está, las letras vuelven a la principal.",
   "MinimalResetPlace": "Restablecer",
@@ -550,5 +550,6 @@
   "TrackOffsetsClearQuestion": "¿Quitar el ajuste de todas las canciones ({0})? El ajuste general se mantiene.",
   "OffsetAll": "Todas las canciones",
   "TourMinimalSetUp": "Configurar Minimal Mode",
-  "TourHomeAddSong": "Añadir una canción a la playlist"
+  "TourHomeAddSong": "Añadir canción",
+  "TourHomeListenShort": "Ver la playlist"
 }

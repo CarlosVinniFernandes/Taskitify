@@ -681,6 +681,15 @@
                                 </StackPanel>
                             </Border>
                             <Border Style="{StaticResource Row}">
+                                <DockPanel>
+                                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding MinimalLook.GraduatedSizes}" AutomationProperties.Name="{DynamicResource Loc.MinimalGraduated}" />
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.MinimalGraduated}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.MinimalGraduatedHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
                                 <StackPanel>
                                     <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookHighlight}" />
                                     <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MinimalLook.Highlights}"
