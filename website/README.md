@@ -26,3 +26,5 @@ To hide a contribution or mark it as added, copy its exact Blob pathname and run
 The API reserves one suggestion per address per minute using an atomic Blob write. The path uses a rotating keyed hash and no raw IP is stored in the suggestion. For future app integration, `/community?song=Song&artist=Artist&name=Nickname#suggest` pre-fills the editable form. Sending still requires an explicit submit, and the nickname checkbox always starts unchecked.
 
 Product images come from the [Store campaign and onboarding assets](../marketing/microsoft-store/SOURCES.md). Font license notices are in `public/fonts/`.
+
+For browser moderation, set the server-only `COMMUNITY_ADMIN_KEY` in Vercel and redeploy. Generate a random key with `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"` and put it in the password field at `/community/admin`. The admin page is disabled without a key. It edits the title, artist, and status of existing wall entries and refreshes the wall after each save. The session lasts 30 minutes. Changing the key invalidates existing sessions.
