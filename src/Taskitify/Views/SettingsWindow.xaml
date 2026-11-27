@@ -400,7 +400,7 @@
 
         <!-- ───────────── Mini player (popup) ───────────── -->
         <TabItem Style="{StaticResource NavItem}" Header="{DynamicResource Loc.NavMiniPlayer}" Tag="&#xE8A7;">
-            <ScrollViewer Style="{StaticResource Page}">
+            <ScrollViewer Style="{StaticResource Page}" Loaded="OnMiniPlayerPageLoaded" Unloaded="OnMiniPlayerPageUnloaded">
                 <StackPanel Style="{StaticResource PageBody}">
                     <TextBlock Style="{StaticResource PageTitle}" Text="{DynamicResource Loc.NavMiniPlayer}" />
                     <TextBlock Style="{StaticResource PageHint}" Text="{DynamicResource Loc.PageMiniPlayerHint}" />
@@ -408,10 +408,9 @@
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.Elements}" />
                     <Border Style="{StaticResource Group}" Padding="18,14,18,18">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource SettingHint}" Margin="0" Text="{DynamicResource Loc.ElementsHint}" />
                             <Border Style="{StaticResource Stage}">
                                 <StackPanel>
-                                    <local:MiniPlayerPicker DataContext="{Binding MiniPlayer}" HorizontalAlignment="Center" />
+                                    <local:MiniPlayerPicker HorizontalAlignment="Center" />
                                     <ContentControl Template="{StaticResource Legend}" />
                                 </StackPanel>
                             </Border>
@@ -427,20 +426,14 @@
 
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookLayout}" />
                     <Border Style="{StaticResource Group}" Padding="18,14,18,8">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource SettingHint}" Margin="0,0,0,10" Text="{DynamicResource Loc.LookPresetsHint}" />
-                            <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Presets}"
-                                     SelectedItem="{Binding MiniLook.Preset}" AutomationProperties.Name="{DynamicResource Loc.LookLayout}" />
-                        </StackPanel>
+                        <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Presets}"
+                                 SelectedItem="{Binding MiniLook.Preset}" AutomationProperties.Name="{DynamicResource Loc.LookLayout}" />
                     </Border>
 
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookBackground}" />
                     <Border Style="{StaticResource Group}" Padding="18,14,18,8">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource SettingHint}" Margin="0,0,0,10" Text="{DynamicResource Loc.LookBackgroundHint}" />
-                            <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Backgrounds}"
-                                     SelectedItem="{Binding MiniLook.Background}" AutomationProperties.Name="{DynamicResource Loc.LookBackground}" />
-                        </StackPanel>
+                        <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Backgrounds}"
+                                 SelectedItem="{Binding MiniLook.Background}" AutomationProperties.Name="{DynamicResource Loc.LookBackground}" />
                     </Border>
 
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookLyrics}" />
@@ -449,29 +442,28 @@
                             <Border Style="{StaticResource FirstRow}">
                                 <StackPanel>
                                     <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookHighlight}" />
-                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ChoiceChip}" ItemsSource="{Binding MiniLook.Highlights}"
+                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Highlights}"
                                              SelectedItem="{Binding MiniLook.Highlight}" Margin="0,8,0,0" AutomationProperties.Name="{DynamicResource Loc.LookHighlight}" />
                                 </StackPanel>
                             </Border>
                             <Border Style="{StaticResource Row}">
                                 <StackPanel>
                                     <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.MotionTitle}" />
-                                    <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.MotionHint}" />
-                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ChoiceChip}" ItemsSource="{Binding MiniLook.Motions}"
+                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Motions}"
                                              SelectedItem="{Binding MiniLook.Motion}" Margin="0,8,0,0" AutomationProperties.Name="{DynamicResource Loc.MotionTitle}" />
                                 </StackPanel>
                             </Border>
                             <Border Style="{StaticResource Row}">
                                 <StackPanel>
                                     <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookAlignment}" />
-                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ChoiceChip}" ItemsSource="{Binding MiniLook.Alignments}"
+                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Alignments}"
                                              SelectedItem="{Binding MiniLook.Alignment}" Margin="0,8,0,0" AutomationProperties.Name="{DynamicResource Loc.LookAlignment}" />
                                 </StackPanel>
                             </Border>
                             <Border Style="{StaticResource Row}">
                                 <StackPanel>
                                     <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookTypeface}" />
-                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ChoiceChip}" ItemsSource="{Binding MiniLook.Typefaces}"
+                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Typefaces}"
                                              SelectedItem="{Binding MiniLook.Typeface}" Margin="0,8,0,0" AutomationProperties.Name="{DynamicResource Loc.LookTypeface}" />
                                 </StackPanel>
                             </Border>
@@ -491,7 +483,7 @@
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookControls}" />
                     <Border Style="{StaticResource Group}">
                         <Border Style="{StaticResource FirstRow}">
-                            <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ChoiceChip}" ItemsSource="{Binding MiniLook.Controls}"
+                            <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Controls}"
                                      SelectedItem="{Binding MiniLook.ControlsStyle}" AutomationProperties.Name="{DynamicResource Loc.LookControls}" />
                         </Border>
                     </Border>

@@ -240,7 +240,7 @@ public partial class App : Application
 
     public void ShowSettings(SettingsPage? page)
     {
-        if (_settings is null || _cache is null || _sync is null || _overlay is null)
+        if (_settings is null || _cache is null || _sync is null || _overlay is null || _monitor is null || _theme is null)
             return;
         if (_settingsWindow is { IsLoaded: true })
         {
@@ -252,7 +252,7 @@ public partial class App : Application
         _spotifyLyrics?.CheckSession();
         _settingsVm = new SettingsViewModel(_settings, _cache, _sync, _overlay.IsCalibrating, _overlay.SetCalibrating)
         {
-            MiniLook = new MiniPlayerLookViewModel(_settings, _monitor?.Thumbnail as BitmapSource, _monitor?.Palette ?? default),
+            MiniLook = new MiniPlayerLookViewModel(_settings, _monitor, _sync, _theme),
         };
         // Customizing the mini player shows it, live, beside the settings.
         _settingsVm.MiniLook!.PreviewRequested += (_, _) => PreviewMiniPlayer();

@@ -1,46 +1,111 @@
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 using Taskitify.Models;
-using Taskitify.Core.Lyrics;
 using Taskitify.Services;
 using Taskitify.Views;
 
 namespace Taskitify.ViewModels;
 
-/// <summary>A choice in the appearance settings: its value, name and, for layouts and backgrounds, a picture of it.</summary>
-public sealed record LookOption<T>(T Value, string Label, ImageSource? Thumbnail = null);
+/// <summary>An appearance choice with a picture that can follow the song without replacing the selection.</summary>
+public sealed class LookOption<T>(T value, string label) : ObservableObject
+{
+    private ImageSource? _thumbnail;
 
-/// <summary>
-/// Settings > Mini player > Appearance: layout, background, lyrics and controls, each chosen on
-/// its own and saved at once. Thumbnails are drawn when the settings open (a few small images),
-/// the backgrounds with the cover playing now.
-/// </summary>
+    public T Value { get; } = value;
+    public string Label { get; } = label;
+    public ImageSource? Thumbnail { get => _thumbnail; internal set => Set(ref _thumbnail, value); }
+}
+
+/// <summary>The mini player's appearance settings and its song-aware previews.</summary>
 public sealed class MiniPlayerLookViewModel : ObservableObject
 {
     private readonly SettingsService _settings;
+    private readonly ISpotifyMonitor _monitor;
+    private readonly LyricsSyncService _lyrics;
+    private readonly ThemeService _theme;
+    private DispatcherOperation? _refresh;
+    private bool _active;
+    private (BitmapSource? Cover, Color Start, Color End, Color Theme, bool AlbumGradient)? _backgroundKey;
+    private Color? _diagramColor;
+    private Brush? _pickerBackground;
 
-    public MiniPlayerLookViewModel(SettingsService settings, BitmapSource? cover, (Color Start, Color End) palette)
+    public MiniPlayerLookViewModel(SettingsService settings, ISpotifyMonitor monitor, LyricsSyncService lyrics, ThemeService theme)
     {
         _settings = settings;
+        _monitor = monitor;
+        _lyrics = lyrics;
+        _theme = theme;
         Layouts =
         [
-            new(MiniPlayerLayout.Vertical, LocalizationService.Get("LookLayoutVertical"), LayoutThumbnail(cinema: false)),
-            new(MiniPlayerLayout.Cinema, LocalizationService.Get("LookLayoutCinema"), LayoutThumbnail(cinema: true)),
+            new(MiniPlayerLayout.Vertical, LocalizationService.Get("LookLayoutVertical")),
+            new(MiniPlayerLayout.Cinema, LocalizationService.Get("LookLayoutCinema")),
         ];
-        Backgrounds = Enum.GetValues<MiniPlayerBackground>()
-            .Select(b => new LookOption<MiniPlayerBackground>(b, LocalizationService.Get("LookBackground" + b), BackgroundThumbnail(b, cover, palette)))
-            .ToList();
-        Presets = LookPreset.All
-            .Select(p => new LookOption<LookPreset>(p, LocalizationService.Get("LookPreset" + p.Key), PresetThumbnail(p, cover, palette)))
-            .ToList();
-        Flows = Enum.GetValues<LyricFlowMode>().Select(mode => new LookOption<LyricFlowMode>(mode, LocalizationService.Get("Flow" + mode))).ToList();
-        Motions = Enum.GetValues<LyricMotionMode>().Select(mode => new LookOption<LyricMotionMode>(mode, LocalizationService.Get("Motion" + mode))).ToList();
-        Highlights = Enum.GetValues<LyricsHighlight>().Select(h => new LookOption<LyricsHighlight>(h, LocalizationService.Get("LookHighlight" + h))).ToList();
-        Typefaces = Enum.GetValues<LyricsTypeface>().Select(t => new LookOption<LyricsTypeface>(t, LocalizationService.Get("LookTypeface" + t))).ToList();
-        Alignments = Enum.GetValues<LyricsAlignment>().Select(a => new LookOption<LyricsAlignment>(a, LocalizationService.Get("LookAlign" + a))).ToList();
-        Controls = Enum.GetValues<ControlsLook>().Select(c => new LookOption<ControlsLook>(c, LocalizationService.Get("LookControls" + c))).ToList();
-        _settings.Changed += (_, _) => OnPropertyChanged(string.Empty);
+        Backgrounds = Options<MiniPlayerBackground>("LookBackground");
+        Presets = LookPreset.All.Select(preset => new LookOption<LookPreset>(preset, LocalizationService.Get("LookPreset" + preset.Key))).ToArray();
+        Motions = Options<LyricMotionMode>("Motion");
+        Highlights = Options<LyricsHighlight>("LookHighlight");
+        Typefaces = Options<LyricsTypeface>("LookTypeface");
+        Alignments = Options<LyricsAlignment>("LookAlign");
+        Controls = Options<ControlsLook>("LookControls");
+    }
+
+    private static LookOption<T>[] Options<T>(string key) where T : struct, Enum =>
+        Enum.GetValues<T>().Select(value => new LookOption<T>(value, LocalizationService.Get(key + value))).ToArray();
+
+    public ImageSource? PreviewCover => _monitor.Thumbnail;
+    public string PreviewTitle => _monitor.Track?.Title ?? LocalizationService.Get("SongTitle");
+    public string PreviewArtist => _monitor.Track?.Artist ?? LocalizationService.Get("Artist");
+    public string PreviewLyric => _lyrics.CurrentLine?.Text ?? LocalizationService.Get("LyricsAlwaysShown");
+    public Brush? PickerBackground { get => _pickerBackground; private set => Set(ref _pickerBackground, value); }
+
+    public void SetPreviewActive(bool active)
+    {
+        if (active == _active)
+            return;
+        _active = active;
+        if (active)
+        {
+            _monitor.TrackChanged += OnPreviewChanged;
+            _monitor.ThumbnailChanged += OnPreviewChanged;
+            _monitor.PlaybackChanged += OnPreviewChanged;
+            _lyrics.LyricsChanged += OnPreviewChanged;
+            _lyrics.CurrentLineChanged += OnPreviewChanged;
+            _theme.Changed += OnPreviewChanged;
+            _settings.Changed += OnSettingsChanged;
+            OnSettingsChanged(this, EventArgs.Empty);
+        }
+        else
+        {
+            _monitor.TrackChanged -= OnPreviewChanged;
+            _monitor.ThumbnailChanged -= OnPreviewChanged;
+            _monitor.PlaybackChanged -= OnPreviewChanged;
+            _lyrics.LyricsChanged -= OnPreviewChanged;
+            _lyrics.CurrentLineChanged -= OnPreviewChanged;
+            _theme.Changed -= OnPreviewChanged;
+            _settings.Changed -= OnSettingsChanged;
+            _refresh?.Abort();
+            _refresh = null;
+        }
+    }
+
+    private void OnSettingsChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(string.Empty);
+        OnPreviewChanged(sender, e);
+    }
+
+    private void OnPreviewChanged(object? sender, EventArgs e)
+    {
+        if (!_active || _refresh is not null)
+            return;
+        _refresh = Application.Current.Dispatcher.InvokeAsync(() =>
+        {
+            _refresh = null;
+            if (_active)
+                UpdatePictures();
+        }, DispatcherPriority.Background);
     }
 
     private MiniPlayerStyle Look => _settings.Current.MiniPlayerLook;
@@ -64,21 +129,14 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     public LookOption<LookPreset>? Preset
     {
         get => Presets.FirstOrDefault(p => p.Value.Matches(Look));
-        set { if (value is not null) Change(s => value.Value.ApplyTo(s.MiniPlayerLook)); }
+        set { if (value is not null && !value.Value.Matches(Look)) Change(s => value.Value.ApplyTo(s.MiniPlayerLook)); }
     }
 
     public IReadOnlyList<LookOption<MiniPlayerLayout>> Layouts { get; }
 
     public IReadOnlyList<LookOption<MiniPlayerBackground>> Backgrounds { get; }
 
-    public IReadOnlyList<LookOption<LyricFlowMode>> Flows { get; }
     public IReadOnlyList<LookOption<LyricMotionMode>> Motions { get; }
-
-    public LookOption<LyricFlowMode>? Flow
-    {
-        get => Flows.FirstOrDefault(option => option.Value == Look.Flow);
-        set { if (value is not null && value.Value != Look.Flow) Change(s => s.MiniPlayerLook.Flow = value.Value); }
-    }
 
     public LookOption<LyricMotionMode>? Motion
     {
@@ -97,37 +155,37 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     public LookOption<MiniPlayerLayout>? Layout
     {
         get => Layouts.FirstOrDefault(o => o.Value == Look.Layout);
-        set { if (value is not null) Change(s => s.MiniPlayerLook.Layout = value.Value); }
+        set { if (value is not null && value.Value != Look.Layout) Change(s => s.MiniPlayerLook.Layout = value.Value); }
     }
 
     public LookOption<MiniPlayerBackground>? Background
     {
         get => Backgrounds.FirstOrDefault(o => o.Value == Look.Background);
-        set { if (value is not null) Change(s => s.MiniPlayerLook.Background = value.Value); }
+        set { if (value is not null && value.Value != Look.Background) Change(s => s.MiniPlayerLook.Background = value.Value); }
     }
 
     public LookOption<LyricsHighlight>? Highlight
     {
         get => Highlights.FirstOrDefault(o => o.Value == Look.Highlight);
-        set { if (value is not null) Change(s => s.MiniPlayerLook.Highlight = value.Value); }
+        set { if (value is not null && value.Value != Look.Highlight) Change(s => s.MiniPlayerLook.Highlight = value.Value); }
     }
 
     public LookOption<LyricsTypeface>? Typeface
     {
         get => Typefaces.FirstOrDefault(o => o.Value == Look.Typeface);
-        set { if (value is not null) Change(s => s.MiniPlayerLook.Typeface = value.Value); }
+        set { if (value is not null && value.Value != Look.Typeface) Change(s => s.MiniPlayerLook.Typeface = value.Value); }
     }
 
     public LookOption<LyricsAlignment>? Alignment
     {
         get => Alignments.FirstOrDefault(o => o.Value == Look.Alignment);
-        set { if (value is not null) Change(s => s.MiniPlayerLook.Alignment = value.Value); }
+        set { if (value is not null && value.Value != Look.Alignment) Change(s => s.MiniPlayerLook.Alignment = value.Value); }
     }
 
     public LookOption<ControlsLook>? ControlsStyle
     {
         get => Controls.FirstOrDefault(o => o.Value == Look.Controls);
-        set { if (value is not null) Change(s => s.MiniPlayerLook.Controls = value.Value); }
+        set { if (value is not null && value.Value != Look.Controls) Change(s => s.MiniPlayerLook.Controls = value.Value); }
     }
 
     /// <summary>The lyrics' size in percent.</summary>
@@ -137,110 +195,67 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
         set => Change(s => s.MiniPlayerLook.LyricsScale = Math.Clamp(Math.Round(value / 5) * 5, 80, 140) / 100);
     }
 
-    // ---- thumbnails ----
-
-    /// <summary>The preset's background with sketched lyrics (its alignment and emphasis) and controls.</summary>
-    private static ImageSource PresetThumbnail(LookPreset preset, BitmapSource? cover, (Color Start, Color End) palette)
+    private void UpdatePictures()
     {
-        const double w = 72, h = 96;
-        var background = BackgroundThumbnail(preset.Background, cover, palette);
-        var left = preset.Alignment == LyricsAlignment.Left;
-        var white = Color.FromRgb(0xFF, 0xFF, 0xFF);
-        return Draw(w, h, dc =>
+        var cover = PreviewCover as BitmapSource;
+        var palette = cover is not null ? _monitor.Palette
+            : (Color.FromRgb(32, 38, 46), Color.FromRgb(53, 68, 79));
+        var themeBackground = ResourceColor("PopupBackgroundBrush");
+        var themeText = ResourceColor("TextPrimaryBrush");
+        var albumGradient = _settings.Current.Background == OverlayBackground.AlbumGradient;
+        var key = (cover, palette.Item1, palette.Item2, themeBackground, albumGradient);
+        if (_backgroundKey != key)
         {
-            dc.DrawImage(background, new Rect(0, 0, w, h));
-            if (cover is not null)
-                dc.DrawImage(cover, new Rect(7, 7, 14, 14));
-            dc.DrawRectangle(new SolidColorBrush(Color.FromArgb(0xE0, 0xFF, 0xFF, 0xFF)), null, new Rect(25, 9, 24, 3.5));
-            dc.DrawRectangle(new SolidColorBrush(Color.FromArgb(0x90, 0xFF, 0xFF, 0xFF)), null, new Rect(25, 15, 16, 2.5));
-            double[] widths = [40, 46, 52, 38, 44];
-            for (var i = 0; i < widths.Length; i++)
+            _backgroundKey = key;
+            foreach (var option in Backgrounds)
+                option.Thumbnail = MiniPlayerLookThumbnails.Background(option.Value, cover, palette, themeBackground, albumGradient);
+            var pickerBackground = new ImageBrush(Backgrounds.First(option => option.Value == MiniPlayerBackground.AlbumGradient).Thumbnail)
             {
-                var current = i == 2;
-                var alpha = preset.Highlight switch
-                {
-                    LyricsHighlight.Progressive => i == 2 ? 0xFF : Math.Abs(i - 2) == 1 ? 0x90 : 0x50,
-                    _ => current ? 0xFF : 0x60,
-                };
-                var lineW = widths[i] * (current && preset.Highlight == LyricsHighlight.Expressive ? 1.15 : 1);
-                var lineH = current && preset.Highlight == LyricsHighlight.Expressive ? 4.5 : 3;
-                var x = left ? 8 : (w - lineW) / 2;
-                dc.DrawRectangle(new SolidColorBrush(Color.FromArgb((byte)alpha, white.R, white.G, white.B)), null, new Rect(x, 30 + (i * 8), lineW, lineH));
-            }
-            dc.DrawRectangle(new SolidColorBrush(Color.FromArgb(0x70, 0xFF, 0xFF, 0xFF)), null, new Rect(8, 74, 56, 2));
-            var play = new SolidColorBrush(white);
-            if (preset.Controls == ControlsLook.Solid)
-                dc.DrawGeometry(play, null, Geometry.Parse("M33,80 L41,85 L33,90 Z"));
-            else
-                dc.DrawEllipse(play, null, new Point(36, 85), 5, 5);
-            dc.DrawRectangle(new SolidColorBrush(Color.FromArgb(0x90, 0xFF, 0xFF, 0xFF)), null, new Rect(20, 83, 6, 4));
-            dc.DrawRectangle(new SolidColorBrush(Color.FromArgb(0x90, 0xFF, 0xFF, 0xFF)), null, new Rect(47, 83, 6, 4));
-        });
-    }
+                Stretch = Stretch.Fill,
+            };
+            pickerBackground.Freeze();
+            PickerBackground = pickerBackground;
+        }
 
-    private static ImageSource BackgroundThumbnail(MiniPlayerBackground style, BitmapSource? cover, (Color Start, Color End) palette)
-    {
-        if (MiniPlayerBackdrop.IsAtmospheric(style))
-            return MiniPlayerBackdrop.Render(cover, style, 72, 96);
-        var themeColor = Application.Current.TryFindResource("PopupBackgroundBrush") is SolidColorBrush b ? b.Color : Color.FromRgb(0x20, 0x20, 0x20);
-        Brush fill = style switch
+        if (_diagramColor != themeText)
         {
-            MiniPlayerBackground.Theme => new SolidColorBrush(themeColor),
-            _ => new LinearGradientBrush(palette.End, palette.Start, new Point(0, 0), new Point(1, 1)),
-        };
-        return Draw(72, 96, dc => dc.DrawRectangle(fill, null, new Rect(0, 0, 72, 96)));
+            _diagramColor = themeText;
+            foreach (var option in Highlights)
+                option.Thumbnail = MiniPlayerLookThumbnails.Highlight(option.Value, themeText);
+            foreach (var option in Motions)
+                option.Thumbnail = MiniPlayerLookThumbnails.Motion(option.Value, themeText);
+            foreach (var option in Alignments)
+                option.Thumbnail = MiniPlayerLookThumbnails.Alignment(option.Value, themeText);
+            foreach (var option in Typefaces)
+                option.Thumbnail = MiniPlayerLookThumbnails.Typeface(option.Value, themeText);
+            foreach (var option in Controls)
+                option.Thumbnail = MiniPlayerLookThumbnails.Controls(option.Value, themeText);
+        }
+
+        var timeline = _lyrics.Timeline;
+        var index = _lyrics.CurrentIndex;
+        string? LineAt(int i) => timeline is not null && i >= 0 && i < timeline.Count ? timeline.Lines[i].Text : null;
+        var sample = new MiniPlayerLookSample(PreviewTitle, PreviewArtist, cover, LineAt(index - 1), LineAt(index), LineAt(index + 1),
+            _monitor.IsPlaying, _monitor.Duration is { TotalSeconds: > 0 } duration
+                ? Math.Clamp(_monitor.Position.TotalSeconds / duration.TotalSeconds, 0, 1) : 0);
+        ImageSource Backdrop(MiniPlayerBackground background) => Backgrounds.First(option => option.Value == background).Thumbnail!;
+        Color Ink(MiniPlayerBackground background) =>
+            background == MiniPlayerBackground.Theme || (background == MiniPlayerBackground.Default && !albumGradient)
+                ? themeText : Colors.White;
+
+        var current = new LookPreset("", Look.Background, Look.Highlight, Look.Typeface, Look.Alignment, Look.Controls);
+        foreach (var option in Layouts)
+            option.Thumbnail = MiniPlayerLookThumbnails.Player(option.Value, current, sample, Backdrop(current.Background), Ink(current.Background));
+        foreach (var option in Presets)
+            option.Thumbnail = MiniPlayerLookThumbnails.Player(Look.Layout, option.Value, sample, Backdrop(option.Value.Background), Ink(option.Value.Background));
+
+        OnPropertyChanged(nameof(PreviewCover));
+        OnPropertyChanged(nameof(PreviewTitle));
+        OnPropertyChanged(nameof(PreviewArtist));
+        OnPropertyChanged(nameof(PreviewLyric));
     }
 
-    /// <summary>A sketch of the layout: where the cover, the lyrics and the controls go.</summary>
-    private static ImageSource LayoutThumbnail(bool cinema)
-    {
-        var w = cinema ? 128.0 : 72;
-        var h = cinema ? 76.0 : 96;
-        var card = new SolidColorBrush(Color.FromRgb(0x2E, 0x34, 0x40));
-        var line = new SolidColorBrush(Color.FromArgb(0x60, 0xFF, 0xFF, 0xFF));
-        var bright = new SolidColorBrush(Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF));
-        var cover = new SolidColorBrush(Color.FromRgb(0x5B, 0x8D, 0xEF));
-        return Draw(w, h, dc =>
-        {
-            dc.DrawRoundedRectangle(card, null, new Rect(0, 0, w, h), 6, 6);
-            if (!cinema)
-            {
-                dc.DrawRoundedRectangle(cover, null, new Rect(8, 8, 16, 16), 2, 2);
-                dc.DrawRectangle(bright, null, new Rect(28, 10, 26, 4));
-                dc.DrawRectangle(line, null, new Rect(28, 17, 18, 3));
-                for (var i = 0; i < 4; i++)
-                    dc.DrawRectangle(i == 1 ? bright : line, null, new Rect(i == 1 ? 12 : 16, 32 + (i * 8), i == 1 ? 48 : 40, 3.5));
-                dc.DrawRectangle(line, null, new Rect(8, 70, 56, 2));
-                dc.DrawEllipse(bright, null, new Point(36, 84), 5, 5);
-                dc.DrawRectangle(line, null, new Rect(20, 82, 6, 4));
-                dc.DrawRectangle(line, null, new Rect(46, 82, 6, 4));
-            }
-            else
-            {
-                dc.DrawRoundedRectangle(cover, null, new Rect(8, 8, 34, 34), 3, 3);
-                dc.DrawRectangle(bright, null, new Rect(8, 46, 26, 3.5));
-                dc.DrawRectangle(line, null, new Rect(8, 52, 18, 3));
-                for (var i = 0; i < 5; i++)
-                    dc.DrawRectangle(i == 2 ? bright : line, null, new Rect(52, 10 + (i * 9), i == 2 ? 64 : 52, 4));
-                dc.DrawRectangle(line, null, new Rect(8, 62, 112, 2));
-                dc.DrawEllipse(bright, null, new Point(64, 70), 3.5, 3.5);
-                dc.DrawRectangle(line, null, new Rect(50, 68.5, 5, 3));
-                dc.DrawRectangle(line, null, new Rect(73, 68.5, 5, 3));
-            }
-        });
-    }
-
-    private static ImageSource Draw(double w, double h, Action<DrawingContext> draw)
-    {
-        var visual = new DrawingVisual();
-        using (var dc = visual.RenderOpen())
-            draw(dc);
-        // Twice the size, for sharp edges on high-DPI screens.
-        var bitmap = new RenderTargetBitmap((int)(w * 2), (int)(h * 2), 192, 192, PixelFormats.Pbgra32);
-        bitmap.Render(visual);
-        bitmap.Freeze();
-        return bitmap;
-    }
+    private static Color ResourceColor(string key) => ((SolidColorBrush)Application.Current.FindResource(key)).Color;
 }
 
 /// <summary>A ready-made mini player look: background, lyrics and controls that go together.</summary>

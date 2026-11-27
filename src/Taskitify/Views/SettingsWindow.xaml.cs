@@ -20,9 +20,17 @@ public partial class SettingsWindow : Window
         DataContext = vm;
         _spotify = spotify;
         _spotify.StatusChanged += OnSpotifyStatus;
-        Closed += (_, _) => _spotify.StatusChanged -= OnSpotifyStatus;
+        Closed += (_, _) =>
+        {
+            _spotify.StatusChanged -= OnSpotifyStatus;
+            _vm.MiniLook?.SetPreviewActive(false);
+        };
         OnSpotifyStatus(this, EventArgs.Empty);
     }
+
+    private void OnMiniPlayerPageLoaded(object sender, RoutedEventArgs e) => _vm.MiniLook?.SetPreviewActive(true);
+
+    private void OnMiniPlayerPageUnloaded(object sender, RoutedEventArgs e) => _vm.MiniLook?.SetPreviewActive(false);
 
     private void OnSpotifyStatus(object? sender, EventArgs e) =>
         SpotifyLyricsStatus.SetResourceReference(TextBlock.TextProperty, "Loc." + _spotify.StatusKey);

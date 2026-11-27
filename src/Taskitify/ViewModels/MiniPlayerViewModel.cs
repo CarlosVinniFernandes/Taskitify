@@ -266,7 +266,9 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     public System.Windows.Thickness LyricsLinePadding => MotionMode != LyricMotionMode.Off ? new(4, 7, 5, 7) : Look.Highlight == LyricsHighlight.Expressive
         ? new(Look.Alignment == LyricsAlignment.Left ? 4 : 18, 7, 18, 7) : new(4, DisplayType ? 6 : 5, 4, DisplayType ? 6 : 5);
 
-    public FontFamily LyricsFont => Look.Typeface switch
+    public FontFamily LyricsFont => FontFor(Look.Typeface);
+
+    internal static FontFamily FontFor(LyricsTypeface typeface) => typeface switch
     {
         LyricsTypeface.Modern => Views.LyricCardRenderer.InterDisplay,
         LyricsTypeface.Geometric => Views.LyricCardRenderer.Figtree,
