@@ -13,7 +13,7 @@ namespace Taskitify.ViewModels;
 public sealed class StudioFieldEditor(StudioField spec, string value, Action<string> apply)
 {
     private string _value = value;
-    public string Label => LocalizationService.Get(spec.Label);
+    public string Label => LocalizationService.Get("Field." + spec.Label);
     public IReadOnlyList<string>? Choices => spec.Choices;
     public bool HasChoices => Choices is not null;
 
