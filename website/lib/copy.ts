@@ -45,7 +45,7 @@ export const copy = {
       description: "Keep synced lyrics floating above your desktop or a game in borderless mode. The current line stays in focus while the surrounding verses scroll.",
       move: "Drag and resize the lyrics to fit around whatever’s on screen.",
       clicks: "Let clicks pass through to the window underneath.",
-      alt: "Three floating lyrics over a mountain wallpaper, with the current verse in focus.",
+      alt: "Synced lyrics floating over a browser window, with the current verse in focus.",
     },
     studio: {
       label: "Lyrics Studio",
@@ -167,7 +167,7 @@ export const copy = {
       description: "Acompanhe as letras sincronizadas sobre a área de trabalho ou um jogo em modo sem bordas. O verso atual fica em destaque enquanto os outros passam.",
       move: "Mova e redimensione a janela de letras para encaixar onde quiser.",
       clicks: "Deixe os cliques passarem para a janela que estiver por baixo.",
-      alt: "Três versos flutuando sobre um papel de parede de montanha, com o verso atual em destaque.",
+      alt: "Letras sincronizadas flutuando sobre uma janela do navegador, com o verso atual em destaque.",
     },
     studio: {
       label: "Lyrics Studio",

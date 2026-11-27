@@ -278,12 +278,20 @@ figcaption { color: var(--muted); font-size: .84rem; }
   border-radius: 12px;
   background: #15232d;
 }
-.minimal-wallpaper { object-fit: cover; }
+.minimal-browser {
+  position: absolute;
+  top: -7%;
+  left: -10%;
+  width: 121%;
+  height: 122%;
+  max-width: none;
+  filter: brightness(.78) saturate(.86);
+}
 .minimal-scene::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 31%, #09172480 100%);
+  background: linear-gradient(180deg, transparent 25%, #10253145 45%, #0a1726cf 100%);
 }
 .minimal-lyrics {
   position: absolute;
@@ -291,7 +299,7 @@ figcaption { color: var(--muted); font-size: .84rem; }
   width: 96%;
   height: auto;
   left: 2%;
-  bottom: 7%;
+  bottom: 4%;
   filter: drop-shadow(0 2px 5px #09111a);
 }
 @media (min-width: 681px) {

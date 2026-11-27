@@ -116,7 +116,7 @@ export function Home({ locale }: { locale: Locale }) {
           </ul>
         </div>
         <figure className="minimal-scene">
-          <Image className="minimal-wallpaper" src="/media/fuji.webp" alt="" fill sizes="(max-width: 680px) 100vw, 60vw" />
+          <Image className="minimal-browser" src="/media/minimal-browser.webp" alt="" width={1920} height={1200} />
           <Image className="minimal-lyrics" src="/media/minimal-mode.webp" alt={t.minimal.alt} width={1280} height={400} />
         </figure>
       </section>
