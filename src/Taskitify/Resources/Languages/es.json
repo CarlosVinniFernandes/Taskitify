@@ -216,6 +216,7 @@
   "CardMarkNone": "Ninguna",
   "FlowTitle": "Letras en flujo",
   "FlowHint": "Relleno progresivo de la letra durante la reproducción. Sin marcas por palabra, se estima el tiempo.",
+  "FlowBothHint": "Relleno progresivo de la letra durante la reproducción, en la barra y en el mini reproductor. Sin marcas por palabra, se estima el tiempo.",
   "TaskbarFlow": "Letras en flujo en la barra de tareas",
   "FlowOff": "Desactivado",
   "FlowLinear": "Lineal",

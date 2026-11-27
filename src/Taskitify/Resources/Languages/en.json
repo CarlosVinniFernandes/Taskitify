@@ -216,6 +216,7 @@
   "CardMarkNone": "None",
   "FlowTitle": "Lyric Flow",
   "FlowHint": "Progressive lyric fill during playback. Timing is estimated when the source lacks word timing.",
+  "FlowBothHint": "Progressive lyric fill during playback, on the taskbar and in the mini player. Timing is estimated when the source lacks word timing.",
   "TaskbarFlow": "Lyric Flow on the taskbar",
   "FlowOff": "Off",
   "FlowLinear": "Linear",

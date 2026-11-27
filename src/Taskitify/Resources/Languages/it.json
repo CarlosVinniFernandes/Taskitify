@@ -216,6 +216,7 @@
   "CardMarkNone": "Nessuna",
   "FlowTitle": "Testo in flusso",
   "FlowHint": "Riempimento progressivo del testo durante la riproduzione. In assenza di marcatori per parola, i tempi sono stimati.",
+  "FlowBothHint": "Riempimento progressivo del testo durante la riproduzione, nella barra e nel mini player. Senza tempi per parola, la tempistica è stimata.",
   "TaskbarFlow": "Testo in flusso sulla barra delle applicazioni",
   "FlowOff": "Disattivato",
   "FlowLinear": "Lineare",

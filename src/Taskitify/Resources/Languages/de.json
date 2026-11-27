@@ -216,6 +216,7 @@
   "CardMarkNone": "Keine",
   "FlowTitle": "Textfluss",
   "FlowHint": "Füllt den Songtext bei der Wiedergabe schrittweise. Ohne Wortmarken wird das Timing geschätzt.",
+  "FlowBothHint": "Füllt den Songtext bei der Wiedergabe schrittweise, in der Taskleiste und im Mini-Player. Ohne Wortmarken wird das Timing geschätzt.",
   "TaskbarFlow": "Textfluss in der Taskleiste",
   "FlowOff": "Aus",
   "FlowLinear": "Linear",

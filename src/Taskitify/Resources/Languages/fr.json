@@ -216,6 +216,7 @@
   "CardMarkNone": "Aucune",
   "FlowTitle": "Paroles en flux",
   "FlowHint": "Remplissage progressif des paroles pendant la lecture. Sans repères par mot, le rythme est estimé.",
+  "FlowBothHint": "Remplissage progressif des paroles pendant la lecture, dans la barre et le mini-lecteur. Sans repères par mot, le minutage est estimé.",
   "TaskbarFlow": "Paroles en flux dans la barre des tâches",
   "FlowOff": "Désactivé",
   "FlowLinear": "Linéaire",

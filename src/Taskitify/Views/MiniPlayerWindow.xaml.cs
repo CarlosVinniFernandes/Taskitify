@@ -32,6 +32,9 @@ public partial class MiniPlayerWindow : Window
     private bool _browsing;
     private bool _lyricsUpdateQueued;
     private bool _animateLyrics;
+    // When the running scroll ends. A finished animation stays attached to the transform
+    // (FillBehavior.Stop keeps its clock), so HasAnimatedProperties cannot tell it is over.
+    private DateTime _scrollEndsAt;
     private bool _inkUpdateQueued;
     private readonly LyricInkDriver _lyricInk;
     private TextBlock? _activeText;
@@ -251,6 +254,7 @@ public partial class MiniPlayerWindow : Window
         _anchor = anchor;
         SetBrowsing(false);
         ScrollToCurrent(animate: false);
+        QueueLyrics(animate: false);
         if (IsPreview)
         {
             // Beside the settings, which keep the focus.
@@ -636,10 +640,15 @@ public partial class MiniPlayerWindow : Window
     /// </summary>
     private void KeepCentred()
     {
-        if (!IsVisible || _browsing || _lyricsUpdateQueued || _vm.Lines.Count == 0 || LyricsOffset.HasAnimatedProperties)
+        if (!IsVisible || _browsing || _lyricsUpdateQueued || _vm.Lines.Count == 0 || DateTime.UtcNow < _scrollEndsAt)
             return;
+        if (!LyricsList.IsArrangeValid)
+            LyricsList.UpdateLayout();
         if (CentreTarget() is { } target && Math.Abs(LyricsOffset.Y - target) > 2)
-            QueueLyrics(animate: true);
+        {
+            Log.Debug($"Mini player lyrics off the current line ({LyricsOffset.Y:0} vs {target:0}, line {_vm.CurrentIndex}): recentred");
+            ScrollToCurrent(animate: Math.Abs(LyricsOffset.Y - target) < LyricsViewport.ActualHeight);
+        }
     }
 
     /// <summary>Where the list must sit for the current line to be in the middle; null before layout.</summary>
@@ -664,6 +673,9 @@ public partial class MiniPlayerWindow : Window
         var viewport = LyricsViewport.ActualHeight;
         double target;
         var index = _vm.CurrentIndex;
+        // The lines' layout must be current, or the target is computed from stale positions.
+        if (!LyricsList.IsArrangeValid)
+            LyricsList.UpdateLayout();
         var container = LyricsList.ItemContainerGenerator.ContainerFromIndex(Math.Max(0, index)) as FrameworkElement;
         if (container is null)
             return;
@@ -676,6 +688,7 @@ public partial class MiniPlayerWindow : Window
         var duration = animate && _animationsEnabled() && SystemParameters.ClientAreaAnimation
             ? (_vm.ScrollMilliseconds > 0 ? _vm.ScrollMilliseconds : 240)
             : 0;
+        _scrollEndsAt = DateTime.UtcNow + TimeSpan.FromMilliseconds(duration + 80);
         LyricMotionText.Tween(LyricsOffset, TranslateTransform.YProperty, target, duration, _vm.ExpressiveMotion);
         if (_vm.FlowMode != LyricFlowMode.Off && index >= 0 && container is ContentPresenter presenter
             && VisualTreeHelper.GetChildrenCount(presenter) > 0)

@@ -237,7 +237,8 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     public MiniPlayerStyle Look => _settings.Current.MiniPlayerLook;
 
-    public LyricFlowMode FlowMode => Look.Flow;
+    /// <summary>One Lyric Flow setting (Lyrics tab) for the taskbar and the mini player alike.</summary>
+    public LyricFlowMode FlowMode => _settings.Current.TaskbarLyricFlow;
     public LyricMotionMode MotionMode => Look.Motion;
     public bool ExpressiveMotion => MotionMode == LyricMotionMode.Expressive;
     public double ScrollMilliseconds { get; private set; }
