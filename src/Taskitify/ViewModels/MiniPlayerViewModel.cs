@@ -241,6 +241,12 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     public LyricFlowMode FlowMode => _settings.Current.TaskbarLyricFlow;
     public LyricMotionMode MotionMode => Look.Motion;
     public bool ExpressiveMotion => MotionMode == LyricMotionMode.Expressive;
+
+    /// <summary>
+    /// The composition the lines use: "no motion" keeps the smooth layout (sizes, spacing, emphasis)
+    /// and only stops animating it, so turning motion off does not change the look the user chose.
+    /// </summary>
+    private LyricMotionMode LayoutMotion => MotionMode == LyricMotionMode.Off ? LyricMotionMode.Smooth : MotionMode;
     public double ScrollMilliseconds { get; private set; }
     public LyricFill CurrentFill => _sync.Fill(CurrentIndex, FlowMode);
     public event EventHandler? LyricPositionChanged;
@@ -263,8 +269,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     public System.Windows.Point LyricsScaleOrigin => Look.Alignment == LyricsAlignment.Left ? new(0, 0.5) : new(0.5, 0.5);
 
     /// <summary>Room at the sides for a line drawn larger.</summary>
-    public System.Windows.Thickness LyricsLinePadding => MotionMode != LyricMotionMode.Off ? new(4, 7, 5, 7) : Look.Highlight == LyricsHighlight.Expressive
-        ? new(Look.Alignment == LyricsAlignment.Left ? 4 : 18, 7, 18, 7) : new(4, DisplayType ? 6 : 5, 4, DisplayType ? 6 : 5);
+    public System.Windows.Thickness LyricsLinePadding => new(4, 7, 5, 7);
 
     public FontFamily LyricsFont => FontFor(Look.Typeface);
 
@@ -279,12 +284,9 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     /// <summary>Display typefaces read as lyrics should: larger, heavier; the system font stays as it was.</summary>
     private bool DisplayType => Look.Typeface != LyricsTypeface.System;
 
-    public double MotionLineHeight => MotionMode == LyricMotionMode.Off ? double.NaN : LyricsFontSize * 1.12;
+    public double MotionLineHeight => LyricsFontSize * 1.12;
 
-    public double LyricsFontSize => MotionMode != LyricMotionMode.Off
-        ? (IsCinema ? 28 : 23) * Math.Clamp(Look.LyricsScale, .8, 1.4) * (DisplayType ? 1 : .86)
-        : Math.Round((DisplayType ? 17 : 14) * Math.Clamp(Look.LyricsScale, 0.8, 1.4) * (IsCinema ? 1.28 : 1)
-        * (Look.Typeface == LyricsTypeface.Serif ? 1.06 : 1), 1);
+    public double LyricsFontSize => (IsCinema ? 28 : 23) * Math.Clamp(Look.LyricsScale, .8, 1.4) * (DisplayType ? 1 : .86);
 
     /// <summary>The song's title in the same type as the lyrics.</summary>
     public FontFamily TitleFont => DisplayType ? LyricsFont : (FontFamily)System.Windows.Application.Current.FindResource("UiDisplayFont");
@@ -515,7 +517,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
             Lines[i].MotionMilliseconds = animateLine ? ScrollMilliseconds : 0;
             Lines[i].IsCurrent = i == index;
             Lines[i].IsPast = i < index;
-            Lines[i].Emphasize(highlight, i - Math.Max(index, 0), started: index >= 0, heavy: DisplayType, motion: mode);
+            Lines[i].Emphasize(highlight, i - Math.Max(index, 0), started: index >= 0, heavy: DisplayType, motion: LayoutMotion);
         }
         CurrentIndex = index;
         CurrentLineChanged?.Invoke(this, EventArgs.Empty);
