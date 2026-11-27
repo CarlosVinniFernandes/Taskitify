@@ -22,3 +22,7 @@ Open **Storage → your private store → Browse** in Vercel. Look under `sugges
 The API accepts one suggestion per address per minute using an atomic Blob write. The path uses a rotating keyed hash. The JSON stores no IP address. For future app integration, `/community?song=Song&artist=Artist&name=Nickname#suggest` pre-fills the editable form. Sending still requires an explicit submit.
 
 Product images come from the [Store campaign and onboarding assets](../marketing/microsoft-store/SOURCES.md). Font license notices are in `public/fonts/`.
+
+## Send a Song experiment
+
+Run `npm run dev` and open `http://localhost:3000/s#CODE` with a code from `shared/lyrics-share-v1.md` on the desktop branch `t3/lyrics-share`. If testing a full desktop link locally, keep its fragment and replace the host. For a non-production build, set `LYRICS_SHARE_EXPERIMENT=1` before building. Keep previews restricted to testers while lyric-sharing rights are being verified. The viewer is disabled when `VERCEL_ENV=production` and is excluded from navigation and search indexing.

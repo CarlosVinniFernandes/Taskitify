@@ -1,0 +1,112 @@
+[
+  {
+    "name": "composition-only",
+    "code": "H4sIAAAAAAACCjWNwQ6CMBAFf2Wz52JaTFR6M9G7kaPxULVCk7YkdEEJ4d9dRK8z8_JG7FErgYQaT8ZFKnYoMKEev2j_JNsC1RbOLNkYhgcbGti35BIxuTE59ja6WEFJ3cPZhJNAj_oy4nuR7QDeEXkLoQk2zrPAH2otpZzEkpVsfjpBIjPAy1ENXVr962KurwLvXOcy32RKZfmWrTexYmYjTh_ZJ2Na0AAAAA",
+    "expected": {
+      "v": 1,
+      "t": "Paint98",
+      "s": {
+        "t": "After the Rain",
+        "a": "Demo Artist",
+        "b": "Evening Studies"
+      },
+      "l": [
+        {
+          "x": "Every little moment",
+          "ms": 13000
+        },
+        {
+          "x": "Some moments stay with us.",
+          "ms": 19000
+        }
+      ],
+      "c": "2026-11-27",
+      "lang": "en"
+    }
+  },
+  {
+    "name": "customized-with-dedication",
+    "code": "H4sIAAAAAAACCk1R0U7cMBD8Fcu8BpSE9u7I2wEFVBAnQftQVX1Ykk3OiuNNbedCdOLfu2tA6otlj2fGM-ujPuiqyHTUlX5YvKmfsEYzRp3plqHwdwKPfAi6OibSLdkGnbqjyTMMjFzjQGrrowmiemHkiiBEa1wSjgwUUF6e11-uv-LqZt1t7i5M_r3o-bZhl6rYrPM8f8u01dXvo36VKBhV3KOaydtGBUuzamh2rBg4ySrR35kfefacR5FLIjigm_CDW5T_kb8d0C-qJkteBZpcE5Q1PaqFpk_6Ruh_Mk1SuCUnnQdyJFVqsMiUM54XWNM5vrLYSutkyceTq4vN5flWzMD3DEQIvYmmXRiKZmB59BNy11fxdxQZ0feIY0pe78F1mKn-EwjkOlaOMKLYbztsBPcD2GQYJZB-3j3ePqub3ZP6tfup2bxJ4T0N8hngLQVhkzg4SE073v_Ym8Az44HZGZagBuiRV-QXjOsVtUqGOoPtg3pZ3vMgnMkDNcvLvFydFsVpuWZHSRcmP3oTZPKWezCCTr_9A11SoI1iAgAA",
+    "expected": {
+      "v": 1,
+      "t": "LyricReceipt",
+      "f": "square",
+      "s": {
+        "t": "Golden Hour",
+        "a": "Demo Artist",
+        "b": "Coastline",
+        "sp": "1a2B3c4D5e6F7g8H9i0J1k",
+        "dur": 187000
+      },
+      "l": [
+        {
+          "x": "Let the world slow down",
+          "ms": 6000
+        },
+        {
+          "x": "Golden hour on the avenue",
+          "ms": 12000
+        },
+        {
+          "x": "Every color sounds like you",
+          "ms": 18000
+        }
+      ],
+      "o": {
+        "font": "mono",
+        "scale": 1.1,
+        "align": "left",
+        "color": "#C98B3A",
+        "mark": "taskitify",
+        "time": true
+      },
+      "x": {
+        "note": "Keep the change, keep the song",
+        "paper": "Aged thermal",
+        "title": "SONGS FOR YOU"
+      },
+      "d": {
+        "from": "Carlos",
+        "to": "Ana",
+        "msg": "This one always makes me think of our walks by the sea."
+      },
+      "c": "2026-11-27",
+      "r": "surprise",
+      "lang": "en"
+    }
+  },
+  {
+    "name": "unicode-dedication",
+    "code": "H4sIAAAAAAACCiVPO04DMRC9yjD1BrFB4rMdJEpBBZR8itHuLDGyPcH2BkSUm9AgCoi4Aa1vwkkYL42l5_edDa6xqStM2OClWApiOqywV7iSkAKZpDBisxklM_L5M38IdAIzcsYvRWlS5iwkExNBxzBnJz6qd5TitkKLze0GX8aAPu_gaWCfGDzBI3m2pJp_WqDNu6GEyJDEC7ADZxxu7yuUcURZtiTfPQeTEnttb2XNAZuebOQKjXso2zlE8WRLeVd8fRCn_xdSFum5GoY3kr_hbpifHM70XdSnSrhY7Au25hXIG02O-T0Y2YPfty-4Ghg4RgKXf6JpCfQIasWtyC95v5S16p4eTI8mdT2ZHmugLsM4hFUwkRVa8uO-NDm_xu0fkD994H4BAAA",
+    "expected": {
+      "v": 1,
+      "t": "Polaroid",
+      "f": "portrait",
+      "s": {
+        "t": "Canção do Caminho",
+        "a": "Artista de Demonstração"
+      },
+      "l": [
+        {
+          "x": "Café quente na janela"
+        },
+        {
+          "x": "o céu de outono em mim"
+        }
+      ],
+      "o": {
+        "tf": "handwritten",
+        "cover": false,
+        "img": "personal"
+      },
+      "d": {
+        "from": "João",
+        "to": "Zoë 🌙",
+        "msg": "Feliz aniversário! ✨ Que essa música te acompanhe."
+      },
+      "c": "2026-11-27",
+      "r": "surprise",
+      "lang": "pt-BR"
+    }
+  }
+]
