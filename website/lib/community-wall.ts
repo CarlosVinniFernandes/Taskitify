@@ -28,7 +28,7 @@ export type WallEntry = {
 export type GuestSignature = { name: string; date: string; country?: string };
 export type GuestbookPage = { names: string[]; signatures: GuestSignature[]; nextOffset: number | null };
 
-export const communityWallPageSizes = { preview: 12, full: 30 } as const;
+export const communityWallPageSizes = { apiDefault: 12, legacyFull: 30, preview: 25, full: 48 } as const;
 export type WallPageSize = typeof communityWallPageSizes[keyof typeof communityWallPageSizes];
 
 export type WallPage = { entries: WallEntry[]; hasMore: boolean; totalPages: number };

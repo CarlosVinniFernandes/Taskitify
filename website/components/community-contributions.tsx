@@ -6,14 +6,14 @@ import { useEffect, useRef, useState } from "react";
 import { copy, type Locale } from "@/lib/copy";
 import { guestbookCopy } from "@/lib/guestbook-copy";
 import type { Fields } from "@/lib/suggestion-fields";
-import type { GuestbookPage, WallPage } from "@/lib/community-wall";
+import { communityWallPageSizes, type GuestbookPage, type WallPage } from "@/lib/community-wall";
 import { SongForm } from "./song-form";
 import { MusicBoard } from "./music-board";
+import { WallPagination } from "./wall-pagination";
 import { pathFor } from "@/lib/site";
 import styles from "./community-wall.module.css";
 
 type PageResult<T> = T | "error" | null;
-const firstWallPage = "/api/community/wall?page=1";
 
 function usePage<T>(url: string | null, revision: number) {
   const [data, setData] = useState<{ url: string; revision: number; result: T | "error" } | null>(null);
@@ -84,7 +84,21 @@ export function CommunityContributions({ locale, initial, wallEnabled, privacyHr
   const t = copy[locale].community;
   const [revision, setRevision] = useState(0);
   const [refresh, setRefresh] = useState(0);
-  const first = usePage<WallPage>(wallEnabled ? firstWallPage : null, revision + refresh);
+  const [page, setPage] = useState(1);
+  const wall = usePage<WallPage>(wallEnabled ? `/api/community/wall?page=${page}&size=${communityWallPageSizes.preview}` : null, revision + refresh);
+  const [totalPages, setTotalPages] = useState(1);
+  useEffect(() => {
+    if (wall && wall !== "error") {
+      const count = Math.max(1, wall.totalPages);
+      setTotalPages(count);
+      if (page > count) setPage(count);
+    }
+  }, [wall, page]);
+
+  function selectPage(selected: number) {
+    setPage(selected);
+    document.getElementById("wall-title")?.focus();
+  }
   const [open, setOpen] = useState<"form" | "names" | "signed">("form");
   const formHeading = useRef<HTMLHeadingElement>(null);
   const returning = useRef(false);
@@ -129,6 +143,7 @@ export function CommunityContributions({ locale, initial, wallEnabled, privacyHr
             <SongForm locale={locale} initial={revision ? emptyFields : initial} wallEnabled={wallEnabled}
               onSaved={() => {
                 if (!wallEnabled) return;
+                setPage(1);
                 setRevision(revision + 1);
                 setOpen("signed");
               }} />
@@ -139,7 +154,8 @@ export function CommunityContributions({ locale, initial, wallEnabled, privacyHr
         </div>
       </div>
     </section>
-    {wallEnabled && <MusicBoard locale={locale} result={first} onRetry={reloadFirst} onWrite={openForm}>
+    {wallEnabled && <MusicBoard locale={locale} result={wall} page={page} onRetry={reloadFirst} onWrite={openForm}>
+      <WallPagination locale={locale} page={page} totalPages={totalPages} onPage={selectPage} />
       <div className={styles.explore}>
         <Link href={pathFor(locale, "wall")} prefetch={false} className="button button-outline">{t.wall.explore}</Link>
       </div>

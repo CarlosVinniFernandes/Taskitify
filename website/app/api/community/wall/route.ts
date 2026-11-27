@@ -12,12 +12,11 @@ export async function GET(request: Request) {
   if (!/^[1-9]\d*$/.test(requested) || !Number.isSafeInteger(page)) {
     return Response.json({ error: "invalid_page" }, { status: 400, headers });
   }
-  const { preview, full } = communityWallPageSizes;
-  if (size !== null && size !== String(full) && size !== String(preview)) {
-    return Response.json({ error: "invalid_size" }, { status: 400, headers });
-  }
+  const pageSize = size === null ? communityWallPageSizes.apiDefault
+    : Object.values(communityWallPageSizes).find((allowed) => size === String(allowed));
+  if (pageSize === undefined) return Response.json({ error: "invalid_size" }, { status: 400, headers });
   try {
-    return Response.json(await getWallPage(page, size === String(full) ? full : preview), { headers });
+    return Response.json(await getWallPage(page, pageSize), { headers });
   } catch {
     return Response.json({ error: "unavailable" }, { status: 503, headers });
   }

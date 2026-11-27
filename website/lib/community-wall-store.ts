@@ -3,7 +3,7 @@ import { unstable_cache } from "next/cache";
 import { createHash } from "node:crypto";
 import { communityWallPageSizes, publicSuggestion, wallEntryTag, wallIndexTag, wallPathPattern, wallPrefix, type GuestbookPage, type GuestSignature, type WallEntry, type WallPage, type WallPageSize } from "./community-wall";
 
-const pageSize = communityWallPageSizes.preview;
+const pageSize = communityWallPageSizes.apiDefault;
 const cacheSeconds = 3600;
 
 const wallIndex = unstable_cache(async (_store: string) => {
