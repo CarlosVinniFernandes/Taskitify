@@ -355,6 +355,11 @@ figcaption { color: var(--muted); font-size: .84rem; }
 .privacy-page p { margin-top: 10px; }
 .privacy-page section { border-top: 1px solid var(--line); padding-top: 23px; margin-top: 26px; }
 .privacy-page > .button { margin-top: 27px; }
+.about-page h1 { font-size: clamp(2.2rem, 6vw, 4.2rem); letter-spacing: -.055em; }
+.about-page hgroup > p { margin: 0 0 10px; color: var(--teal); font-size: .9rem; font-weight: 600; }
+.about-page .about-letter { color: var(--paper); font-size: 1.1rem; max-width: 59ch; }
+.about-page section > p > a { color: var(--teal); text-decoration: underline; text-underline-offset: .2em; }
+.about-page section > .button { margin-top: 15px; }
 
 @keyframes arrive {
   from { opacity: 0; transform: translateY(7px); }

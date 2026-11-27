@@ -23,7 +23,7 @@ export function SiteShell({ locale, page, children }: { locale: Locale; page: Pa
           <Link href={home} aria-current={page === "home" ? "page" : undefined}>{t.nav.home}</Link>
           <Link href={`${home}#features`}>{t.nav.features}</Link>
           <Link href={pathFor(locale, "community")} aria-current={page === "community" ? "page" : undefined}>{t.nav.community}</Link>
-          <a href={repository}><Github size={16} aria-hidden="true" /> {t.nav.github}</a>
+          <Link href={pathFor(locale, "about")} aria-current={page === "about" ? "page" : undefined}>{t.nav.about}</Link>
         </nav>
         <div className="header-actions">
           <Link className="locale-link" href={pathFor(alternate, page)} hrefLang={alternate} lang={alternate}
@@ -46,6 +46,7 @@ export function SiteShell({ locale, page, children }: { locale: Locale; page: Pa
         </div>
         <nav aria-label={t.footer.legal}>
           <Link href={pathFor(locale, "privacy")}>{t.footer.privacy}</Link>
+          <a href={repository}>{t.nav.github}</a>
           <a href={contact || issues}>{contact ? t.footer.contact : t.favor.githubContact}</a>
           <a href={`${repository}/blob/main/LICENSE`}>{t.footer.legal}</a>
           <Link href={pathFor(alternate, page)} hrefLang={alternate} lang={alternate}>{alternate === "en" ? "English" : "Português"}</Link>

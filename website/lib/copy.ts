@@ -6,7 +6,7 @@ export const copy = {
       title: "Taskitify · Spotify lyrics on your Windows taskbar",
       description: "Live Spotify lyrics on your Windows taskbar, a mini player one click away, and a studio for the lines you want to keep. Free and open source.",
     },
-    nav: { home: "Home", features: "Features", community: "Community", github: "GitHub", download: "Download", skip: "Skip to content", navigation: "Main navigation", language: "Language" },
+    nav: { home: "Home", features: "Features", community: "Community", about: "About the project", github: "GitHub", download: "Download", skip: "Skip to content", navigation: "Main navigation", language: "Language" },
     hero: {
       platform: "Made for Windows",
       first: "Less switching.",
@@ -93,6 +93,17 @@ export const copy = {
       star: "Star on GitHub", contact: "Email Carlos", githubContact: "Contact on GitHub",
     },
     footer: { privacy: "Privacy", contact: "Contact", made: "Made for music. Made with care.", legal: "MIT License" },
+    about: {
+      title: "About the project",
+      heading: "Made for people who love music",
+      description: "Why Taskitify exists, where its lyrics come from, and how it handles privacy.",
+      letter: "I made Taskitify because I wanted to enjoy the music I was already listening to without interrupting what I was doing. I shared it because I thought someone else might enjoy that too. It’s free, open source, and built to stay simple.",
+      signature: "— Carlos, creator of Taskitify",
+      independence: { title: "An independent project", text: "Taskitify is an independent project. It has no affiliation with Spotify or Musixmatch and is neither sponsored nor endorsed by either company. Connecting to Spotify is optional." },
+      lyrics: { title: "Where the lyrics come from", text: "According to Spotify, Musixmatch licenses and synchronizes lyrics for its service. Rights to individual lyrics belong to the respective rights holders. Crediting a source is separate from obtaining permission to share lyrics.", source: "About lyrics on Spotify for Artists" },
+      privacy: { title: "Privacy in plain language", text: "Taskitify has no account system and uses no first-party telemetry, advertising, or behavioral tracking. When the app looks up lyrics on LRCLIB, it sends the track and artist, plus the album when available. If you choose to contribute to the community wall, your recommendation, signature, and optional country are public.", link: "Read the privacy policy" },
+      contact: { title: "Talk to the project", text: "Get in touch with Carlos for questions, credit corrections, or requests to remove content." },
+    },
     privacy: {
       title: "Privacy",
       description: "What Taskitify and this website use, and what happens when you suggest a song.",
@@ -109,7 +120,7 @@ export const copy = {
       title: "Taskitify · Letras do Spotify na barra do Windows",
       description: "Letras sincronizadas na barra do Windows, mini player a um clique e um estúdio para os versos que você quer guardar. Gratuito e de código aberto.",
     },
-    nav: { home: "Início", features: "Recursos", community: "Comunidade", github: "GitHub", download: "Baixar", skip: "Ir para o conteúdo", navigation: "Navegação principal", language: "Idioma" },
+    nav: { home: "Início", features: "Recursos", community: "Comunidade", about: "Sobre o projeto", github: "GitHub", download: "Baixar", skip: "Ir para o conteúdo", navigation: "Navegação principal", language: "Idioma" },
     hero: {
       platform: "Feito para Windows",
       first: "Menos janelas.",
@@ -195,6 +206,17 @@ export const copy = {
       star: "Dar estrela no GitHub", contact: "Enviar e-mail ao Carlos", githubContact: "Contato pelo GitHub",
     },
     footer: { privacy: "Privacidade", contact: "Contato", made: "Feito para a música. Feito com cuidado.", legal: "Licença MIT" },
+    about: {
+      title: "Sobre o projeto",
+      heading: "Feito para quem ama música",
+      description: "Por que o Taskitify existe, de onde vêm as letras e como o projeto trata a privacidade.",
+      letter: "Fiz o Taskitify porque queria curtir mais a música que já estava ouvindo, sem interromper o que eu estava fazendo. Compartilhei o app porque imaginei que mais alguém pudesse gostar disso também. Ele é gratuito, de código aberto e feito para continuar simples.",
+      signature: "— Carlos, criador do Taskitify",
+      independence: { title: "Um projeto independente", text: "O Taskitify é um projeto independente, sem afiliação, patrocínio ou endosso do Spotify ou do Musixmatch. A conexão com o Spotify é opcional." },
+      lyrics: { title: "De onde vêm as letras", text: "Segundo o Spotify, o Musixmatch licencia e sincroniza letras para o serviço. Os direitos sobre cada letra pertencem aos respectivos titulares. Dar crédito à fonte é diferente de obter autorização para compartilhar letras.", source: "Sobre as letras no Spotify for Artists" },
+      privacy: { title: "Privacidade em linguagem simples", text: "O Taskitify não exige conta própria e não usa telemetria própria, publicidade ou rastreamento comportamental. Ao buscar letras no LRCLIB, o app envia o título, o artista e, quando disponível, o álbum. Se você decidir contribuir para o mural da comunidade, a recomendação, sua assinatura e o país opcional ficam públicos.", link: "Leia a política de privacidade" },
+      contact: { title: "Fale com o projeto", text: "Entre em contato com o Carlos para tirar dúvidas, corrigir créditos ou pedir a remoção de um conteúdo." },
+    },
     privacy: {
       title: "Privacidade",
       description: "O que o Taskitify e este site usam e o que acontece quando você sugere uma música.",

@@ -7,7 +7,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const origin = siteOrigin();
   if (!origin) return [];
   const locales: Locale[] = ["en", "pt-BR"];
-  const pages: Page[] = ["home", "community", "privacy"];
+  const pages: Page[] = ["home", "community", "about", "privacy"];
   if (communityWallEnabled()) pages.push("wall");
   return pages.flatMap((page) => locales.map((locale) => ({
     url: new URL(pathFor(locale, page), origin).href,
