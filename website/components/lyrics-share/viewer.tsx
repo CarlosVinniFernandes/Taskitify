@@ -9,10 +9,10 @@ import styles from "./viewer.module.css";
 
 type Screen =
   | { status: "loading" }
-  | { status: "error"; locale: ShareLocale; error: ReturnType<typeof shareFailure> }
+  | { status: "error"; locale: ShareLocale; error: ReturnType<typeof shareFailure> | "missing" | "unavailable" }
   | { status: "closed" | "opening" | "open"; locale: ShareLocale; payload: SharedSong };
 
-export function ShareViewer() {
+export function ShareViewer({ shortId }: { shortId?: string }) {
   const [screen, setScreen] = useState<Screen>({ status: "loading" });
   const card = useRef<HTMLElement>(null);
   const focusOnOpen = useRef(false);
@@ -27,13 +27,31 @@ export function ShareViewer() {
 
   useEffect(() => {
     let revision = 0;
+    const controller = new AbortController();
     async function readLink() {
       const current = ++revision;
       const browser = navigator.languages?.length ? navigator.languages : [navigator.language];
       focusOnOpen.current = false;
       setScreen({ status: "loading" });
+      let code = window.location.hash.slice(1);
+      if (shortId !== undefined) {
+        let failure: "missing" | "unavailable" = "unavailable";
+        try {
+          const response = await fetch(`/api/share/${encodeURIComponent(shortId)}`, {
+            signal: controller.signal, referrerPolicy: "no-referrer", cache: "no-store",
+          });
+          if (response.status === 404) failure = "missing";
+          if (!response.ok) throw new Error();
+          const data = await response.json();
+          if (typeof data?.code !== "string") throw new Error();
+          code = data.code;
+        } catch {
+          if (current === revision) setScreen({ status: "error", error: failure, locale: shareLocale(browser) });
+          return;
+        }
+      }
       try {
-        const payload = await decodeShare(window.location.hash.slice(1));
+        const payload = await decodeShare(code);
         if (current === revision) setScreen({
           status: payload.r === "surprise" ? "closed" : "open",
           locale: shareLocale(browser, payload.lang),
@@ -46,9 +64,13 @@ export function ShareViewer() {
       }
     }
     void readLink();
-    window.addEventListener("hashchange", readLink);
-    return () => { ++revision; window.removeEventListener("hashchange", readLink); };
-  }, []);
+    if (shortId === undefined) window.addEventListener("hashchange", readLink);
+    return () => {
+      ++revision;
+      controller.abort();
+      window.removeEventListener("hashchange", readLink);
+    };
+  }, [shortId]);
 
   useEffect(() => {
     if (screen.status === "open" && focusOnOpen.current) {
@@ -64,8 +86,8 @@ export function ShareViewer() {
 
   if (screen.status === "error") return <main className={styles.scene} lang={locale}>
     <section className={styles.error}>
-      <h1>{screen.error === "version" ? t.version : t.invalid}</h1>
-      <p>{screen.error === "unsupported" ? t.unsupported : t.help}</p>
+      <h1>{screen.error === "unsupported" ? t.invalid : t[screen.error]}</h1>
+      <p>{screen.error === "unsupported" ? t.unsupported : screen.error === "unavailable" ? t.tryAgain : t.help}</p>
       <a className={styles.about} href={home}>{t.about} <ArrowUpRight size={15} aria-hidden="true" /></a>
     </section>
   </main>;
