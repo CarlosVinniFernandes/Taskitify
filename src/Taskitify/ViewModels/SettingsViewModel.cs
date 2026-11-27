@@ -179,6 +179,8 @@ public sealed class SettingsViewModel : ObservableObject
 
     public ICommand OpenCommunityCommand { get; } = new RelayCommand(() => Infrastructure.OfficialLinks.Open(Infrastructure.OfficialLinks.Community));
 
+    public ICommand OpenTourCommand { get; } = new RelayCommand(() => ((App)System.Windows.Application.Current).ShowTour());
+
     /// <summary>Folder for the user's own .lrc files, which take precedence over LRCLIB.</summary>
     public ICommand OpenLyricsFolderCommand { get; }
 

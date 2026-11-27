@@ -480,5 +480,7 @@
   "TourHomeDiscover": "Découvrez quelque chose de nouveau.",
   "TourHomeDiscoverBody": "Des chansons choisies par des gens du monde entier.",
   "CardShareShortening": "Création d'un lien court…",
-  "CardShareCopiedLong": "Lien copié. Impossible de créer un lien court pour l'instant ; voici le lien complet."
+  "CardShareCopiedLong": "Lien copié. Impossible de créer un lien court pour l'instant ; voici le lien complet.",
+  "RatingTitle": "Vous aimez Taskitify ?",
+  "RatingText": "Si vous le souhaitez, un avis sur le Microsoft Store aide d'autres personnes à le découvrir. Cliquez ici pour l'ouvrir. C'est la seule fois que nous le demandons."
 }

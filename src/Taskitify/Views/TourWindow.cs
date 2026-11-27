@@ -32,6 +32,9 @@ internal static class ContactInfo
 /// </summary>
 public sealed class TourWindow : Window
 {
+    /// <summary>Raise when the tour changes enough to show it again to users who saw an older one.</summary>
+    public const int Version = 1;
+
     private const double DesignWidth = 1120, DesignHeight = 720;
     private static readonly Color Cream = Color.FromRgb(0xF1, 0xF2, 0xED);
     private static readonly Brush CreamBrush = Frozen(Cream);

@@ -190,6 +190,18 @@ public sealed class AppSettings
     /// <summary>The like button was added to the layouts saved by older versions (once).</summary>
     public bool LikeButtonAdded { get; set; }
 
+    /// <summary>The welcome tour seen (0: never). Shown once per tour version, to new and updating users.</summary>
+    public int TourVersion { get; set; }
+
+    /// <summary>Local only, for the one-time rating invitation: first day used, days with music, whether it was shown.</summary>
+    public string? FirstUseDay { get; set; }
+
+    public int ListeningDays { get; set; }
+
+    public string? LastListeningDay { get; set; }
+
+    public bool RatingInviteShown { get; set; }
+
     /// <summary>The lyric card as it was last made (style, format, typography...).</summary>
     public LyricCardOptions LyricCard { get; set; } = new();
 

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http;
 using System.Windows;
@@ -204,10 +205,12 @@ public partial class App : Application
                 "Taskitify", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        if (e.Args.Contains("--tour", StringComparer.OrdinalIgnoreCase))
+        _settings.Current.FirstUseDay ??= DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        if (_monitor is not null)
+            _monitor.PlaybackChanged += (_, _) => RecordListening();
+        // The tour opens once: on a new installation, and once for users updating from a version without it.
+        if (e.Args.Contains("--tour", StringComparer.OrdinalIgnoreCase) || _settings.Current.TourVersion < TourWindow.Version)
             ShowTour();
-        else if (_settings.IsFirstRun)
-            ShowWelcome();
         else if (!background && _tray.Visible)
             _tray.ShowBalloon("Taskitify", LocalizationService.Get("BackgroundNotice"));
     }
@@ -285,10 +288,51 @@ public partial class App : Application
         }
         _miniPlayer?.HidePopup();
         _tour = new TourWindow(page => { ShowSettings(page); return true; }, _settings!);
-        _tour.Closed += (_, _) => _tour = null;
+        _tour.Closed += (_, _) =>
+        {
+            _tour = null;
+            if (_settings.Current.TourVersion < TourWindow.Version)
+            {
+                _settings.Update(s => s.TourVersion = TourWindow.Version);
+                _settings.Flush(); // seen, even if the app is closed right away
+            }
+        };
         WindowInterop.SetDarkTitleBar(_tour, true);
         _tour.Show();
         _tour.Activate();
+    }
+
+    /// <summary>Counts the days music played (local only), then perhaps invites a rating once.</summary>
+    private void RecordListening()
+    {
+        if (_monitor?.Status != Models.PlaybackState.Playing || _settings is null)
+            return;
+        var today = DateTime.Today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        if (_settings.Current.LastListeningDay == today)
+            return;
+        _settings.Update(s => { s.LastListeningDay = today; s.ListeningDays++; });
+        InviteRatingOnce();
+    }
+
+    /// <summary>
+    /// After two weeks and seven days with music, one quiet notification offers the Store's review page.
+    /// Only for the Store package, never during the first run or the tour, never again once shown.
+    /// </summary>
+    private void InviteRatingOnce()
+    {
+        var s = _settings!.Current;
+        if (s.RatingInviteShown || s.ListeningDays < 7 || _tour is not null || _tray?.Visible != true
+            || !DateTime.TryParse(s.FirstUseDay, CultureInfo.InvariantCulture, DateTimeStyles.None, out var first) || (DateTime.Today - first).TotalDays < 14)
+            return;
+        string family;
+        try { family = global::Windows.ApplicationModel.Package.Current.Id.FamilyName; }
+        catch (InvalidOperationException) { return; } // not installed from the Store package
+        _settings.Update(x => x.RatingInviteShown = true);
+        _tray.ShowBalloon(LocalizationService.Get("RatingTitle"), LocalizationService.Get("RatingText"), () =>
+        {
+            try { Process.Start(new ProcessStartInfo($"ms-windows-store://review/?PFN={family}") { UseShellExecute = true }); }
+            catch (System.ComponentModel.Win32Exception ex) { Log.Error("Could not open the Store review page", ex); }
+        });
     }
 
     /// <summary>First run: LRCLIB alone or Spotify + LRCLIB, and what the Spotify connection does.</summary>

@@ -12,6 +12,7 @@ public sealed class TrayIconService : IDisposable
     public TrayIconService(Action showSettings, Action showMiniPlayer, Action showLyricCard, Action showDebug, Action exit, Action? showTour = null)
     {
         var menu = new Forms.ContextMenuStrip();
+
         menu.Items.Add(LocalizationService.Get("ShowPlayer"), null, (_, _) => showMiniPlayer());
         var cardItem = new Forms.ToolStripMenuItem(LocalizationService.Get("LyricCardOpen"), null, (_, _) => showLyricCard());
         menu.Items.Add(cardItem);
@@ -45,6 +46,13 @@ public sealed class TrayIconService : IDisposable
             if (e.Button == Forms.MouseButtons.Left)
                 showSettings();
         };
+        _icon.BalloonTipClicked += (_, _) =>
+        {
+            var click = _balloonClick;
+            _balloonClick = null;
+            click?.Invoke();
+        };
+        _icon.BalloonTipClosed += (_, _) => _balloonClick = null;
     }
 
     /// <summary>Whether a song is playing, so the lyric card item can be used.</summary>
@@ -61,8 +69,14 @@ public sealed class TrayIconService : IDisposable
         set => _debugItem.Visible = value;
     }
 
-    public void ShowBalloon(string title, string text) =>
-        _icon.ShowBalloonTip(4000, title, text, Forms.ToolTipIcon.None);
+    private Action? _balloonClick;
+
+    /// <param name="onClick">Runs if the user clicks this notification (not a later one).</param>
+    public void ShowBalloon(string title, string text, Action? onClick = null)
+    {
+        _balloonClick = onClick;
+        _icon.ShowBalloonTip(onClick is null ? 4000 : 10000, title, text, Forms.ToolTipIcon.None);
+    }
 
     public void Dispose()
     {

@@ -480,5 +480,7 @@
   "TourHomeDiscover": "Discover something new.",
   "TourHomeDiscoverBody": "Songs picked by people from all over the world.",
   "CardShareShortening": "Creating a short link…",
-  "CardShareCopiedLong": "Link copied. A short link isn't available right now, so this is the full link."
+  "CardShareCopiedLong": "Link copied. A short link isn't available right now, so this is the full link.",
+  "RatingTitle": "Enjoying Taskitify?",
+  "RatingText": "If you'd like, a review in the Microsoft Store helps others find it. Click here to open it. This is the only time we'll ask."
 }
