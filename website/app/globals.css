@@ -344,6 +344,8 @@ figcaption { color: var(--muted); font-size: .84rem; }
   padding: 9px 10px;
 }
 .song-form input::placeholder { color: #94aab0; }
+.song-form .publish-name { display: flex; align-items: center; gap: 9px; width: fit-content; }
+.song-form .publish-name input { appearance: auto; flex: none; width: 17px; height: 17px; margin: 0; accent-color: var(--teal); }
 .song-form .button { justify-self: start; }
 .song-form .form-note, .song-form .feedback { font-size: .9rem; }
 .song-form .feedback:not(:empty) { margin-top: 14px; color: #ffcabe; }

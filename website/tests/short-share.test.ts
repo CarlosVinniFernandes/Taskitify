@@ -89,3 +89,23 @@ test("atomically reserves windows across requests and stops at the daily budget"
   assert.ok(!JSON.stringify([...data.values()]).includes(address));
   assert.equal((await submit(address, () => now() + 86_400_000)).status, 201);
 });
+
+test("applies server upload limits without changing existing short links", async (context) => {
+  const { store } = memoryStore();
+  const id = "K8mP2xR7nQ4a";
+  const settings = ["SHARE_CODE_DAILY_LIMIT", "SHARE_CODE_IP_WINDOW_SECONDS", "SHARE_CODE_MAX_LENGTH"] as const;
+  const previous = settings.map((key) => process.env[key]);
+  context.after(() => settings.forEach((key, index) => {
+    if (previous[index] === undefined) delete process.env[key];
+    else process.env[key] = previous[index];
+  }));
+  process.env.SHARE_CODE_DAILY_LIMIT = "2";
+  process.env.SHARE_CODE_IP_WINDOW_SECONDS = "60";
+  const submit = (ip: string) => createShortShare(post(), { store, origin, address: ip, secret, now, newId: () => id });
+  assert.equal((await submit(address)).status, 201);
+  assert.equal((await submit(address)).headers.get("retry-after"), "40");
+  process.env.SHARE_CODE_MAX_LENGTH = "10";
+  assert.equal((await submit("203.0.113.2")).status, 413);
+  const saved = await readShortShare(new Request(origin + "/api/share/" + id), id, store);
+  assert.deepEqual(await saved.json(), { code });
+});

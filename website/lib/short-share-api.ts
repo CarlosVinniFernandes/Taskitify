@@ -6,9 +6,12 @@ const prefix = "lyrics-shares/v1";
 const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 const maxCode = 6000;
 export const maxBody = 6200;
-const dailyLimit = 15;
-const ipWindowMs = 600_000;
 const dayMs = 86_400_000;
+
+function setting(value: string | undefined, fallback: number, min: number, max: number) {
+  const number = Number(value);
+  return Number.isInteger(number) && number >= min && number <= max ? number : fallback;
+}
 
 export type ShareStore = {
   read: (path: string, consistent: boolean) => Promise<{ value: unknown; etag: string } | null>;
@@ -102,6 +105,8 @@ export async function createShortShare(request: Request, options: CreateOptions)
     return error instanceof RangeError ? shareError(413, "too_large") : shareError(400, "invalid_code");
   }
   if (!code) return shareError(400, "invalid_code");
+  const uploadLimit = setting(process.env.SHARE_CODE_MAX_LENGTH, maxCode, 1, maxCode);
+  if (code.length > uploadLimit) return shareError(413, "too_large");
   try {
     await decodeShare(code);
   } catch (error) {
@@ -111,6 +116,8 @@ export async function createShortShare(request: Request, options: CreateOptions)
   const address = addressBucket(options.address);
   if (!address || options.secret.length < 32) return shareError(503, "unavailable");
   const now = options.now?.() ?? Date.now();
+  const dailyLimit = setting(process.env.SHARE_CODE_DAILY_LIMIT, 15, 1, 30);
+  const ipWindowMs = setting(process.env.SHARE_CODE_IP_WINDOW_SECONDS, 600, 60, 86_400) * 1000;
   const day = Math.floor(now / dayMs);
   const window = Math.floor(now / ipWindowMs);
   const key = createHmac("sha256", options.secret).update(`${window}|${address}`).digest("hex");

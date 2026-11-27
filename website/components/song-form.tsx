@@ -7,7 +7,9 @@ import { limits, type Fields } from "@/lib/suggestion-fields";
 
 type Feedback = "idle" | "sending" | "success" | "invalid" | "rate" | "error";
 
-export function SongForm({ locale, initial }: { locale: Locale; initial: Fields }) {
+export function SongForm({ locale, initial, wallEnabled, onSaved }: {
+  locale: Locale; initial: Fields; wallEnabled: boolean; onSaved: () => void;
+}) {
   const t = copy[locale].community;
   const [state, setState] = useState<Feedback>("idle");
   const sending = useRef(false);
@@ -17,13 +19,14 @@ export function SongForm({ locale, initial }: { locale: Locale; initial: Fields 
     if (sending.current) return;
     const form = event.currentTarget;
     const values = new FormData(form);
+    const { publishName, ...fields } = Object.fromEntries(values);
     sending.current = true;
     setState("sending");
     try {
       const response = await fetch("/api/community/suggestions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(Object.fromEntries(values)),
+        body: JSON.stringify({ ...fields, publishSuggestion: wallEnabled, publishName: wallEnabled && publishName === "on" }),
       });
       const result: unknown = await response.json().catch(() => null);
       if (response.status === 201 && result && typeof result === "object" && "ok" in result && result.ok === true) {
@@ -33,6 +36,7 @@ export function SongForm({ locale, initial }: { locale: Locale; initial: Fields 
           if (field instanceof HTMLInputElement) field.value = "";
         }
         setState("success");
+        onSaved();
       } else {
         setState(response.status === 429 ? "rate" : [400, 403, 413, 415].includes(response.status) ? "invalid" : "error");
       }
@@ -59,12 +63,15 @@ export function SongForm({ locale, initial }: { locale: Locale; initial: Fields 
         <input id="name" name="name" maxLength={limits.name} defaultValue={initial.name}
                placeholder={t.namePlaceholder} autoComplete="nickname" />
       </label>
+      {wallEnabled && <label className="publish-name">
+        <input name="publishName" type="checkbox" /> {t.wall.publishName}
+      </label>}
       <div className="honeypot" aria-hidden="true">
         <label htmlFor="website">Website
           <input id="website" name="website" tabIndex={-1} autoComplete="off" />
         </label>
       </div>
-      <p id="form-note" className="form-note">{t.note}</p>
+      <p id="form-note" className="form-note">{wallEnabled ? t.wall.formNote : t.note}</p>
       <button type="submit" className="button button-light">
         <Music2 size={17} aria-hidden="true" /> {state === "sending" ? t.sending : t.send}
       </button>

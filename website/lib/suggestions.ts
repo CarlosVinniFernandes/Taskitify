@@ -11,13 +11,15 @@ export type Suggestion = {
   artist: string;
   name: string | null;
   submittedAt: string;
-  status: "pending";
+  status: "pending" | "suggested" | "added" | "hidden";
+  publishName?: boolean;
 };
 
 type Options = {
   address: string | null;
   secret: string | undefined;
   create: (path: string, suggestion: Suggestion) => Promise<boolean>;
+  wallEnabled?: boolean;
   now?: () => Date;
 };
 
@@ -69,22 +71,23 @@ async function readPayload(request: Request) {
   }
 }
 
-function validate(data: unknown): Fields | null {
+function validate(data: unknown): (Fields & { publishSuggestion: boolean; publishName: boolean }) | null {
   if (!data || typeof data !== "object" || Array.isArray(data)) return null;
   const fields = data as Record<string, unknown>;
-  if (Object.keys(fields).some((key) => !["song", "artist", "name", "website"].includes(key))) return null;
+  if (Object.keys(fields).some((key) => !["song", "artist", "name", "website", "publishSuggestion", "publishName"].includes(key))) return null;
   if (fields.website !== undefined && fields.website !== "") return null;
+  if ([fields.publishSuggestion, fields.publishName].some((value) => value !== undefined && typeof value !== "boolean")) return null;
 
   const result: Fields = { song: "", artist: "", name: "" };
   for (const key of Object.keys(limits) as (keyof Fields)[]) {
     const raw = fields[key];
     if (key === "name" && raw === undefined) continue;
-    if (typeof raw !== "string" || raw.length > limits[key] || /\p{Cc}/u.test(raw)) return null;
+    if (typeof raw !== "string" || raw.length > limits[key] || /[\p{Cc}\u202a-\u202e\u2066-\u2069]/u.test(raw)) return null;
     const value = raw.normalize("NFC").trim();
     if (value.length > limits[key] || (key !== "name" && !value)) return null;
     result[key] = value;
   }
-  return result;
+  return { ...result, publishSuggestion: fields.publishSuggestion === true, publishName: fields.publishName === true };
 }
 
 export async function handleSuggestion(request: Request, options: Options): Promise<Response> {
@@ -108,13 +111,15 @@ export async function handleSuggestion(request: Request, options: Options): Prom
   const client = addressVersion === 6 ? new URL(`http://[${address}]/`).hostname : address;
   const key = createHmac("sha256", options.secret).update(`${window}|${client}`).digest("hex");
   const path = `suggestions/${new Date(window * windowMs).toISOString().slice(0, 7)}/${key}.json`;
+  const publish = options.wallEnabled === true && fields.publishSuggestion;
   const suggestion: Suggestion = {
     id: randomUUID(),
     song: fields.song,
     artist: fields.artist,
     name: fields.name || null,
     submittedAt: now.toISOString(),
-    status: "pending",
+    status: publish ? "suggested" : "pending",
+    ...(publish ? { publishName: fields.publishName && Boolean(fields.name) } : {}),
   };
 
   try {
