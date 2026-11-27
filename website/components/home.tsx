@@ -7,9 +7,6 @@ import { pathFor, releases, repository, store } from "@/lib/site";
 import { CommunityRecord } from "./community-record";
 import { ContactLink, PlaylistLink, RecordArt, SiteShell } from "./site";
 
-// The Windows welcome tour currently shows Minimal Mode as a concept.
-const showMinimalMode = false;
-
 export function Home({ locale }: { locale: Locale }) {
   const t = copy[locale];
   const community = pathFor(locale, "community");
@@ -108,12 +105,21 @@ export function Home({ locale }: { locale: Locale }) {
         </div>
       </section>
 
-      {showMinimalMode && (
-        <section className="section wrap">
-          <h2>{t.minimal.title}</h2>
+      <section className="section wrap feature-split minimal-section" aria-labelledby="minimal-title">
+        <div className="feature-copy minimal-copy">
+          <p className="eyebrow">{t.minimal.label}</p>
+          <h2 id="minimal-title">{t.minimal.title}</h2>
           <p>{t.minimal.description}</p>
-        </section>
-      )}
+          <ul className="minimal-points">
+            <li><Check size={17} aria-hidden="true" />{t.minimal.move}</li>
+            <li><Check size={17} aria-hidden="true" />{t.minimal.clicks}</li>
+          </ul>
+        </div>
+        <figure className="minimal-scene">
+          <Image className="minimal-wallpaper" src="/media/fuji.webp" alt="" fill sizes="(max-width: 680px) 100vw, 60vw" />
+          <Image className="minimal-lyrics" src="/media/minimal-mode.webp" alt={t.minimal.alt} width={1280} height={400} />
+        </figure>
+      </section>
 
       <section className="section wrap feature-split studio-section" aria-labelledby="studio-title">
         <div className="feature-copy">

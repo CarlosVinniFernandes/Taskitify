@@ -39,7 +39,14 @@ export const copy = {
       wideAlt: "Cinema Wide mini player with a warm album-derived background and flowing lyrics",
       verticalAlt: "Vertical mini player showing synced lyrics in a dark turquoise atmosphere",
     },
-    minimal: { title: "Just you and the lyrics.", description: "Keep the words floating where you like, anywhere on your desktop." },
+    minimal: {
+      label: "Minimal Mode",
+      title: "Just you and the lyrics.",
+      description: "Keep synced lyrics floating above your desktop or a game in borderless mode. The current line stays in focus while the surrounding verses scroll.",
+      move: "Drag and resize the lyrics to fit around whatever’s on screen.",
+      clicks: "Let clicks pass through to the window underneath.",
+      alt: "Three floating lyrics over a mountain wallpaper, with the current verse in focus.",
+    },
     studio: {
       label: "Lyrics Studio",
       title: "Some lyrics deserve to stay.",
@@ -154,7 +161,14 @@ export const copy = {
       wideAlt: "Mini player Cinema Wide com fundo em tons quentes da capa e preenchimento sincronizado",
       verticalAlt: "Mini player vertical com letras sincronizadas e fundo turquesa escuro",
     },
-    minimal: { title: "Só você e a letra.", description: "Deixe os versos flutuando onde quiser na sua área de trabalho." },
+    minimal: {
+      label: "Minimal Mode",
+      title: "Só você e a letra.",
+      description: "Acompanhe as letras sincronizadas sobre a área de trabalho ou um jogo em modo sem bordas. O verso atual fica em destaque enquanto os outros passam.",
+      move: "Mova e redimensione a janela de letras para encaixar onde quiser.",
+      clicks: "Deixe os cliques passarem para a janela que estiver por baixo.",
+      alt: "Três versos flutuando sobre um papel de parede de montanha, com o verso atual em destaque.",
+    },
     studio: {
       label: "Lyrics Studio",
       title: "Alguns versos merecem ficar.",

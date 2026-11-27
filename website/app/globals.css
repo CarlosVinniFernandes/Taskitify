@@ -265,6 +265,40 @@ figcaption { color: var(--muted); font-size: .84rem; }
 }
 .feature-copy .eyebrow { margin-bottom: 14px; }
 .feature-copy > p:not(.eyebrow) { margin-top: 19px; max-width: 535px; }
+.minimal-points { list-style: none; padding: 0; margin: 19px 0 0; color: var(--muted); }
+.minimal-points li { display: flex; align-items: baseline; gap: 9px; margin-top: 9px; }
+.minimal-points svg { color: var(--teal); flex: none; align-self: center; }
+.minimal-scene {
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 1.63;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #15232d;
+}
+.minimal-wallpaper { object-fit: cover; }
+.minimal-scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 31%, #09172480 100%);
+}
+.minimal-lyrics {
+  position: absolute;
+  z-index: 1;
+  width: 96%;
+  height: auto;
+  left: 2%;
+  bottom: 7%;
+  filter: drop-shadow(0 2px 5px #09111a);
+}
+@media (min-width: 681px) {
+  .minimal-section { grid-template-columns: minmax(0, 1.25fr) minmax(0, .8fr); }
+  .minimal-copy { grid-column: 2; grid-row: 1; }
+  .minimal-scene { grid-column: 1; grid-row: 1; }
+}
 .bar-samples { display: grid; gap: 19px; }
 .bar-samples figure {
   display: grid;
