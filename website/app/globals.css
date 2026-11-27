@@ -271,7 +271,10 @@ figcaption { color: var(--muted); font-size: .84rem; }
 .minimal-scene {
   position: relative;
   isolation: isolate;
-  aspect-ratio: 1.63;
+  width: 100%;
+  max-width: 520px;
+  justify-self: center;
+  aspect-ratio: 1.66;
   margin: 0;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -285,25 +288,25 @@ figcaption { color: var(--muted); font-size: .84rem; }
   width: 121%;
   height: 122%;
   max-width: none;
-  filter: brightness(.78) saturate(.86);
+  filter: brightness(.88) saturate(.9);
 }
 .minimal-scene::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 25%, #10253145 45%, #0a1726cf 100%);
+  background: radial-gradient(ellipse at 70% 82%, #0a1726cc, transparent 54%);
 }
 .minimal-lyrics {
   position: absolute;
   z-index: 1;
-  width: 96%;
+  width: 66%;
   height: auto;
-  left: 2%;
+  right: 4%;
   bottom: 4%;
   filter: drop-shadow(0 2px 5px #09111a);
 }
 @media (min-width: 681px) {
-  .minimal-section { grid-template-columns: minmax(0, 1.25fr) minmax(0, .8fr); }
+  .minimal-section { grid-template-columns: minmax(0, 1.04fr) minmax(0, .96fr); }
   .minimal-copy { grid-column: 2; grid-row: 1; }
   .minimal-scene { grid-column: 1; grid-row: 1; }
 }
@@ -447,6 +450,7 @@ figcaption { color: var(--muted); font-size: .84rem; }
   .community-record .sleeve-title strong { font-size: clamp(.85rem, 3.7vw, 1.85rem); }
   .sleeve-title strong { font-size: clamp(1.45rem, 5vw, 2.55rem); }
   .feature-split { gap: 27px; }
+  .minimal-lyrics { width: 76%; right: 3%; }
   .bar-samples { gap: 14px; }
   .player-shots { grid-template-columns: minmax(0, 1.35fr) minmax(0, .9fr); gap: 10px; }
   .player-shots figcaption { font-size: .81rem; }
