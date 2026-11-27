@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Check, Github, Heart, Music2, ShieldCheck, Star, Grid2X2 } from "lucide-react";
 import { copy, type Locale } from "@/lib/copy";
 import { pathFor, releases, repository, store } from "@/lib/site";
+import { CommunityRecord } from "./community-record";
 import { ContactLink, PlaylistLink, RecordArt, SiteShell } from "./site";
 
 // The Windows welcome tour currently shows Minimal Mode as a concept.
@@ -55,7 +57,9 @@ export function Home({ locale }: { locale: Locale }) {
 
       <section className="soundtrack-section" aria-labelledby="soundtrack-title">
         <div className="wrap soundtrack-inner">
-          <RecordArt />
+          <Suspense fallback={<RecordArt />}>
+            <CommunityRecord locale={locale} />
+          </Suspense>
           <div className="soundtrack-copy">
             <p className="eyebrow"><Music2 size={16} aria-hidden="true" /> {t.community.name}</p>
             <h2 id="soundtrack-title">{t.community.intro}<br /><em>{t.community.split}</em></h2>
