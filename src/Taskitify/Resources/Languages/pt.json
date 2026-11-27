@@ -604,6 +604,8 @@
   "NotMinimalLockedHint": "Destravado, arraste o player pelo fundo e redimensione pela alça do canto.",
   "NotMinimalAutoFit": "Diminuir letras automaticamente",
   "NotMinimalAutoFitHint": "Ao diminuir pela alça, as letras encolhem junto.",
-  "ControlsOnHover": "Controles só ao passar o mouse",
-  "ControlsOnHoverHint": "Mais limpo: botões, alça, controles e progresso aparecem quando o mouse passa por cima. Vale para as letras e o player flutuantes."
+  "ControlsOnHover": "Controles do player só ao passar o mouse",
+  "ControlsOnHoverHint": "Mais limpo: ações da música, progresso, controles e alça aparecem quando o mouse passa sobre o player.",
+  "ButtonsOnHover": "Botões só ao passar o mouse",
+  "ButtonsOnHoverHint": "Os botões acima e a alça do canto aparecem quando o mouse passa sobre as letras. Desligado: sempre visíveis, discretos."
 }

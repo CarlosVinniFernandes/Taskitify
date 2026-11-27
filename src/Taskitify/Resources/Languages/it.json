@@ -604,6 +604,8 @@
   "NotMinimalLockedHint": "Sbloccato, trascina il player dallo sfondo e ridimensionalo dall'angolo.",
   "NotMinimalAutoFit": "Riduci i testi automaticamente",
   "NotMinimalAutoFitHint": "Rimpicciolito dall'angolo, i testi si riducono con lui.",
-  "ControlsOnHover": "Controlli solo al passaggio del mouse",
-  "ControlsOnHoverHint": "Più pulito: pulsanti, angolo, controlli e avanzamento compaiono al passaggio del mouse. Vale per testi e player fluttuanti."
+  "ControlsOnHover": "Controlli del player solo al passaggio del mouse",
+  "ControlsOnHoverHint": "Più pulito: azioni del brano, avanzamento, controlli e angolo compaiono passando il mouse sul player.",
+  "ButtonsOnHover": "Pulsanti solo al passaggio del mouse",
+  "ButtonsOnHoverHint": "I pulsanti sopra e l'angolo compaiono passando il mouse sui testi. Disattivato: sempre visibili, discreti."
 }

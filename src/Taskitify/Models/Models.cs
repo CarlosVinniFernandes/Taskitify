@@ -826,9 +826,12 @@ public sealed class MinimalModeSettings
     public bool ShowClickThroughMark { get; set; } = true;
 
     /// <summary>
-    /// Cleaner: the buttons, the grip and (floating player) the controls and progress appear only
-    /// while the pointer is over the window. Off by default: nothing important waits for a hover.
+    /// The floating lyrics' own buttons and corner grip appear only while the pointer is over them:
+    /// minimal by default. Everything they do is also in Settings, the tray and Ctrl + Alt + click.
     /// </summary>
+    public bool ButtonsOnHover { get; set; } = true;
+
+    /// <summary>The floating player's song actions, progress, playback controls and grip appear only under the pointer.</summary>
     public bool ControlsOnHover { get; set; }
 
     public int X { get; set; }

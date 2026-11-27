@@ -604,6 +604,8 @@
   "NotMinimalLockedHint": "Desbloqueado, arrastra el reproductor por el fondo y cambia su tamaño desde la esquina.",
   "NotMinimalAutoFit": "Reducir letras automáticamente",
   "NotMinimalAutoFitHint": "Al hacerlo más pequeño con la esquina, las letras se reducen con él.",
-  "ControlsOnHover": "Controles solo al pasar el ratón",
-  "ControlsOnHoverHint": "Más limpio: los botones, la esquina, los controles y el progreso aparecen al pasar el ratón. Vale para las letras y el reproductor flotantes."
+  "ControlsOnHover": "Controles del reproductor solo al pasar el ratón",
+  "ControlsOnHoverHint": "Más limpio: las acciones de la canción, el progreso, los controles y la esquina aparecen al pasar el ratón sobre el reproductor.",
+  "ButtonsOnHover": "Botones solo al pasar el ratón",
+  "ButtonsOnHoverHint": "Los botones de arriba y la esquina aparecen al pasar el ratón sobre las letras. Apagado: siempre visibles, discretos."
 }

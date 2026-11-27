@@ -604,6 +604,8 @@
   "NotMinimalLockedHint": "Déverrouillé, faites glisser le lecteur par son fond et redimensionnez-le par le coin.",
   "NotMinimalAutoFit": "Réduire les paroles automatiquement",
   "NotMinimalAutoFitHint": "Rétréci par le coin, les paroles rétrécissent avec lui.",
-  "ControlsOnHover": "Commandes seulement au survol",
-  "ControlsOnHoverHint": "Plus épuré : boutons, coin, commandes et progression apparaissent au survol. Commun aux paroles et au lecteur flottants."
+  "ControlsOnHover": "Commandes de lecture seulement au survol",
+  "ControlsOnHoverHint": "Plus épuré : actions du morceau, progression, commandes et coin apparaissent au survol du lecteur.",
+  "ButtonsOnHover": "Boutons seulement au survol",
+  "ButtonsOnHoverHint": "Les boutons ci-dessus et le coin apparaissent au survol des paroles. Désactivé : toujours là, discrets."
 }

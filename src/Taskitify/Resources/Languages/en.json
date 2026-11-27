@@ -604,6 +604,8 @@
   "NotMinimalLockedHint": "Unlocked, drag the player by its background and resize it from the corner grip.",
   "NotMinimalAutoFit": "Shrink lyrics automatically",
   "NotMinimalAutoFitHint": "Made smaller with the grip, the lyrics shrink with it.",
-  "ControlsOnHover": "Show controls only on hover",
-  "ControlsOnHoverHint": "Cleaner: the buttons, grip, controls and progress appear when the pointer is over it. Shared by the floating lyrics and the floating player."
+  "ControlsOnHover": "Playback controls only on hover",
+  "ControlsOnHoverHint": "Cleaner: the song's actions, progress, controls and grip appear when the pointer is over the player.",
+  "ButtonsOnHover": "Buttons only on hover",
+  "ButtonsOnHoverHint": "The buttons above and the corner grip appear when the pointer is over the lyrics. Off: always there, quiet."
 }

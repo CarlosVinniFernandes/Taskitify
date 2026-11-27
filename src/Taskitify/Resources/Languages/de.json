@@ -604,6 +604,8 @@
   "NotMinimalLockedHint": "Entsperrt: den Player am Hintergrund ziehen und am Eckgriff skalieren.",
   "NotMinimalAutoFit": "Songtext automatisch verkleinern",
   "NotMinimalAutoFitHint": "Am Eckgriff verkleinert, schrumpft der Songtext mit.",
-  "ControlsOnHover": "Steuerung nur beim Überfahren",
-  "ControlsOnHoverHint": "Aufgeräumter: Schaltflächen, Eckgriff, Steuerung und Fortschritt erscheinen beim Überfahren. Gilt für schwebenden Text und Player."
+  "ControlsOnHover": "Wiedergabesteuerung nur beim Überfahren",
+  "ControlsOnHoverHint": "Aufgeräumter: Song-Aktionen, Fortschritt, Steuerung und Eckgriff erscheinen beim Überfahren des Players.",
+  "ButtonsOnHover": "Schaltflächen nur beim Überfahren",
+  "ButtonsOnHoverHint": "Die Schaltflächen oben und der Eckgriff erscheinen beim Überfahren des Songtexts. Aus: immer da, dezent."
 }

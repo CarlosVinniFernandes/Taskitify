@@ -351,7 +351,7 @@ public partial class MinimalLyricsWindow : Window
             _vm.SetFitSize(null);
             return;
         }
-        _vm.SetFitSize(s.FitFontSize(LyricsViewport.ActualHeight, LyricsViewport.ActualWidth, VerseWidthAt100()));
+        _vm.SetFitSize(s.FitFontSize(LyricsViewport.ActualHeight - ChromeRoom(), LyricsViewport.ActualWidth, VerseWidthAt100()));
     }
 
     /// <summary>A typical verse's width at 100 px in the lyrics' type (the 85th percentile, so one long verse does not shrink them all); once per song and type.</summary>
@@ -414,12 +414,62 @@ public partial class MinimalLyricsWindow : Window
     }
 
     /// <summary>The buttons and grip: quiet, or (controls on hover) gone until the pointer is over the lyrics.</summary>
+    private const double ToolbarRow = 30;
+
+    /// <summary>
+    /// The buttons and grip: quiet, or (buttons on hover) gone until the pointer is over the lyrics.
+    /// Gone, their row closes too and the verses glide into the room it leaves; back, they make
+    /// room again. The type keeps its size throughout (no jump at the end).
+    /// </summary>
     private void UpdateChromeOpacity()
     {
-        var target = Root.IsMouseOver ? 1 : _settings.Current.Minimal.ControlsOnHover ? 0 : 0.6;
-        var duration = _settings.Current.EnableAnimations && SystemParameters.ClientAreaAnimation ? 140 : 0;
-        LyricMotionText.Tween(Toolbar, OpacityProperty, target, duration, expressive: false);
-        LyricMotionText.Tween(ResizeGrip, OpacityProperty, target, duration, expressive: false);
+        var s = _settings.Current.Minimal;
+        var shown = Root.IsMouseOver || !s.ButtonsOnHover;
+        var target = Root.IsMouseOver ? 1 : s.ButtonsOnHover ? 0 : 0.6;
+        var animate = _settings.Current.EnableAnimations && SystemParameters.ClientAreaAnimation;
+        LyricMotionText.Tween(Toolbar, OpacityProperty, target, animate ? 140 : 0, expressive: false);
+        LyricMotionText.Tween(ResizeGrip, OpacityProperty, target, animate ? 140 : 0, expressive: false);
+
+        // The row only closes when it holds nothing else (no song line) and the buttons can show at all.
+        var collapsible = !s.ShowSong && !s.ClickThrough;
+        if (!collapsible)
+        {
+            TopRow.BeginAnimation(HeightProperty, null);
+            TopRow.Height = double.NaN;
+            return;
+        }
+        var from = double.IsNaN(TopRow.Height) ? TopRow.ActualHeight : TopRow.Height;
+        var to = shown ? ToolbarRow : 0;
+        if (Math.Abs(from - to) < 0.5)
+            return;
+        var ms = animate ? (shown ? 180 : 260) : 0;
+        if (ms == 0)
+        {
+            TopRow.BeginAnimation(HeightProperty, null);
+            TopRow.Height = to;
+            return;
+        }
+        TopRow.BeginAnimation(HeightProperty, new System.Windows.Media.Animation.DoubleAnimation(from, to, TimeSpan.FromMilliseconds(ms))
+        {
+            EasingFunction = ChromeEase,
+            FillBehavior = System.Windows.Media.Animation.FillBehavior.HoldEnd,
+        }, System.Windows.Media.Animation.HandoffBehavior.SnapshotAndReplace);
+    }
+
+    private static readonly System.Windows.Media.Animation.IEasingFunction ChromeEase = CreateChromeEase();
+
+    private static System.Windows.Media.Animation.IEasingFunction CreateChromeEase()
+    {
+        var ease = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseInOut };
+        ease.Freeze();
+        return ease;
+    }
+
+    /// <summary>The room the buttons' row gives the lyrics right now (it does not change their size).</summary>
+    private double ChromeRoom()
+    {
+        var s = _settings.Current.Minimal;
+        return !s.ShowSong && !s.ClickThrough ? Math.Max(0, ToolbarRow - TopRow.ActualHeight) : 0;
     }
 
     private void UpdateStatus()

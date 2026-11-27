@@ -13,7 +13,8 @@ Branch `t3/personalization-expansion`, from `t3/release-candidate` (aca354f). No
 | Settings > General / Advanced | "Taskitify on the web" as rows (site, Community Soundtrack with Listen + Add a song, community, tour); repository link in Advanced |
 | Minimal Mode extras | Global shortcut Ctrl + Alt + L (changeable, works in games), turn on by itself with chosen apps in front, what shows while paused, one-click quick positions |
 | Not that minimal | Own tab: the whole mini player floating and pinned, with every mini player look and Minimal Mode's possibilities (click-through with Ctrl + Alt + click both ways and its mark, never taking focus, topmost over games, lock, corner-grip resize with lyrics shrinking, quick positions); exclusive with the floating lyrics |
-| Controls on hover | Optional (off by default), shared: the floating lyrics' buttons and grip, and the floating player's actions, progress, controls and grip appear only under the pointer |
+| Buttons on hover | Floating lyrics (on by default): the window's buttons and grip appear under the pointer; their row closes and the verses glide into the room, back when hovered (type size unchanged) |
+| Controls on hover | Floating player (off by default): song actions, progress, controls and grip appear under the pointer |
 | Tour | Minimal Mode step shows the real feature; last card has two playlist buttons side by side |
 
 ### Minimal Mode

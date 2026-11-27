@@ -868,10 +868,10 @@
                         </Border>
                             <Border Style="{StaticResource Row}">
                                 <DockPanel>
-                                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding MinimalLook.ControlsOnHover}" AutomationProperties.Name="{DynamicResource Loc.ControlsOnHover}" />
+                                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding MinimalLook.ButtonsOnHover}" AutomationProperties.Name="{DynamicResource Loc.ButtonsOnHover}" />
                                     <StackPanel Style="{StaticResource RowText}">
-                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.ControlsOnHover}" />
-                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.ControlsOnHoverHint}" />
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.ButtonsOnHover}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.ButtonsOnHoverHint}" />
                                     </StackPanel>
                                 </DockPanel>
                             </Border>
