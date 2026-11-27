@@ -117,6 +117,82 @@ internal static class MiniPlayerLookThumbnails
     public static ImageSource Controls(ControlsLook kind, Color color) =>
         Diagram((dc, bounds) => Transport(dc, bounds.Width / 2, bounds.Height / 2, kind, color, playing: false));
 
+    // ---- Minimal Mode: the lyrics over a desktop (a real photo, so clear and translucent read as such) ----
+
+    private static BitmapSource? _wallpaper;
+
+    private static BitmapSource Wallpaper()
+    {
+        if (_wallpaper is null)
+        {
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.UriSource = new Uri("pack://application:,,,/Resources/Tour/fuji.jpg");
+            image.DecodePixelWidth = 240;
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.EndInit();
+            image.Freeze();
+            _wallpaper = image;
+        }
+        return _wallpaper;
+    }
+
+    /// <summary>A desktop with a floating verse on it: the given background, text colour and legibility.</summary>
+    public static ImageSource MinimalScene(MinimalBackdrop backdrop, double opacity, MinimalTextColor textColor, MinimalLegibility legibility,
+        BitmapSource? cover, (Color Start, Color End) palette, string verse)
+    {
+        var ink = MinimalInk.Text(textColor, palette);
+        var panel = MinimalInk.Backdrop(backdrop, opacity, cover, palette, ink);
+        return Draw(112, 64, (dc, bounds) =>
+        {
+            dc.PushClip(new RectangleGeometry(bounds, 5, 5));
+            var photo = Wallpaper();
+            // Filled and a little zoomed in: snow and sky, light and dark parts, as a real desktop has.
+            var zoom = Math.Max(bounds.Width / photo.PixelWidth, bounds.Height / photo.PixelHeight) * 1.15;
+            var (w, h) = (photo.PixelWidth * zoom, photo.PixelHeight * zoom);
+            dc.DrawImage(photo, new Rect((bounds.Width - w) / 2, (bounds.Height - h) * 0.65, w, h));
+            var card = new Rect(10, 18, bounds.Width - 20, 30);
+            if (panel is not null)
+                dc.DrawRoundedRectangle(panel, null, card, 6, 6);
+            var font = MiniPlayerViewModel.FontFor(LyricsTypeface.Modern);
+            var halo = MinimalInk.IsDark(ink) ? Colors.White : Colors.Black;
+            if (legibility == MinimalLegibility.Outline)
+            {
+                foreach (var (dx, dy) in new[] { (-.8, 0d), (.8, 0d), (0d, -.8), (0d, .8), (-.6, -.6), (.6, .6), (-.6, .6), (.6, -.6) })
+                    Text(dc, verse, font, 11, halo, card.X + 4 + dx, card.Y + 7 + dy, card.Width - 8, bold: true, alignment: TextAlignment.Center);
+            }
+            else if (legibility == MinimalLegibility.Shadow)
+            {
+                foreach (var (dx, dy, a) in new[] { (0d, 1.6, (byte)0x70), (0d, 1d, (byte)0x60), (.8, 1.2, (byte)0x40), (-.8, 1.2, (byte)0x40) })
+                    Text(dc, verse, font, 11, halo, card.X + 4 + dx, card.Y + 7 + dy, card.Width - 8, bold: true, opacity: a, alignment: TextAlignment.Center);
+            }
+            Text(dc, verse, font, 11, ink, card.X + 4, card.Y + 7, card.Width - 8, bold: true, alignment: TextAlignment.Center);
+            dc.Pop();
+        });
+    }
+
+    /// <summary>How many verses show: the current one bright, the others quieter, the rest gone.</summary>
+    public static ImageSource MinimalLines(MinimalLines lines, Color color) =>
+        Diagram((dc, bounds) =>
+        {
+            var (before, after) = lines switch
+            {
+                Models.MinimalLines.Current => (0, 0),
+                Models.MinimalLines.Next => (0, 1),
+                Models.MinimalLines.Five => (2, 2),
+                _ => (1, 1),
+            };
+            var count = before + after + 1;
+            var step = count >= 5 ? 7.5 : 9.5;
+            var top = (bounds.Height - ((count - 1) * step)) / 2 - 1.5;
+            for (var i = 0; i < count; i++)
+            {
+                var distance = i - before;
+                Line(dc, 14, top + (i * step), bounds.Width - 28, distance == 0 ? .9 : .66, TextAlignment.Center, color,
+                    distance == 0 ? (byte)0xFF : Math.Abs(distance) == 1 ? (byte)0x80 : (byte)0x48, distance == 0 ? 4 : 3);
+            }
+        });
+
     private static void Transport(DrawingContext dc, double x, double y, ControlsLook look, Color color, bool playing)
     {
         var classic = look == ControlsLook.Classic;

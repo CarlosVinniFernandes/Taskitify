@@ -13,26 +13,42 @@ public sealed class TrayIconService : IDisposable
     {
         var menu = new Forms.ContextMenuStrip();
 
-        menu.Items.Add(LocalizationService.Get("ShowPlayer"), null, (_, _) => showMiniPlayer());
-        var cardItem = new Forms.ToolStripMenuItem(LocalizationService.Get("LyricCardOpen"), null, (_, _) => showLyricCard());
+        var playerItem = new Forms.ToolStripMenuItem("", null, (_, _) => showMiniPlayer());
+        // Minimal Mode, and the way back when its lyrics let clicks through (they cannot be clicked then).
+        var minimalItem = new Forms.ToolStripMenuItem("", null, (_, _) => ToggleMinimal?.Invoke());
+        var clicksItem = new Forms.ToolStripMenuItem("", null, (_, _) => ToggleMinimalClicks?.Invoke());
+        var cardItem = new Forms.ToolStripMenuItem("", null, (_, _) => showLyricCard());
+        var settingsItem = new Forms.ToolStripMenuItem("", null, (_, _) => showSettings());
+        var tourItem = showTour is null ? null : new Forms.ToolStripMenuItem("", null, (_, _) => showTour());
+        _debugItem = new Forms.ToolStripMenuItem("", null, (_, _) => showDebug());
+        var exitItem = new Forms.ToolStripMenuItem("", null, (_, _) => exit());
+        menu.Items.Add(playerItem);
+        menu.Items.Add(minimalItem);
+        menu.Items.Add(clicksItem);
         menu.Items.Add(cardItem);
-        menu.Items.Add(LocalizationService.Get("Settings"), null, (_, _) => showSettings());
-        // Temporary, for reviewing the welcome tour before it is wired into the first run.
-        if (showTour is not null)
-            menu.Items.Add(LocalizationService.Get("TourOpen"), null, (_, _) => showTour());
-        _debugItem = new Forms.ToolStripMenuItem(LocalizationService.Get("Diagnostics"), null, (_, _) => showDebug());
+        menu.Items.Add(settingsItem);
+        if (tourItem is not null)
+            menu.Items.Add(tourItem);
         menu.Items.Add(_debugItem);
         menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add(LocalizationService.Get("Exit"), null, (_, _) => exit());
+        menu.Items.Add(exitItem);
 
         menu.Opening += (_, _) =>
         {
-            menu.Items[0].Text = LocalizationService.Get("ShowPlayer");
+            playerItem.Text = LocalizationService.Get("ShowPlayer");
+            var (minimal, clicksThrough) = Minimal?.Invoke() ?? (false, false);
+            minimalItem.Text = LocalizationService.Get("NavMinimal");
+            minimalItem.Checked = minimal;
+            clicksItem.Text = LocalizationService.Get("MinimalClickThrough");
+            clicksItem.Checked = clicksThrough;
+            clicksItem.Visible = minimal;
             cardItem.Text = LocalizationService.Get("LyricCardOpen");
             cardItem.Enabled = CanMakeLyricCard?.Invoke() ?? true;
-            menu.Items[2].Text = LocalizationService.Get("Settings");
+            settingsItem.Text = LocalizationService.Get("Settings");
+            if (tourItem is not null)
+                tourItem.Text = LocalizationService.Get("TourOpen");
             _debugItem.Text = LocalizationService.Get("Diagnostics");
-            menu.Items[5].Text = LocalizationService.Get("Exit");
+            exitItem.Text = LocalizationService.Get("Exit");
         };
 
         _icon = new Forms.NotifyIcon
@@ -54,6 +70,13 @@ public sealed class TrayIconService : IDisposable
         };
         _icon.BalloonTipClosed += (_, _) => _balloonClick = null;
     }
+
+    /// <summary>Minimal Mode's state: on, and letting clicks through.</summary>
+    public Func<(bool On, bool ClickThrough)>? Minimal { get; set; }
+
+    public Action? ToggleMinimal { get; set; }
+
+    public Action? ToggleMinimalClicks { get; set; }
 
     /// <summary>Whether a song is playing, so the lyric card item can be used.</summary>
     public Func<bool>? CanMakeLyricCard { get; set; }

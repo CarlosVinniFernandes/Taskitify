@@ -30,6 +30,7 @@ public partial class SettingsWindow : Window
         {
             _spotify.StatusChanged -= OnSpotifyStatus;
             _vm.MiniLook?.SetPreviewActive(false);
+            _vm.MinimalLook?.SetActive(false);
         };
         OnSpotifyStatus(this, EventArgs.Empty);
     }
@@ -39,6 +40,7 @@ public partial class SettingsWindow : Window
         var page = (SettingsPage)Pages.SelectedIndex;
         _vm.MiniLook?.SetPreviewActive(page is SettingsPage.Bar or SettingsPage.MinimizedBar or SettingsPage.MiniPlayer,
             showLooks: page == SettingsPage.MiniPlayer);
+        _vm.MinimalLook?.SetActive(page == SettingsPage.Minimal);
     }
 
     private void OnSpotifyStatus(object? sender, EventArgs e) =>
@@ -72,6 +74,7 @@ public enum SettingsPage
     Bar,
     MinimizedBar,
     MiniPlayer,
+    Minimal,
     Lyrics,
     Position,
     Advanced,

@@ -10,6 +10,11 @@ internal static class NativeMethods
     public const int WS_EX_TOOLWINDOW = 0x00000080;
     public const int WS_EX_NOACTIVATE = 0x08000000;
     public const int WS_EX_APPWINDOW = 0x00040000;
+    public const int WS_EX_TRANSPARENT = 0x00000020;
+    public const int WS_EX_LAYERED = 0x00080000;
+    public const int WM_NCHITTEST = 0x0084;
+    public const int WM_EXITSIZEMOVE = 0x0232;
+    public const int HTLEFT = 10, HTRIGHT = 11, HTTOP = 12, HTTOPLEFT = 13, HTTOPRIGHT = 14, HTBOTTOM = 15, HTBOTTOMLEFT = 16, HTBOTTOMRIGHT = 17;
 
     public static readonly IntPtr HWND_TOPMOST = new(-1);
 

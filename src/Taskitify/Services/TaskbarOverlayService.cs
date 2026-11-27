@@ -396,6 +396,9 @@ public sealed class TaskbarOverlayService : IDisposable
     {
         if (IsCalibrating)
             return null;
+        // Minimal Mode alone, unless the user keeps the taskbar player too (its layout is untouched).
+        if (_settings.Current.Minimal is { Enabled: true, KeepTaskbar: false })
+            return "minimal mode";
         if (_monitor.Track is null)
             return "no track";
         if (_monitor.Status != PlaybackState.Playing && !_vm.IsCompact)

@@ -92,6 +92,9 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>The mini player's appearance (set by the app, which knows the cover playing).</summary>
     public MiniPlayerLookViewModel? MiniLook { get; set; }
 
+    /// <summary>Minimal Mode's settings and pictures.</summary>
+    public MinimalLookViewModel? MinimalLook { get; set; }
+
     public bool IsMinimizeOnPause => S.PausedBehavior == PausedBehavior.Minimize;
 
     /// <summary>The minimized bar page explains why its settings are greyed out.</summary>

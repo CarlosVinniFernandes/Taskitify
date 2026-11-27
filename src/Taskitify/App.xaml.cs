@@ -35,6 +35,10 @@ public partial class App : Application
     private TaskbarOverlayService? _overlay;
     private MiniPlayerViewModel? _miniPlayerVm;
     private MiniPlayerWindow? _miniPlayer;
+    private MinimalLyricsViewModel? _minimalVm;
+    private MinimalLyricsWindow? _minimal;
+    // Minimal Mode is off but its look is being changed in the settings: shown until they close.
+    private bool _minimalPreview;
     private TrayIconService? _tray;
     private SettingsWindow? _settingsWindow;
     private SettingsViewModel? _settingsVm;
@@ -181,9 +185,22 @@ public partial class App : Application
         _miniPlayer = new MiniPlayerWindow(_miniPlayerVm, () => _settings.Current.EnableAnimations,
             () => _settings.Current.Background == Models.OverlayBackground.AlbumGradient);
 
+        _minimalVm = new MinimalLyricsViewModel(_monitor, _sync, _settings);
+        _minimalVm.MiniPlayerRequested += (_, _) =>
+        {
+            if (_minimal is { IsVisible: true } && _miniPlayer is { IsVisible: false })
+                OpenMiniPlayer(WindowInterop.GetBounds(WindowInterop.EnsureHandle(_minimal)));
+            else
+                _miniPlayer?.HidePopup();
+        };
+        _minimal = new MinimalLyricsWindow(_minimalVm, _settings, _monitor);
+
         _tray = new TrayIconService(ShowSettings, ShowMiniPlayerFromTray, ShowLyricCard, ShowDebug, Shutdown, ShowTour)
         {
             CanMakeLyricCard = () => _monitor?.Track is not null,
+            Minimal = () => (_settings.Current.Minimal.Enabled, _settings.Current.Minimal.ClickThrough),
+            ToggleMinimal = () => _settings.Update(s => s.Minimal.Enabled = !s.Minimal.Enabled),
+            ToggleMinimalClicks = () => _settings.Update(s => s.Minimal.ClickThrough = !s.Minimal.ClickThrough),
         };
         ApplySettings();
         _settings.Changed += (_, _) => ApplySettings();
@@ -220,6 +237,9 @@ public partial class App : Application
         IsShuttingDown = true;
         _settings?.Flush();
         _tray?.Dispose();
+        _minimal?.HideLyrics();
+        _settings?.Flush();
+        _minimalVm?.Dispose();
         _overlay?.Dispose();
         _miniPlayerVm?.Dispose();
         _taskbarVm?.Dispose();
@@ -258,9 +278,16 @@ public partial class App : Application
         _settingsVm = new SettingsViewModel(_settings, _cache, _sync, _overlay.IsCalibrating, _overlay.SetCalibrating)
         {
             MiniLook = new MiniPlayerLookViewModel(_settings, _monitor, _sync, _theme),
+            MinimalLook = new MinimalLookViewModel(_settings, _monitor, _theme),
         };
         // Customizing the mini player shows it, live, beside the settings.
         _settingsVm.MiniLook!.PreviewRequested += (_, _) => PreviewMiniPlayer();
+        _settingsVm.MinimalLook!.PreviewRequested += (_, _) =>
+        {
+            _minimalPreview = true;
+            UpdateMinimal();
+        };
+        _settingsVm.MinimalLook.ResetPlacementRequested += (_, _) => _minimal?.ResetPlacement();
         _settingsWindow = new SettingsWindow(_settingsVm, _spotifyLyrics!);
         if (page is { } first)
             _settingsWindow.ShowPage(first);
@@ -269,6 +296,8 @@ public partial class App : Application
             _settingsWindow = null;
             _settingsVm = null;
             _miniPlayer?.EndPreview();
+            _minimalPreview = false;
+            UpdateMinimal();
             _settings.Flush();
         };
         WindowInterop.SetDarkTitleBar(_settingsWindow, !_theme!.AppsUseLightTheme);
@@ -483,6 +512,19 @@ public partial class App : Application
         Log.WriteToFile = _settings.Current.DebugMode;
         _tray.Visible = _settings.Current.ShowTrayIcon;
         _tray.DebugEnabled = _settings.Current.DebugMode;
+        UpdateMinimal();
+    }
+
+    /// <summary>Minimal Mode's window follows its switch (and the settings' live preview).</summary>
+    private void UpdateMinimal()
+    {
+        if (_minimal is null || _settings is null)
+            return;
+        var on = _settings.Current.Minimal.Enabled;
+        if (on || _minimalPreview)
+            _minimal.ShowLyrics(preview: !on);
+        else
+            _minimal.HideLyrics();
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

@@ -208,6 +208,9 @@ public sealed class AppSettings
     /// <summary>How the mini player looks: layout, background, lyrics and controls, each on its own.</summary>
     public MiniPlayerStyle MiniPlayerLook { get; set; } = new();
 
+    /// <summary>Minimal Mode: the lyrics floating over the desktop, in a window of their own.</summary>
+    public MinimalModeSettings Minimal { get; set; } = new();
+
     /// <summary>Card settings the user saved under a name.</summary>
     public List<LyricCardPreset> LyricCardPresets { get; set; } = [];
 
@@ -518,4 +521,131 @@ public sealed class MiniPlayerStyle
     public LyricsAlignment Alignment { get; set; } = LyricsAlignment.Center;
 
     public ControlsLook Controls { get; set; } = ControlsLook.Classic;
+}
+
+/// <summary>How many verses Minimal Mode shows around the one being sung.</summary>
+public enum MinimalLines
+{
+    /// <summary>Only the current verse.</summary>
+    Current,
+
+    /// <summary>The current verse and the next one, like karaoke.</summary>
+    Next,
+
+    /// <summary>One before, the current one, one after.</summary>
+    Three,
+
+    /// <summary>Two before and two after.</summary>
+    Five,
+}
+
+/// <summary>What sits behind Minimal Mode's lyrics.</summary>
+public enum MinimalBackdrop
+{
+    /// <summary>Nothing: the lyrics alone on the desktop.</summary>
+    Clear,
+
+    /// <summary>A dark, translucent panel.</summary>
+    Soft,
+
+    /// <summary>The album's colours (the Aurora background), translucent.</summary>
+    Album,
+}
+
+public enum MinimalTextColor
+{
+    White,
+
+    /// <summary>A warm off-white, easier on the eyes over photos.</summary>
+    Warm,
+
+    /// <summary>A light tone of the album's main colour.</summary>
+    Album,
+
+    /// <summary>Near black, for light wallpapers and windows.</summary>
+    Dark,
+}
+
+/// <summary>Keeps the lyrics readable over any surface.</summary>
+public enum MinimalLegibility
+{
+    None,
+
+    /// <summary>A soft shadow around the letters.</summary>
+    Shadow,
+
+    /// <summary>A thin, tight halo: reads on busy and light surfaces too.</summary>
+    Outline,
+}
+
+/// <summary>
+/// Minimal Mode's settings. Its look (type, highlight, motion...) is its own, not the mini
+/// player's, so the two can differ; the position is in physical pixels (0 width: not placed yet).
+/// </summary>
+public sealed class MinimalModeSettings
+{
+    public bool Enabled { get; set; }
+
+    /// <summary>Also keep the taskbar player while the floating lyrics are on (off: the lyrics alone).</summary>
+    public bool KeepTaskbar { get; set; }
+
+    public bool Topmost { get; set; } = true;
+
+    /// <summary>The window can be neither moved nor resized.</summary>
+    public bool Locked { get; set; }
+
+    /// <summary>Clicks go to whatever is under the lyrics (turned off from the tray or the settings).</summary>
+    public bool ClickThrough { get; set; }
+
+    public LyricsHighlight Highlight { get; set; } = LyricsHighlight.Progressive;
+
+    public LyricMotionMode Motion { get; set; } = LyricMotionMode.Smooth;
+
+    public LyricsTypeface Typeface { get; set; } = LyricsTypeface.Modern;
+
+    public LyricsAlignment Alignment { get; set; } = LyricsAlignment.Center;
+
+    /// <summary>The current verse's size in DIPs.</summary>
+    public double FontSize { get; set; } = 30;
+
+    public MinimalLines Lines { get; set; } = MinimalLines.Three;
+
+    /// <summary>Room between verses, relative to the usual (0.6 to 1.8).</summary>
+    public double LineSpacing { get; set; } = 1;
+
+    public MinimalBackdrop Backdrop { get; set; } = MinimalBackdrop.Soft;
+
+    /// <summary>The background's opacity (0 to 1); a clear background has none.</summary>
+    public double BackdropOpacity { get; set; } = 0.55;
+
+    public MinimalTextColor TextColor { get; set; } = MinimalTextColor.White;
+
+    public MinimalLegibility Legibility { get; set; } = MinimalLegibility.Shadow;
+
+    /// <summary>The song's title and artist above the lyrics.</summary>
+    public bool ShowSong { get; set; }
+
+    /// <summary>Previous, play/pause and next under the lyrics.</summary>
+    public bool ShowControls { get; set; }
+
+    public int X { get; set; }
+
+    public int Y { get; set; }
+
+    public int Width { get; set; }
+
+    public int Height { get; set; }
+
+    /// <summary>Verses shown before and after the current one.</summary>
+    public (int Before, int After) Around => Lines switch
+    {
+        MinimalLines.Current => (0, 0),
+        MinimalLines.Next => (0, 1),
+        MinimalLines.Five => (2, 2),
+        _ => (1, 1),
+    };
+
+    public static double ClampFontSize(double size) => Math.Clamp(Math.Round(size), 18, 64);
+
+    public static double ClampSpacing(double spacing) => Math.Clamp(Math.Round(spacing * 10) / 10, 0.6, 1.8);
 }

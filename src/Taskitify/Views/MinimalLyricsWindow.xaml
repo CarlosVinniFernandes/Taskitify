@@ -1,0 +1,118 @@
+<Window x:Class="Taskitify.Views.MinimalLyricsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Taskitify.Views"
+        Title="Taskitify — Minimal Mode"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowActivated="False"
+        ShowInTaskbar="False"
+        Topmost="True"
+        Width="640" Height="200" MinWidth="220" MinHeight="72"
+        FontFamily="{StaticResource UiFont}"
+        TextOptions.TextFormattingMode="Ideal"
+        UseLayoutRounding="True">
+
+    <Window.Resources>
+        <Style x:Key="ToolButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style x:Key="TransportButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+            <Setter Property="Width" Value="36" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="FontSize" Value="15" />
+        </Style>
+    </Window.Resources>
+
+    <!-- Almost transparent, not transparent: a layered window ignores the mouse where it is fully
+         clear, and the whole window must be draggable, a clear background included. -->
+    <Grid x:Name="Root" Background="#01000000">
+        <Border x:Name="Backdrop" CornerRadius="14" />
+
+        <Grid Margin="16,4,16,10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Song (optional) and the window's own buttons, always there: move, settings, lock, close. -->
+            <Grid x:Name="TopRow" Margin="0,2,-10,0">
+                <TextBlock x:Name="SongText" Text="{Binding SongLine}" FontFamily="{Binding LyricsFont}" FontSize="{Binding SongFontSize}" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                           HorizontalAlignment="{Binding SongAlignment}" Margin="0,0,0,0" ToolTip="{Binding SongLine}"
+                           Visibility="{Binding ShowSong, Converter={StaticResource BoolToVisibility}}" />
+                <StackPanel x:Name="Toolbar" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Opacity="0.6">
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE8A7;" Command="{Binding MiniPlayerCommand}"
+                            ToolTip="{DynamicResource Loc.ShowPlayer}" AutomationProperties.Name="{DynamicResource Loc.ShowPlayer}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE713;" Command="{Binding SettingsCommand}"
+                            ToolTip="{DynamicResource Loc.MinimalSettings}" AutomationProperties.Name="{DynamicResource Loc.MinimalSettings}" />
+                    <Button x:Name="LockButton" Style="{StaticResource ToolButton}" Content="{Binding LockGlyph}" Command="{Binding ToggleLockCommand}"
+                            ToolTip="{Binding LockTip}" AutomationProperties.Name="{Binding LockTip}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE711;" Command="{Binding CloseCommand}"
+                            ToolTip="{DynamicResource Loc.MinimalClose}" AutomationProperties.Name="{DynamicResource Loc.MinimalClose}" />
+                </StackPanel>
+            </Grid>
+
+            <!-- The lyrics: the list slides so the current verse sits at its place; the verses
+                 outside the chosen number fade out. -->
+            <Grid x:Name="LyricsViewport" Grid.Row="1" ClipToBounds="True">
+                <Grid.OpacityMask>
+                    <LinearGradientBrush x:Name="LyricsFade" MappingMode="Absolute" StartPoint="0,0" EndPoint="0,100">
+                        <GradientStop Offset="0" Color="Transparent" />
+                        <GradientStop Offset="0.08" Color="Black" />
+                        <GradientStop Offset="0.92" Color="Black" />
+                        <GradientStop Offset="1" Color="Transparent" />
+                    </LinearGradientBrush>
+                </Grid.OpacityMask>
+                <Canvas x:Name="LyricsLayer">
+                    <ItemsControl x:Name="LyricsList" ItemsSource="{Binding Lines}" Width="{Binding ActualWidth, ElementName=LyricsViewport}">
+                        <ItemsControl.RenderTransform>
+                            <TranslateTransform x:Name="LyricsOffset" />
+                        </ItemsControl.RenderTransform>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <local:LyricMotionText Text="{Binding Text}" TextWrapping="Wrap"
+                                           LineStackingStrategy="BlockLineHeight"
+                                           LineHeight="{Binding DataContext.LineHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                           Expressive="{Binding DataContext.ExpressiveMotion, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                           TransitionMilliseconds="{Binding MotionMilliseconds}"
+                                           TextAlignment="{Binding DataContext.LyricsTextAlignment, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                           FontFamily="{Binding DataContext.LyricsFont, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                           FontSize="{Binding DataContext.LyricsFontSize, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                           Padding="{Binding DataContext.LinePadding, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                           RenderTransformOrigin="{Binding DataContext.ScaleOrigin, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                           Foreground="{DynamicResource TextPrimaryBrush}" TargetOpacity="{Binding Emphasis}"
+                                           FontWeight="{Binding Weight}" Effect="{Binding Soften}" TargetScale="{Binding Scale}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Canvas>
+                <TextBlock x:Name="StatusText" Text="{Binding StatusMessage}" TextWrapping="Wrap" VerticalAlignment="Center"
+                           TextAlignment="{Binding LyricsTextAlignment}" FontFamily="{Binding LyricsFont}" FontWeight="SemiBold"
+                           FontSize="{Binding SongFontSize}" Foreground="{DynamicResource TextSecondaryBrush}" Margin="6,0" />
+            </Grid>
+
+            <StackPanel x:Name="ControlsRow" Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="{Binding SongAlignment}" Margin="0,4,0,0"
+                        Visibility="{Binding ShowControls, Converter={StaticResource BoolToVisibility}}">
+                <Button Style="{StaticResource TransportButton}" Content="&#xE892;" Command="{Binding PreviousCommand}"
+                        ToolTip="{DynamicResource Loc.Previous}" AutomationProperties.Name="{DynamicResource Loc.Previous}" />
+                <Button Style="{StaticResource TransportButton}" Content="{Binding PlayGlyph}" Command="{Binding PlayPauseCommand}" Margin="4,0"
+                        ToolTip="{DynamicResource Loc.PlayPause}" AutomationProperties.Name="{DynamicResource Loc.PlayPause}" />
+                <Button Style="{StaticResource TransportButton}" Content="&#xE893;" Command="{Binding NextCommand}"
+                        ToolTip="{DynamicResource Loc.Next}" AutomationProperties.Name="{DynamicResource Loc.Next}" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Always-visible corner grip: drag it to resize (the edges resize too). Hidden when locked. -->
+        <Grid x:Name="ResizeGrip" Width="22" Height="22" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,3,3"
+              Background="Transparent" Cursor="SizeNWSE" Opacity="0.6" ToolTip="{DynamicResource Loc.MinimalResize}">
+            <Path Data="M16,4 L4,16 M16,9 L9,16 M16,14 L14,16" Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.6"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Grid>
+    </Grid>
+</Window>
