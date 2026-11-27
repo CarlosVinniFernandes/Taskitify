@@ -316,8 +316,6 @@ figcaption { color: var(--muted); font-size: .84rem; }
 .site-footer nav { flex-wrap: wrap; gap: 12px 20px; }
 
 .community-intro .soundtrack-inner { padding-block: clamp(54px, 8vw, 100px); }
-.suggestion-section { display: grid; grid-template-columns: minmax(0, .82fr) minmax(0, 1.15fr); gap: clamp(23px, 6vw, 85px); padding-block: clamp(58px, 8vw, 100px); scroll-margin-top: 16px; }
-.suggestion-section > div > p { margin-top: 15px; }
 .text-link { display: inline-block; color: var(--teal); text-decoration: underline; text-underline-offset: 4px; margin-top: 16px; }
 .song-form {
   min-width: 0;
@@ -384,7 +382,7 @@ figcaption { color: var(--muted); font-size: .84rem; }
   .hero-dock { padding-block: 4px; }
   .hero-dock img { width: 81%; }
   .everyday-shots { grid-template-columns: 1fr; gap: 20px; }
-  .soundtrack-inner, .feature-split, .suggestion-section { grid-template-columns: 1fr; }
+  .soundtrack-inner, .feature-split { grid-template-columns: 1fr; }
   .soundtrack-inner { gap: 24px; }
   .record-art { width: min(72%, 325px); justify-self: start; }
   .sleeve-title strong { font-size: clamp(1.45rem, 5vw, 2.55rem); }

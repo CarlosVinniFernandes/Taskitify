@@ -24,6 +24,8 @@ export type WallEntry = {
   status: "suggested" | "added";
 };
 
+export type GuestbookPage = { names: string[]; nextOffset: number | null };
+
 export type WallPage = { entries: WallEntry[]; hasMore: boolean };
 
 export function publicSuggestion(value: unknown): WallEntry | null {

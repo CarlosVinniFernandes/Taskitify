@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
-import { Music2 } from "lucide-react";
+import { Heart } from "lucide-react";
 import { copy, type Locale } from "@/lib/copy";
+import { guestbookCopy } from "@/lib/guestbook-copy";
 import { limits, type Fields } from "@/lib/suggestion-fields";
 
 type Feedback = "idle" | "sending" | "success" | "invalid" | "rate" | "error";
@@ -73,7 +74,7 @@ export function SongForm({ locale, initial, wallEnabled, onSaved }: {
       </div>
       <p id="form-note" className="form-note">{wallEnabled ? t.wall.formNote : t.note}</p>
       <button type="submit" className="button button-light">
-        <Music2 size={17} aria-hidden="true" /> {state === "sending" ? t.sending : t.send}
+        {state === "sending" ? t.sending : guestbookCopy[locale].submit} <Heart size={16} aria-hidden="true" />
       </button>
     </fieldset>
     <p className={`feedback ${state === "success" ? "feedback-success" : ""}`} role="status">

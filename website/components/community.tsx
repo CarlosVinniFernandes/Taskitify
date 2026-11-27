@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Music2 } from "lucide-react";
 import { copy, type Locale } from "@/lib/copy";
 import { pathFor } from "@/lib/site";
@@ -28,13 +27,8 @@ export async function Community({ locale, searchParams }: { locale: Locale; sear
           </div>
         </div>
       </section>
-      <CommunityContributions locale={locale} initial={initial} wallEnabled={communityWallEnabled()}>
-        <div>
-          <h2 id="suggest-title">{t.suggest}</h2>
-          <p>{t.formIntro}</p>
-          <Link className="text-link" href={pathFor(locale, "privacy")}>{t.privacy}</Link>
-        </div>
-      </CommunityContributions>
+      <CommunityContributions locale={locale} initial={initial} wallEnabled={communityWallEnabled()}
+        privacyHref={pathFor(locale, "privacy")} />
     </SiteShell>
   );
 }
