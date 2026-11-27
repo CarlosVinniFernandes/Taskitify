@@ -473,10 +473,10 @@
                     </Grid>
                 </Viewbox>
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="8,0,8,10">
-                    <TextBlock Text="{Binding Credit}" FontSize="15" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap"
-                               Foreground="{DynamicResource TextPrimaryBrush}" Visibility="{Binding Credit, Converter={StaticResource NullToCollapsed}}" />
-                    <TextBlock Text="{Binding PreviewDimensions}" FontSize="12" TextAlignment="Center" Margin="0,4,0,0"
+                    <TextBlock Text="{Binding PreviewDimensions}" FontSize="12" TextAlignment="Center"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock Text="{Binding Credit}" FontSize="15" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,0"
+                               Foreground="{DynamicResource TextPrimaryBrush}" Visibility="{Binding Credit, Converter={StaticResource NullToCollapsed}}" />
                 </StackPanel>
             </Grid>
         </Border>

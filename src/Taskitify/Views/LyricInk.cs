@@ -71,6 +71,7 @@ internal sealed class LyricInk(TextBlock text)
     {
         if (Math.Abs(edge - row.From) < 0.01)
             return Rect.Empty;
+        edge = Math.Clamp(edge, row.Bounds.Left, row.Bounds.Right);
         return row.To >= row.From
             ? new Rect(row.Bounds.Left, row.Bounds.Top, Math.Max(0, edge - row.Bounds.Left), row.Bounds.Height)
             : new Rect(edge, row.Bounds.Top, Math.Max(0, row.Bounds.Right - edge), row.Bounds.Height);
@@ -138,6 +139,7 @@ internal sealed class LyricInk(TextBlock text)
         }
         if (cells.Count == 0)
             return;
+        ClipAtLineBoundaries(rows, _size.Height);
         _rows = rows.ToArray();
         _cells = cells.ToArray();
         var frame = new Rect(_size);
@@ -151,6 +153,30 @@ internal sealed class LyricInk(TextBlock text)
             Viewport = frame, ViewportUnits = BrushMappingMode.Absolute,
             Stretch = Stretch.None,
         };
+    }
+
+    private static void ClipAtLineBoundaries(List<Row> rows, double bottom)
+    {
+        // Caret rectangles (plus overhang) can straddle the next line in a tightly spaced TextBlock.
+        // Runs on the same physical line share its boundary, including mixed text directions.
+        var end = rows.Count;
+        while (end > 0)
+        {
+            var first = end - 1;
+            while (first > 0 && Math.Abs(rows[first - 1].Bounds.Top - rows[end - 1].Bounds.Top) < 1)
+                first--;
+            for (var i = first; i < end; i++)
+            {
+                var row = rows[i];
+                var bounds = row.Bounds;
+                if (bounds.Bottom <= bottom)
+                    continue;
+                bounds.Height = Math.Max(0, bottom - bounds.Top);
+                rows[i] = row with { Bounds = bounds };
+            }
+            bottom = rows[first].Bounds.Top;
+            end = first;
+        }
     }
 
     private static T Freeze<T>(T value) where T : Freezable
