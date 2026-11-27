@@ -20,7 +20,7 @@ internal static class ContactInfo
 {
     // TODO before release: confirm the full address on carlosfernandes.dev (none was found in the project).
     public const string Email = "hello@carlosfernandes.dev";
-    public const string Repository = "https://github.com/CarlosVinniFernandes/Taskitify";
+    public const string Repository = OfficialLinks.Repository;
 
     public static string MailTo => $"mailto:{Email}?subject={Uri.EscapeDataString("Taskitify — feedback")}";
 }
@@ -88,6 +88,7 @@ public sealed class TourWindow : Window
         _steps.Add(new("Minimal", BuildMinimal, Atmosphere("#0A1420", "#14283A", "#3A4C66")));
         _steps.Add(new("Studio", BuildStudio, Atmosphere("#1A1622", "#3A2E3A", "#9A7B52")));
         _steps.Add(new("Privacy", BuildPrivacy, Atmosphere("#0C1A20", "#163037", "#2E5A55")));
+        _steps.Add(new("Community", BuildCommunity, Atmosphere("#12182A", "#23315A", "#8A5A6E")));
         _steps.Add(new("Home", BuildHome, Atmosphere("#111C2A", "#2A3550", "#B08A55"), CustomActions: true));
 
         // The atmosphere fills the whole window; only the content keeps the design proportions.
@@ -843,7 +844,42 @@ public sealed class TourWindow : Window
         return grid;
     }
 
-    // ---- 09 Make yourself at home ----------------------------------------------------------------
+    // ---- 09 Community Soundtrack ----------------------------------------------------------------
+
+    private FrameworkElement BuildCommunity()
+    {
+        var grid = Columns(500);
+        var left = Stack(Eyebrow(T("CommunityEyebrow")), Headline(T("CommunityTitle"), 40), Body(T("CommunityBody"), 16, top: 14),
+            Body(T("CommunityNote"), 13.5, top: 12));
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 26, 0, 0) };
+        buttons.Children.Add(Primary("\uE8D6  " + T("CommunityListen"), () => OfficialLinks.Open(OfficialLinks.Community)));
+        var suggest = Ghost("\uE710  " + T("CommunitySuggest"), () => OfficialLinks.Open(OfficialLinks.SuggestSong));
+        suggest.Margin = new Thickness(12, 0, 0, 0);
+        buttons.Children.Add(suggest);
+        left.Children.Add(buttons);
+        grid.Children.Add(left);
+
+        // A still mosaic of covers, as a playlist made by many people would look. No animation.
+        var mosaic = new UniformGrid { Columns = 3, Rows = 3, Width = 390, Height = 390, Margin = new Thickness(60, 0, 0, 0) };
+        var tints = new[] { "#2B4A5E", "#5E3A4F", "#3E5A3A", "#6B5330" };
+        for (var i = 0; i < 9; i++)
+        {
+            var tile = new Border { Margin = new Thickness(6), CornerRadius = new CornerRadius(10), ClipToBounds = true };
+            if (i % 2 == 0)
+                tile.Background = new ImageBrush(TourSong.All[i / 2 % TourSong.All.Length].Cover(256)) { Stretch = Stretch.UniformToFill };
+            else
+            {
+                tile.Background = Frozen((Color)ColorConverter.ConvertFromString(tints[i / 2 % tints.Length]));
+                tile.Child = new TextBlock { Text = "\uE8D6", FontFamily = Icons, FontSize = 26, Foreground = Faint, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+            }
+            mosaic.Children.Add(tile);
+        }
+        Grid.SetColumn(mosaic, 1);
+        grid.Children.Add(mosaic);
+        return grid;
+    }
+
+    // ---- 10 Make yourself at home ----------------------------------------------------------------
 
     private FrameworkElement BuildHome()
     {

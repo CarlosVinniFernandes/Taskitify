@@ -7,11 +7,12 @@ A shared link carries one Lyrics Studio composition and, optionally, a dedicatio
 the URL fragment, so the server never receives it:
 
 ```text
-https://<base>/s#<code>
+https://taskitify.vercel.app/s#<code>
 ```
 
-- Base address: `LyricShareLink.BaseUrl` in `src/Taskitify/Services/LyricShareLink.cs`, currently
-  `https://taskitify.carlosfernandes.dev/s` (**placeholder until the site's address is decided**).
+- Base address: `https://taskitify.vercel.app/s`, the official site (`OfficialLinks.LyricsShare` in
+  `src/Taskitify/Infrastructure/OfficialLinks.cs`, used by `LyricShareLink.BaseUrl`). The examples below
+  show only codes, so they do not depend on the address.
 - The page reads `location.hash` (without `#`), decodes it and renders the composition in the browser.
   No backend, database, upload or HTTP request is involved in making or opening a link.
 

@@ -18,10 +18,10 @@ namespace Taskitify.Services;
 public static class LyricShareLink
 {
     /// <summary>
-    /// Where shared compositions open. TODO before release: the official site's address (the web
-    /// renderer does not exist yet, so the feature stays hidden in production builds).
+    /// Where shared compositions open: the official site. Its viewer is not ready yet, so the feature
+    /// stays hidden in production builds (see <see cref="Enabled"/>).
     /// </summary>
-    public const string BaseUrl = "https://taskitify.carlosfernandes.dev/s";
+    public const string BaseUrl = Infrastructure.OfficialLinks.LyricsShare;
 
     public const int Version = 1;
 

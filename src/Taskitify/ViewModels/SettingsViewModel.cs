@@ -175,6 +175,10 @@ public sealed class SettingsViewModel : ObservableObject
 
     public ICommand OpenDataFolderCommand { get; }
 
+    public ICommand OpenWebsiteCommand { get; } = new RelayCommand(() => Infrastructure.OfficialLinks.Open(Infrastructure.OfficialLinks.Website));
+
+    public ICommand OpenCommunityCommand { get; } = new RelayCommand(() => Infrastructure.OfficialLinks.Open(Infrastructure.OfficialLinks.Community));
+
     /// <summary>Folder for the user's own .lrc files, which take precedence over LRCLIB.</summary>
     public ICommand OpenLyricsFolderCommand { get; }
 

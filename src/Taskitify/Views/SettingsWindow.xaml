@@ -238,6 +238,21 @@
                             </Border>
                         </StackPanel>
                     </Border>
+
+                    <Border Style="{StaticResource Group}" Margin="0,12,0,0">
+                        <Border Style="{StaticResource FirstRow}">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.WebsiteOpen}" Command="{Binding OpenWebsiteCommand}" Margin="0,0,8,0" />
+                                    <Button Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.CommunityOpen}" Command="{Binding OpenCommunityCommand}" />
+                                </StackPanel>
+                                <StackPanel Style="{StaticResource RowText}">
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.WebsiteTitle}" />
+                                    <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.WebsiteHint}" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                    </Border>
                 </StackPanel>
             </ScrollViewer>
         </TabItem>

@@ -437,5 +437,15 @@
   "CardShareCopy": "Copier le lien",
   "CardShareCopied": "Lien copié.",
   "CardShareTooLong": "Trop de contenu pour un lien : choisissez moins de lignes ou un message plus court.",
-  "CardShareSurprise": "Révéler comme une surprise"
+  "CardShareSurprise": "Révéler comme une surprise",
+  "TourCommunityEyebrow": "La bande-son de la communauté",
+  "TourCommunityTitle": "Des gens différents. Des lieux différents. Un même amour de la musique.",
+  "TourCommunityBody": "Nous créons une playlist de chansons suggérées par les utilisateurs de Taskitify du monde entier. La prochaine pourrait être la vôtre.",
+  "TourCommunityNote": "Les deux ouvrent le site de Taskitify dans votre navigateur.",
+  "TourCommunityListen": "Découvrir la playlist",
+  "TourCommunitySuggest": "Suggérer une chanson",
+  "WebsiteTitle": "Taskitify sur le web",
+  "WebsiteHint": "Nouveautés, la playlist de la communauté et suggestions de chansons.",
+  "WebsiteOpen": "Site web",
+  "CommunityOpen": "Communauté"
 }
