@@ -105,10 +105,24 @@ public partial class MiniPlayerWindow : Window
                 _pinned?.SetClickThrough(true);
             }
         };
-        MouseEnter += (_, _) => { UpdateHoverChrome(); UpdatePinnedToolbar(); };
-        MouseLeave += (_, _) => { UpdateHoverChrome(); UpdatePinnedToolbar(); };
-        PinnedSwitch.Click += (_, _) => _pinned?.SwitchMode();
-        PinnedSettings.Click += (_, _) => (Application.Current as App)?.ShowSettings(SettingsPage.NotMinimal);
+        // The pointer's own state: IsMouseOver can still be true while MouseLeave is raised.
+        MouseEnter += (_, _) => { _pointerOver = true; UpdateHoverChrome(); UpdatePinnedToolbar(); };
+        MouseLeave += (_, _) => { _pointerOver = false; UpdateHoverChrome(); UpdatePinnedToolbar(); };
+        IsVisibleChanged += (_, _) => { if (!IsVisible) _pointerOver = false; };
+        PinnedSwitch.Click += (_, _) =>
+        {
+            if (_pinned is { } p)
+                p.SwitchMode();
+            else
+                MinimalRequested?.Invoke(this, EventArgs.Empty);
+        };
+        PinnedSettings.Click += (_, _) => (Application.Current as App)?.ShowSettings(IsPinned ? SettingsPage.NotMinimal : SettingsPage.MiniPlayer);
+        PopupFloat.Click += (_, _) => FloatRequested?.Invoke(this, EventArgs.Empty);
+        PopupKeepOpen.Click += (_, _) =>
+        {
+            _keepOpen = !_keepOpen;
+            UpdatePinnedToolbar();
+        };
         PinnedClickThrough.Click += (_, _) => _pinned?.SetClickThrough(true);
         PinnedLock.Click += (_, _) => _pinned?.SetLocked(!_pinned.Locked);
         PinnedClose.Click += (_, _) => _pinned?.TurnOff();
@@ -268,7 +282,12 @@ public partial class MiniPlayerWindow : Window
             return;
         // Clicks on the overlay toggle the player themselves.
         if (!Contains(WindowInterop.GetBounds(_hwnd), x, y) && !Contains(_anchor, x, y))
-            Dispatcher.BeginInvoke(HidePopup);
+        {
+            if (!_keepOpen)
+                Dispatcher.BeginInvoke(HidePopup);
+            else if (VolumePopup.IsOpen)
+                Dispatcher.BeginInvoke(() => _vm.Volume.IsOpen = false);
+        }
         else if (VolumePopup.IsOpen && !ContainsVolumeButton(x, y))
             Dispatcher.BeginInvoke(() => _vm.Volume.IsOpen = false);
     }
@@ -301,6 +320,16 @@ public partial class MiniPlayerWindow : Window
     private bool _gripping;
     private NativeMethods.POINT _gripStart;
     private (double Width, double Lyrics, double Zoom, double WindowWidth, double WindowHeight) _gripFrom;
+
+    /// <summary>The popup's hover buttons: float the whole player, or switch to Minimal Mode.</summary>
+    public event EventHandler? FloatRequested;
+    public event EventHandler? MinimalRequested;
+
+    private bool _pointerOver;
+
+    // The popup kept open with its pin: clicks elsewhere and losing the focus no longer close it;
+    // Esc, a click on the bar's lyric or unpinning it still do.
+    private bool _keepOpen;
     private bool _gripShape;
     private (double Width, double Lyrics, double Zoom)? _gripPending;
 
@@ -387,7 +416,7 @@ public partial class MiniPlayerWindow : Window
         Topmost = true;
         BeginAnimation(ToolbarShownProperty, null);
         SetValue(ToolbarShownProperty, 0.0);
-        PinnedToolbar.Visibility = Visibility.Collapsed;
+        UpdatePinnedToolbar();
         foreach (UIElement part in new UIElement[] { ActionsPart, ProgressPart, ControlsPart })
             LyricMotionText.Tween(part, OpacityProperty, 1, 0, expressive: false);
         HidePopup(force: true);
@@ -433,13 +462,13 @@ public partial class MiniPlayerWindow : Window
     /// <summary>Floating with controls on hover: only the cover, the song and the lyrics until the pointer comes.</summary>
     private void UpdateHoverChrome()
     {
-        var hide = IsPinned && _pinned is { ControlsOnHover: true } && !IsMouseOver && !_gripping;
+        var hide = IsPinned && _pinned is { ControlsOnHover: true } && !_pointerOver && !_gripping;
         var target = hide ? 0.0 : 1.0;
         var duration = _animationsEnabled() && SystemParameters.ClientAreaAnimation ? 160 : 0;
         foreach (UIElement part in new UIElement[] { ActionsPart, ProgressPart, ControlsPart })
             LyricMotionText.Tween(part, OpacityProperty, target, duration, expressive: false);
         // The grip goes with the window's own buttons.
-        var grip = IsPinned && _pinned is { PlayerButtonsOnHover: true } && !IsMouseOver && !_gripping ? 0.0 : IsMouseOver || _gripping ? 1.0 : 0.6;
+        var grip = IsPinned && _pinned is { PlayerButtonsOnHover: true } && !_pointerOver && !_gripping ? 0.0 : _pointerOver || _gripping ? 1.0 : 0.6;
         LyricMotionText.Tween(PinnedGrip, OpacityProperty, grip, duration, expressive: false);
     }
 
@@ -656,6 +685,7 @@ public partial class MiniPlayerWindow : Window
             return;
         LastHidden = DateTime.UtcNow;
         _vm.IsActive = false;
+        _keepOpen = false;
         _outsideClicks.Stop();
         var restoreFocus = NativeMethods.GetForegroundWindow() == _hwnd;
         Hide();
@@ -667,7 +697,7 @@ public partial class MiniPlayerWindow : Window
     {
         base.OnDeactivated(e);
         // A preview stays while the settings are used; a menu of its own does not close it either.
-        if (IsPreview || IsPinned || ContentCard.ContextMenu is { IsOpen: true } || VolumePopup.Child is { IsKeyboardFocusWithin: true })
+        if (IsPreview || IsPinned || _keepOpen || ContentCard.ContextMenu is { IsOpen: true } || VolumePopup.Child is { IsKeyboardFocusWithin: true })
             return;
         HidePopup();
     }
@@ -954,8 +984,9 @@ public partial class MiniPlayerWindow : Window
 
     private void ApplyToolbarRoom()
     {
-        var shown = IsPinned ? ToolbarShown : 0;
-        var room = ToolbarRoom * shown;
+        // The buttons float over the player: the lyrics keep all of their room.
+        var shown = ToolbarShown;
+        var room = 0.0;
         var height = Math.Max(60, _lyricsBase - room);
         LyricsViewport.Height = height;
         LyricsFade.EndPoint = new Point(0, height);
@@ -972,15 +1003,28 @@ public partial class MiniPlayerWindow : Window
             LyricsPart.Margin = _lyricsMargin;
         }
         PinnedToolbar.Opacity = shown;
+        PinnedToolbar.IsHitTestVisible = shown > 0.5;
     }
 
     /// <summary>The floating toolbar: shown, or (buttons on hover) only while the pointer is over the player.</summary>
     private void UpdatePinnedToolbar()
     {
         var o = _pinned;
-        var available = IsPinned && o is { ClickThrough: false };
+        // Popup: on hover only; floating: unless clicks go through, on hover or always (its setting).
+        var available = IsPinned ? o is { ClickThrough: false } : !IsPreview;
         PinnedToolbar.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
-        var target = available && (IsMouseOver || _gripping || o is { PlayerButtonsOnHover: false }) ? 1.0 : 0.0;
+        var popupOnly = IsPinned ? Visibility.Collapsed : Visibility.Visible;
+        var pinnedOnly = IsPinned ? Visibility.Visible : Visibility.Collapsed;
+        PopupFloat.Visibility = PopupKeepOpen.Visibility = popupOnly;
+        PopupKeepOpen.Content = _keepOpen ? "\uE840" : "\uE718";
+        PopupKeepOpen.ToolTip = LocalizationService.Get(_keepOpen ? "KeepOpenOff" : "KeepOpen");
+        if (_keepOpen)
+            PopupKeepOpen.SetResourceReference(ForegroundProperty, "AccentBrush");
+        else
+            PopupKeepOpen.ClearValue(ForegroundProperty);
+        PinnedClickThrough.Visibility = PinnedLock.Visibility = PinnedClose.Visibility = pinnedOnly;
+        PinnedSettings.ToolTip = LocalizationService.Get(IsPinned ? "MinimalSettings" : "MiniPlayerSettings");
+        var target = available && (_pointerOver || _gripping || (IsPinned && o is { PlayerButtonsOnHover: false })) ? 1.0 : 0.0;
         if (IsPinned && o is { } p)
         {
             PinnedLock.Content = p.Locked ? "\uE72E" : "\uE785";

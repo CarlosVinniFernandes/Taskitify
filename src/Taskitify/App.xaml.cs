@@ -194,6 +194,13 @@ public partial class App : Application
         _miniPlayerVm.ShareRequested += (_, _) => ShowLyricCard();
         _miniPlayer = new MiniPlayerWindow(_miniPlayerVm, () => _settings.Current.EnableAnimations,
             () => _settings.Current.Background == Models.OverlayBackground.AlbumGradient);
+        // The popup's hover buttons.
+        _miniPlayer.FloatRequested += (_, _) => _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, true));
+        _miniPlayer.MinimalRequested += (_, _) =>
+        {
+            _miniPlayer.HidePopup(force: true);
+            _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, false));
+        };
 
         _minimalVm = new MinimalLyricsViewModel(_monitor, _sync, _settings);
         // The floating lyrics' first button: the whole player instead (Not that minimal).

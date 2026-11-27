@@ -230,16 +230,26 @@
                 </Border>
             </Grid>
         </Border>
-        <!-- Floating: the window's own buttons, top right, in the room the lyrics give up for them. -->
-        <StackPanel x:Name="PinnedToolbar" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,7,12,0"
-                    Visibility="Collapsed" Opacity="0">
-            <StackPanel.Resources>
+        <!-- The window's own buttons, over the top right corner while the pointer is on the player:
+             nothing moves or shrinks for them. Popup: float, Minimal Mode, settings. Floating: its own. -->
+        <Border x:Name="PinnedToolbar" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,5,6,0" Padding="2"
+                CornerRadius="9" Background="{DynamicResource PopupBackgroundBrush}" BorderBrush="{DynamicResource PopupBorderBrush}"
+                BorderThickness="1" Visibility="Collapsed" Opacity="0">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="10" ShadowDepth="1" Direction="270" Opacity="0.3" Color="Black" />
+            </Border.Effect>
+            <Border.Resources>
                 <Style x:Key="PinnedTool" TargetType="Button" BasedOn="{StaticResource IconButton}">
-                    <Setter Property="Width" Value="28" />
-                    <Setter Property="Height" Value="28" />
+                    <Setter Property="Width" Value="26" />
+                    <Setter Property="Height" Value="26" />
                     <Setter Property="FontSize" Value="12" />
                 </Style>
-            </StackPanel.Resources>
+            </Border.Resources>
+            <StackPanel Orientation="Horizontal">
+            <Button x:Name="PopupKeepOpen" Style="{StaticResource PinnedTool}" Content="&#xE718;"
+                    ToolTip="{DynamicResource Loc.KeepOpen}" AutomationProperties.Name="{DynamicResource Loc.KeepOpen}" />
+            <Button x:Name="PopupFloat" Style="{StaticResource PinnedTool}" Content="&#xE8A7;"
+                    ToolTip="{DynamicResource Loc.FloatPlayer}" AutomationProperties.Name="{DynamicResource Loc.FloatPlayer}" />
             <Button x:Name="PinnedSwitch" Style="{StaticResource PinnedTool}" Content="&#xE8D6;"
                     ToolTip="{DynamicResource Loc.SwitchToMinimal}" AutomationProperties.Name="{DynamicResource Loc.SwitchToMinimal}" />
             <Button x:Name="PinnedSettings" Style="{StaticResource PinnedTool}" Content="&#xE713;"
@@ -255,7 +265,8 @@
                     ToolTip="{DynamicResource Loc.MinimalLock}" AutomationProperties.Name="{DynamicResource Loc.MinimalLock}" />
             <Button x:Name="PinnedClose" Style="{StaticResource PinnedTool}" Content="&#xE711;"
                     ToolTip="{DynamicResource Loc.MinimalClose}" AutomationProperties.Name="{DynamicResource Loc.MinimalClose}" />
-        </StackPanel>
+            </StackPanel>
+        </Border>
         <Grid x:Name="PinnedMark" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10,0,0,8"
               Opacity="0.6" IsHitTestVisible="False" Visibility="Collapsed">
             <Path Data="M5,3 L5,15 L8,12 L10.5,17 L12.5,16 L10,11 L14,11 Z" Fill="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
