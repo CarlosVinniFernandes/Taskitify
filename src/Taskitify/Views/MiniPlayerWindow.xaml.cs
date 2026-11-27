@@ -96,6 +96,21 @@ public partial class MiniPlayerWindow : Window
         _vm.Like.JustLiked += (_, _) => LikeIcon.Pulse();
         ContentCard.ContextMenu = BuildMenu();
         ContentCard.MouseLeftButtonDown += OnPinnedDrag;
+        // Ctrl + Alt + click on the floating player: clicks pass through from now on.
+        ContentCard.PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            if (IsPinned && NativeMethods.GetAsyncKeyState(0x11) < 0 && NativeMethods.GetAsyncKeyState(0x12) < 0)
+            {
+                e.Handled = true;
+                _pinned?.SetClickThrough(true);
+            }
+        };
+        MouseEnter += (_, _) => UpdateHoverChrome();
+        MouseLeave += (_, _) => UpdateHoverChrome();
+        PinnedGrip.MouseLeftButtonDown += OnGripDown;
+        PinnedGrip.MouseMove += OnGripMove;
+        PinnedGrip.MouseLeftButtonUp += OnGripUp;
+        PinnedGrip.LostMouseCapture += (_, _) => _gripping = false;
         CoverPart.Cursor = Cursors.Hand;
         CoverPart.ToolTip = LocalizationService.Get("OpenInSpotify");
         CoverPart.MouseLeftButtonUp += (_, _) => OpenSpotify();
@@ -268,19 +283,30 @@ public partial class MiniPlayerWindow : Window
     /// <summary>"Not that minimal": the player floats, pinned (it does not close on a click outside or Esc).</summary>
     public bool IsPinned { get; private set; }
 
-    private Action<PixelRect>? _pinnedMoved;
+    private PinnedOptions? _pinned;
+    private ModifierClickWatcher? _unpinClicks;
+    private ForegroundWatcher? _pinnedForeground;
+    private bool _gripping;
+    private NativeMethods.POINT _gripStart;
+    private (double Width, double Lyrics) _gripFrom;
 
-    /// <summary>Shows the player floating at a saved place (or bottom right of the main screen), until <see cref="Unpin"/>.</summary>
-    public void ShowPinned(PixelRect saved, bool topmost, Action<PixelRect> moved)
+    /// <summary>
+    /// Shows the player floating at a saved place (or bottom right of the main screen), until
+    /// <see cref="Unpin"/>, with Minimal Mode's possibilities: clicks through (Ctrl + Alt + click
+    /// both ways), never taking the focus, above games, locked, resized with its grip.
+    /// </summary>
+    public void ShowPinned(PixelRect saved, PinnedOptions options)
     {
-        _pinnedMoved = moved;
+        _pinned = options;
         if (!IsPinned && IsVisible)
             HidePopup(force: true);
         IsPinned = true;
         IsPreview = false;
-        Topmost = topmost;
         if (IsVisible)
+        {
+            ApplyPinned();
             return;
+        }
         _vm.IsActive = true;
         ApplyLayout();
         ApplyControlsStyle();
@@ -300,8 +326,7 @@ public partial class MiniPlayerWindow : Window
             ? areas.Count > 0 ? FloatingPlacement.Snap(bounds, areas[0], FloatingSpot.BottomRight, 24) : bounds
             : FloatingPlacement.Resolve(new PixelRect(saved.X, saved.Y, bounds.Width, bounds.Height), areas, (bounds.Width, bounds.Height));
         WindowInterop.SetPosition(_hwnd, place.X, place.Y);
-        if (!topmost)
-            NativeMethods.SetWindowPos(_hwnd, new IntPtr(-2), 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
+        ApplyPinned();
         SetBrowsing(false);
         ScrollToCurrent(animate: false);
         QueueLyrics(animate: false);
@@ -313,14 +338,135 @@ public partial class MiniPlayerWindow : Window
         if (!IsPinned)
             return;
         IsPinned = false;
+        _pinned = null;
+        _unpinClicks?.Stop();
+        _pinnedForeground?.Dispose();
+        _pinnedForeground = null;
+        PinnedMark.Visibility = PinnedGrip.Visibility = Visibility.Collapsed;
+        SetExStyle(transparent: false, noActivate: false);
+        _vm.FitScale = 1;
         Topmost = true;
+        foreach (UIElement part in new UIElement[] { ActionsPart, ProgressPart, ControlsPart })
+            LyricMotionText.Tween(part, OpacityProperty, 1, 0, expressive: false);
         HidePopup(force: true);
+        ApplyLayout();
+    }
+
+    /// <summary>The options as they are now (called on every settings change while pinned).</summary>
+    private void ApplyPinned()
+    {
+        if (_pinned is not { } o)
+            return;
+        Topmost = o.Topmost;
+        if (!o.Topmost)
+            NativeMethods.SetWindowPos(_hwnd, new IntPtr(-2), 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
+        // Games keep the focus: the player never takes it while floating.
+        SetExStyle(o.ClickThrough, noActivate: true);
+        PinnedMark.Visibility = o.ClickThrough && o.ShowMark ? Visibility.Visible : Visibility.Collapsed;
+        PinnedGrip.Visibility = o.ClickThrough || o.Locked ? Visibility.Collapsed : Visibility.Visible;
+        _unpinClicks ??= new ModifierClickWatcher(
+            (x, y) => IsVisible && IsPinned && Contains(WindowInterop.GetBounds(_hwnd), x, y),
+            () => Dispatcher.BeginInvoke(() => _pinned?.SetClickThrough(false)));
+        if (o.ClickThrough)
+            _unpinClicks.Start();
+        else
+            _unpinClicks.Stop();
+        if (o.Topmost && _pinnedForeground is null)
+            _pinnedForeground = new ForegroundWatcher(h =>
+            {
+                if (h != _hwnd && IsPinned && _pinned?.Topmost == true)
+                    WindowInterop.BringToTopmost(_hwnd);
+            });
+        else if (!o.Topmost && _pinnedForeground is not null)
+        {
+            _pinnedForeground.Dispose();
+            _pinnedForeground = null;
+        }
+        ApplyLayout();
+        UpdateFit();
+        UpdateHoverChrome();
+    }
+
+    /// <summary>Floating with controls on hover: only the cover, the song and the lyrics until the pointer comes.</summary>
+    private void UpdateHoverChrome()
+    {
+        var hide = IsPinned && _pinned is { ControlsOnHover: true } && !IsMouseOver && !_gripping;
+        var target = hide ? 0.0 : 1.0;
+        var duration = _animationsEnabled() && SystemParameters.ClientAreaAnimation ? 160 : 0;
+        foreach (UIElement part in new UIElement[] { ActionsPart, ProgressPart, ControlsPart, PinnedGrip })
+            LyricMotionText.Tween(part, OpacityProperty, part == PinnedGrip && !hide ? 0.6 : target, duration, expressive: false);
+    }
+
+    private void SetExStyle(bool transparent, bool noActivate)
+    {
+        if (_hwnd == IntPtr.Zero)
+            return;
+        var ex = NativeMethods.GetWindowLong(_hwnd, NativeMethods.GWL_EXSTYLE);
+        var wanted = transparent ? ex | NativeMethods.WS_EX_TRANSPARENT : ex & ~NativeMethods.WS_EX_TRANSPARENT;
+        wanted = noActivate ? wanted | NativeMethods.WS_EX_NOACTIVATE : wanted & ~NativeMethods.WS_EX_NOACTIVATE;
+        if (wanted != ex)
+            NativeMethods.SetWindowLong(_hwnd, NativeMethods.GWL_EXSTYLE, wanted);
+    }
+
+    /// <summary>Lyrics shorter than usual (resized with the grip): their type shrinks with them, if chosen.</summary>
+    private void UpdateFit()
+    {
+        var usual = _vm.IsCinema ? (_vm.ShowCover ? 268 : 200) : 176;
+        _vm.FitScale = IsPinned && _pinned is { AutoFit: true } ? LyricsViewport.Height / usual : 1;
+    }
+
+    /// <summary>One click from Settings: the floating player moved to a spot of its screen.</summary>
+    public void PlaceAt(FloatingSpot spot)
+    {
+        if (!IsPinned || !IsVisible)
+            return;
+        var bounds = WindowInterop.GetBounds(_hwnd);
+        if (WindowInterop.MonitorForRect(bounds) is not { } monitor)
+            return;
+        // The shadow margin (12 DIPs) is part of the window: the card itself keeps the distance.
+        var place = FloatingPlacement.Snap(bounds, monitor.WorkArea, spot, (int)Math.Round(20 * WindowInterop.GetScale(_hwnd)));
+        WindowInterop.SetPosition(_hwnd, place.X, place.Y);
+        SavePinned();
+    }
+
+    private void SavePinned() =>
+        _pinned?.Saved(WindowInterop.GetBounds(_hwnd), (int)Math.Round(Width), (int)Math.Round(LyricsViewport.Height));
+
+    private void OnGripDown(object sender, MouseButtonEventArgs e)
+    {
+        if (!IsPinned || _pinned is { Locked: true } or { ClickThrough: true })
+            return;
+        NativeMethods.GetCursorPos(out _gripStart);
+        _gripFrom = (Width, LyricsViewport.Height);
+        _gripping = PinnedGrip.CaptureMouse();
+        e.Handled = true;
+    }
+
+    private void OnGripMove(object sender, MouseEventArgs e)
+    {
+        if (!_gripping)
+            return;
+        NativeMethods.GetCursorPos(out var now);
+        var scale = WindowInterop.GetScale(_hwnd);
+        var (min, max) = _vm.IsCinema ? (584.0, 744.0) : (334.0, 664.0);
+        Width = Math.Clamp(_gripFrom.Width + ((now.X - _gripStart.X) / scale), min, max);
+        SetLyricsHeight(Math.Clamp(_gripFrom.Lyrics + ((now.Y - _gripStart.Y) / scale), 90, 640));
+        UpdateFit();
+    }
+
+    private void OnGripUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_gripping)
+            return;
+        _gripping = false;
+        PinnedGrip.ReleaseMouseCapture();
+        SavePinned();
     }
 
     /// <summary>Pinned: dragged by any part that is not a control (buttons, progress, lyrics).</summary>
     private void OnPinnedDrag(object sender, MouseButtonEventArgs e)
     {
-        if (!IsPinned || e.OriginalSource is not DependencyObject source)
+        if (!IsPinned || _pinned is { Locked: true } || e.OriginalSource is not DependencyObject source)
             return;
         for (var node = source; node is not null && node != ContentCard; node = node is Visual ? VisualTreeHelper.GetParent(node) : null)
         {
@@ -329,7 +475,7 @@ public partial class MiniPlayerWindow : Window
         }
         try { DragMove(); }
         catch (InvalidOperationException) { return; }
-        _pinnedMoved?.Invoke(WindowInterop.GetBounds(_hwnd));
+        SavePinned();
     }
 
     public void ShowAt(PixelRect anchor, PixelRect workArea, double scale, bool preview = false)
@@ -500,7 +646,8 @@ public partial class MiniPlayerWindow : Window
                 break;
             case nameof(MiniPlayerViewModel.WindowWidth):
                 // Not a XAML binding: the window writes its HWND's size to Width, which drops one.
-                Width = _vm.WindowWidth;
+                if (!(IsPinned && _pinned is { Width: > 0 }))
+                    Width = _vm.WindowWidth;
                 break;
             case nameof(MiniPlayerViewModel.StatusMessage):
                 StatusText.Visibility = string.IsNullOrEmpty(_vm.StatusMessage) ? Visibility.Collapsed : Visibility.Visible;
@@ -649,7 +796,7 @@ public partial class MiniPlayerWindow : Window
             ActionsPart.Margin = new Thickness(-8, 6, 0, 0);
             ActionsPart.HorizontalAlignment = HorizontalAlignment.Left;
             LyricsPart.Margin = new Thickness(18, 0, 0, 8);
-            SetLyricsHeight(_vm.ShowCover ? 268 : 200);
+            SetLyricsHeight(IsPinned && _pinned is { LyricsHeight: > 0 } c ? c.LyricsHeight : _vm.ShowCover ? 268 : 200);
             HeaderPart.VerticalAlignment = VerticalAlignment.Top;
         }
         else
@@ -672,9 +819,9 @@ public partial class MiniPlayerWindow : Window
             ActionsPart.Margin = new Thickness(8, 0, -6, 0);
             ActionsPart.HorizontalAlignment = HorizontalAlignment.Right;
             LyricsPart.Margin = new Thickness(0, 12, 0, 6);
-            SetLyricsHeight(176);
+            SetLyricsHeight(IsPinned && _pinned is { LyricsHeight: > 0 } v ? v.LyricsHeight : 176);
         }
-        Width = _vm.WindowWidth;
+        Width = IsPinned && _pinned is { Width: > 0 } w ? Math.Clamp(w.Width, cinema ? 584 : 334, cinema ? 744 : 664) : _vm.WindowWidth;
     }
 
     private static void Place(UIElement element, int row, int column, int span = 1)
@@ -843,3 +990,7 @@ public partial class MiniPlayerWindow : Window
         _lyricInk.Refresh();
     }
 }
+
+/// <summary>How the floating player behaves (Minimal Mode's settings) and where its changes go.</summary>
+public sealed record PinnedOptions(bool ClickThrough, bool Locked, bool Topmost, bool ShowMark, bool AutoFit, bool ControlsOnHover, int Width, int LyricsHeight,
+    Action<bool> SetClickThrough, Action<PixelRect, int, int> Saved);

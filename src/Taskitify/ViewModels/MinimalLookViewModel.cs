@@ -243,6 +243,7 @@ public sealed class MinimalLookViewModel : ObservableObject
     public bool ShowLockButton { get => S.ShowLockButton; set => Change(s => s.ShowLockButton = value); }
     public bool ShowCloseButton { get => S.ShowCloseButton; set => Change(s => s.ShowCloseButton = value); }
     public bool ShowClickThroughMark { get => S.ShowClickThroughMark; set => Change(s => s.ShowClickThroughMark = value); }
+    public bool ControlsOnHover { get => S.ControlsOnHover; set => Change(s => s.ControlsOnHover = value); }
 
     // ---- Lyrics ----
 

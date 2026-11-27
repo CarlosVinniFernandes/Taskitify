@@ -598,5 +598,12 @@
   "MinimalWhenPaused": "In pausa",
   "NotMinimalTitle": "Il mini player completo, fluttuante",
   "NotMinimalHint": "Trascinalo ovunque; resta dove lo lasci. Anche la scorciatoia e le app della scheda Minimal Mode lo attivano e disattivano. Gli aspetti qui sotto sono quelli del mini player.",
-  "NotMinimalPageHint": "Per chi vuole di più: il mini player completo che fluttua sopra Windows, con tutti i suoi aspetti."
+  "NotMinimalPageHint": "Per chi vuole di più: il mini player completo che fluttua sopra Windows, con tutti i suoi aspetti.",
+  "NotMinimalShared": "Condiviso con Minimal Mode.",
+  "NotMinimalClickThroughHint": "I clic vanno al gioco o all'app sotto. Ctrl + Alt + clic sul player alterna, in entrambi i sensi.",
+  "NotMinimalLockedHint": "Sbloccato, trascina il player dallo sfondo e ridimensionalo dall'angolo.",
+  "NotMinimalAutoFit": "Riduci i testi automaticamente",
+  "NotMinimalAutoFitHint": "Rimpicciolito dall'angolo, i testi si riducono con lui.",
+  "ControlsOnHover": "Controlli solo al passaggio del mouse",
+  "ControlsOnHoverHint": "Più pulito: pulsanti, angolo, controlli e avanzamento compaiono al passaggio del mouse. Vale per testi e player fluttuanti."
 }

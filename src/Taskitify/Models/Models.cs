@@ -758,6 +758,12 @@ public sealed class MinimalModeSettings
 
     public int PlayerWidth { get; set; }
 
+    /// <summary>The floating player's lyrics area height (DIPs), set with its grip; 0 for the usual.</summary>
+    public int PlayerLyricsHeight { get; set; }
+
+    /// <summary>The floating player's window width (DIPs), set with its grip; 0 for the mini player's.</summary>
+    public int PlayerWindowWidth { get; set; }
+
     /// <summary>Also keep the taskbar player while the floating lyrics are on (off: the lyrics alone).</summary>
     public bool KeepTaskbar { get; set; }
 
@@ -818,6 +824,12 @@ public sealed class MinimalModeSettings
     public bool ShowLockButton { get; set; } = true;
     public bool ShowCloseButton { get; set; } = true;
     public bool ShowClickThroughMark { get; set; } = true;
+
+    /// <summary>
+    /// Cleaner: the buttons, the grip and (floating player) the controls and progress appear only
+    /// while the pointer is over the window. Off by default: nothing important waits for a hover.
+    /// </summary>
+    public bool ControlsOnHover { get; set; }
 
     public int X { get; set; }
 

@@ -598,5 +598,12 @@
   "MinimalWhenPaused": "Ao pausar",
   "NotMinimalTitle": "O mini player completo, flutuando",
   "NotMinimalHint": "Arraste para qualquer lugar; ele fica onde você deixar. O atalho e os apps da aba Minimal Mode também ligam e desligam. Os visuais abaixo são os do mini player.",
-  "NotMinimalPageHint": "Para quem quer mais: o mini player completo flutuando sobre o Windows, com todos os seus visuais."
+  "NotMinimalPageHint": "Para quem quer mais: o mini player completo flutuando sobre o Windows, com todos os seus visuais.",
+  "NotMinimalShared": "Compartilhado com o Minimal Mode.",
+  "NotMinimalClickThroughHint": "Os cliques vão para o jogo ou app embaixo. Ctrl + Alt + clique no player alterna, nos dois sentidos.",
+  "NotMinimalLockedHint": "Destravado, arraste o player pelo fundo e redimensione pela alça do canto.",
+  "NotMinimalAutoFit": "Diminuir letras automaticamente",
+  "NotMinimalAutoFitHint": "Ao diminuir pela alça, as letras encolhem junto.",
+  "ControlsOnHover": "Controles só ao passar o mouse",
+  "ControlsOnHoverHint": "Mais limpo: botões, alça, controles e progresso aparecem quando o mouse passa por cima. Vale para as letras e o player flutuantes."
 }

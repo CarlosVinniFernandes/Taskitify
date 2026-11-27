@@ -286,7 +286,24 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     public double MotionLineHeight => LyricsFontSize * 1.12;
 
-    public double LyricsFontSize => (IsCinema ? 28 : 23) * Math.Clamp(Look.LyricsScale, .8, 1.4) * (DisplayType ? 1 : .86);
+    public double LyricsFontSize => (IsCinema ? 28 : 23) * Math.Clamp(Look.LyricsScale, .8, 1.4) * (DisplayType ? 1 : .86) * _fitScale;
+
+    private double _fitScale = 1;
+
+    /// <summary>Floating and resized smaller: the lyrics shrink with it (1: their usual size).</summary>
+    public double FitScale
+    {
+        get => _fitScale;
+        set
+        {
+            value = Math.Clamp(value, 0.55, 1);
+            if (Math.Abs(value - _fitScale) < 0.01)
+                return;
+            _fitScale = value;
+            OnPropertyChanged(nameof(LyricsFontSize));
+            OnPropertyChanged(nameof(MotionLineHeight));
+        }
+    }
 
     /// <summary>The song's title in the same type as the lyrics.</summary>
     public FontFamily TitleFont => DisplayType ? LyricsFont : (FontFamily)System.Windows.Application.Current.FindResource("UiDisplayFont");

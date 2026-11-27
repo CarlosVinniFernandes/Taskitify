@@ -598,5 +598,12 @@
   "MinimalWhenPaused": "While paused",
   "NotMinimalTitle": "The whole mini player, floating",
   "NotMinimalHint": "Drag it anywhere; it stays where you leave it. The shortcut and the apps of the Minimal Mode page turn it on and off too. The looks below are the mini player's.",
-  "NotMinimalPageHint": "For those who want more: the whole mini player floating over Windows, with all of its looks."
+  "NotMinimalPageHint": "For those who want more: the whole mini player floating over Windows, with all of its looks.",
+  "NotMinimalShared": "Shared with Minimal Mode.",
+  "NotMinimalClickThroughHint": "Clicks go to the game or app underneath. Ctrl + Alt + click on the player switches it, both ways.",
+  "NotMinimalLockedHint": "Unlocked, drag the player by its background and resize it from the corner grip.",
+  "NotMinimalAutoFit": "Shrink lyrics automatically",
+  "NotMinimalAutoFitHint": "Made smaller with the grip, the lyrics shrink with it.",
+  "ControlsOnHover": "Show controls only on hover",
+  "ControlsOnHoverHint": "Cleaner: the buttons, grip, controls and progress appear when the pointer is over it. Shared by the floating lyrics and the floating player."
 }

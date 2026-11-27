@@ -598,5 +598,12 @@
   "MinimalWhenPaused": "Al pausar",
   "NotMinimalTitle": "El mini reproductor completo, flotando",
   "NotMinimalHint": "Arrástralo a cualquier lugar; se queda donde lo dejes. El atajo y las apps de la pestaña Minimal Mode también lo activan y desactivan. Los estilos de abajo son los del mini reproductor.",
-  "NotMinimalPageHint": "Para quien quiere más: el mini reproductor completo flotando sobre Windows, con todos sus estilos."
+  "NotMinimalPageHint": "Para quien quiere más: el mini reproductor completo flotando sobre Windows, con todos sus estilos.",
+  "NotMinimalShared": "Compartido con Minimal Mode.",
+  "NotMinimalClickThroughHint": "Los clics van al juego o la app de abajo. Ctrl + Alt + clic en el reproductor lo alterna, en ambos sentidos.",
+  "NotMinimalLockedHint": "Desbloqueado, arrastra el reproductor por el fondo y cambia su tamaño desde la esquina.",
+  "NotMinimalAutoFit": "Reducir letras automáticamente",
+  "NotMinimalAutoFitHint": "Al hacerlo más pequeño con la esquina, las letras se reducen con él.",
+  "ControlsOnHover": "Controles solo al pasar el ratón",
+  "ControlsOnHoverHint": "Más limpio: los botones, la esquina, los controles y el progreso aparecen al pasar el ratón. Vale para las letras y el reproductor flotantes."
 }

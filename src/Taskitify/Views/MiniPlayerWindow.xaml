@@ -50,6 +50,8 @@
             </Border.Effect>
         </Border>
 
+        <!-- Floating (not that minimal): clicks pass through, marked by the crossed-out pointer;
+             the corner grip resizes it. Both only while pinned. -->
         <Border x:Name="ContentCard" CornerRadius="12" Background="{DynamicResource PopupBackgroundBrush}"
                 BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="1" Padding="16,16,16,10" ClipToBounds="True">
             <!-- The parts below are placed by the layout (vertical or cinema wide) in code: one set, two arrangements. -->
@@ -228,5 +230,16 @@
                 </Border>
             </Grid>
         </Border>
+        <Grid x:Name="PinnedMark" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10,0,0,8"
+              Opacity="0.6" IsHitTestVisible="False" Visibility="Collapsed">
+            <Path Data="M5,3 L5,15 L8,12 L10.5,17 L12.5,16 L10,11 L14,11 Z" Fill="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <Path Data="M3,17 L17,3" Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Grid>
+        <Grid x:Name="PinnedGrip" Width="22" Height="22" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,2"
+              Background="Transparent" Cursor="SizeNWSE" Opacity="0.6" Visibility="Collapsed" ToolTip="{DynamicResource Loc.MinimalResize}">
+            <Path Data="M16,4 L4,16 M16,9 L9,16 M16,14 L14,16" Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.6"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Grid>
     </Grid>
 </Window>

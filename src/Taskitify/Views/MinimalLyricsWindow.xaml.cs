@@ -163,8 +163,8 @@ public partial class MinimalLyricsWindow : Window
         Root.PreviewMouseMove += OnResizeMove;
         Root.PreviewMouseLeftButtonUp += (_, _) => EndResize();
         Root.LostMouseCapture += (_, _) => EndResize();
-        Root.MouseEnter += (_, _) => Toolbar.Opacity = ResizeGrip.Opacity = 1;
-        Root.MouseLeave += (_, _) => Toolbar.Opacity = ResizeGrip.Opacity = 0.6;
+        Root.MouseEnter += (_, _) => UpdateChromeOpacity();
+        Root.MouseLeave += (_, _) => UpdateChromeOpacity();
 
         SourceInitialized += (_, _) =>
         {
@@ -301,6 +301,7 @@ public partial class MinimalLyricsWindow : Window
         Cursor = s.Locked ? null : Cursors.SizeAll;
         ResizeGrip.Visibility = s.Locked || s.ClickThrough ? Visibility.Collapsed : Visibility.Visible;
         ClickThroughMark.Visibility = s.ClickThrough && s.ShowClickThroughMark ? Visibility.Visible : Visibility.Collapsed;
+        UpdateChromeOpacity();
         if (s.ClickThrough && IsVisible)
             _unlockClick.Start();
         else
@@ -410,6 +411,15 @@ public partial class MinimalLyricsWindow : Window
     {
         if (_hwnd != IntPtr.Zero && IsVisible && _settings.Current.Minimal.Topmost)
             WindowInterop.BringToTopmost(_hwnd);
+    }
+
+    /// <summary>The buttons and grip: quiet, or (controls on hover) gone until the pointer is over the lyrics.</summary>
+    private void UpdateChromeOpacity()
+    {
+        var target = Root.IsMouseOver ? 1 : _settings.Current.Minimal.ControlsOnHover ? 0 : 0.6;
+        var duration = _settings.Current.EnableAnimations && SystemParameters.ClientAreaAnimation ? 140 : 0;
+        LyricMotionText.Tween(Toolbar, OpacityProperty, target, duration, expressive: false);
+        LyricMotionText.Tween(ResizeGrip, OpacityProperty, target, duration, expressive: false);
     }
 
     private void UpdateStatus()

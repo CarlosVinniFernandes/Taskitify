@@ -598,5 +598,12 @@
   "MinimalWhenPaused": "En pause",
   "NotMinimalTitle": "Le mini lecteur complet, flottant",
   "NotMinimalHint": "Faites-le glisser n'importe où ; il reste là où vous le laissez. Le raccourci et les apps de l'onglet Minimal Mode l'activent et le désactivent aussi. Les apparences ci-dessous sont celles du mini lecteur.",
-  "NotMinimalPageHint": "Pour ceux qui en veulent plus : le mini lecteur complet flottant au-dessus de Windows, avec toutes ses apparences."
+  "NotMinimalPageHint": "Pour ceux qui en veulent plus : le mini lecteur complet flottant au-dessus de Windows, avec toutes ses apparences.",
+  "NotMinimalShared": "Partagé avec le Minimal Mode.",
+  "NotMinimalClickThroughHint": "Les clics vont au jeu ou à l'app en dessous. Ctrl + Alt + clic sur le lecteur bascule, dans les deux sens.",
+  "NotMinimalLockedHint": "Déverrouillé, faites glisser le lecteur par son fond et redimensionnez-le par le coin.",
+  "NotMinimalAutoFit": "Réduire les paroles automatiquement",
+  "NotMinimalAutoFitHint": "Rétréci par le coin, les paroles rétrécissent avec lui.",
+  "ControlsOnHover": "Commandes seulement au survol",
+  "ControlsOnHoverHint": "Plus épuré : boutons, coin, commandes et progression apparaissent au survol. Commun aux paroles et au lecteur flottants."
 }

@@ -301,7 +301,13 @@ public partial class App : Application
             UpdateMinimal();
         };
         _settingsVm.MinimalLook.ResetPlacementRequested += (_, _) => _minimal?.ResetPlacement();
-        _settingsVm.MinimalLook.PlaceRequested += (_, spot) => _minimal?.PlaceAt(spot);
+        _settingsVm.MinimalLook.PlaceRequested += (_, spot) =>
+        {
+            if (_miniPlayer is { IsPinned: true })
+                _miniPlayer.PlaceAt(spot);
+            else
+                _minimal?.PlaceAt(spot);
+        };
         _settingsVm.MinimalLook.HotkeyTaken = () => _hotkeyTaken;
         _settingsVm.MinimalLook.CapturingChanged += (_, _) =>
         {
@@ -663,7 +669,8 @@ public partial class App : Application
     /// <summary>Minimal Mode's window follows its switch (and the settings' live preview).</summary>
     private void UpdateMinimal()
     {
-        if (_minimal is null || _settings is null)
+        // Settings saved while closing (the windows' last places) must not show them again.
+        if (_minimal is null || _settings is null || IsShuttingDown)
             return;
         var on = MinimalShown;
         // Not that minimal: the mini player floats instead of the lyrics alone.
@@ -671,8 +678,11 @@ public partial class App : Application
         {
             _minimal.HideLyrics();
             var m = _settings.Current.Minimal;
-            _miniPlayer.ShowPinned(new Core.Layout.PixelRect(m.PlayerX, m.PlayerY, m.PlayerWidth, m.PlayerWidth > 0 ? 1 : 0), m.Topmost,
-                r => _settings.Update(s => (s.Minimal.PlayerX, s.Minimal.PlayerY, s.Minimal.PlayerWidth) = (r.X, r.Y, r.Width)));
+            _miniPlayer.ShowPinned(new Core.Layout.PixelRect(m.PlayerX, m.PlayerY, m.PlayerWidth, m.PlayerWidth > 0 ? 1 : 0),
+                new PinnedOptions(m.ClickThrough, m.Locked, m.Topmost, m.ShowClickThroughMark, m.AutoFit, m.ControlsOnHover, m.PlayerWindowWidth, m.PlayerLyricsHeight,
+                    on => _settings.Update(s => s.Minimal.ClickThrough = on),
+                    (r, width, lyrics) => _settings.Update(s => (s.Minimal.PlayerX, s.Minimal.PlayerY, s.Minimal.PlayerWidth, s.Minimal.PlayerWindowWidth, s.Minimal.PlayerLyricsHeight)
+                        = (r.X, r.Y, r.Width, width, lyrics))));
             return;
         }
         _miniPlayer?.Unpin();
