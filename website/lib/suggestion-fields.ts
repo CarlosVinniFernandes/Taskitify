@@ -1,4 +1,5 @@
 export const limits = { song: 120, artist: 120, name: 60 } as const;
+export const countryLimit = 60;
 export type Fields = Record<keyof typeof limits, string>;
 
 export function prefill(params: Record<string, string | string[] | undefined>): Fields {

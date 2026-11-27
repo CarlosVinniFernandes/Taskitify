@@ -36,7 +36,7 @@ export function MusicBoard({ locale, result, page = 1, full, onRetry, onWrite, r
   const entries = result && result !== "error" ? result.entries : [];
   const hasMore = result !== null && result !== "error" && result.hasMore;
 
-  return <section className={`wrap ${styles.wall}${full ? " " + styles.wallFull : ""}`} id="wall" aria-labelledby="wall-title" aria-busy={result === null}>
+  return <section className={`wrap ${styles.wall}${full ? " " + styles.wallFull : ""}`} id="wall" data-sparse={result && result !== "error" && entries.length <= 3 ? entries.length : undefined} aria-labelledby="wall-title" aria-busy={result === null}>
     <header className={styles.heading}>
       {full ? <h1 id="wall-title">{t.title}</h1> : <>
         <p className={styles.kicker}>{t.title}</p>

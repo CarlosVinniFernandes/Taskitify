@@ -4,7 +4,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { Heart } from "lucide-react";
 import { copy, type Locale } from "@/lib/copy";
 import { guestbookCopy } from "@/lib/guestbook-copy";
-import { limits, type Fields } from "@/lib/suggestion-fields";
+import { countryLimit, limits, type Fields } from "@/lib/suggestion-fields";
 
 type Feedback = "idle" | "sending" | "success" | "invalid" | "rate" | "error";
 
@@ -12,6 +12,7 @@ export function SongForm({ locale, initial, wallEnabled, onSaved }: {
   locale: Locale; initial: Fields; wallEnabled: boolean; onSaved: () => void;
 }) {
   const t = copy[locale].community;
+  const book = guestbookCopy[locale];
   const [state, setState] = useState<Feedback>("idle");
   const sending = useRef(false);
 
@@ -62,20 +63,25 @@ export function SongForm({ locale, initial, wallEnabled, onSaved }: {
         <label htmlFor="artist">{t.artist}
           <input id="artist" name="artist" required maxLength={limits.artist} defaultValue={initial.artist}
                  placeholder={t.artistPlaceholder} autoComplete="off" />
-        </label>
+          </label>
       </div>
-      <label htmlFor="name">{t.nickname}
-        <input id="name" name="name" required maxLength={limits.name} defaultValue={initial.name}
-               placeholder={t.namePlaceholder} autoComplete="nickname" />
-      </label>
+      <div className={wallEnabled ? "form-pair signature-fields" : "form-pair"}>
+        <label htmlFor="name">{t.nickname}
+          <input id="name" name="name" required maxLength={limits.name} defaultValue={initial.name}
+                 placeholder={t.namePlaceholder} autoComplete="nickname" />
+        </label>
+        {wallEnabled && <label htmlFor="country">{book.country}
+          <input id="country" name="country" maxLength={countryLimit} placeholder={book.countryPlaceholder} autoComplete="off" />
+        </label>}
+      </div>
       <div className="honeypot" aria-hidden="true">
         <label htmlFor="website">Website
           <input id="website" name="website" tabIndex={-1} autoComplete="off" />
         </label>
       </div>
-      <p id="form-note" className="form-note">{wallEnabled ? t.wall.formNote : t.note}</p>
+      <p id="form-note" className="form-note">{wallEnabled ? `${t.wall.formNote} ${book.countryNote}` : t.note}</p>
       <button type="submit" className="button button-light">
-        {state === "sending" ? t.sending : guestbookCopy[locale].submit} <Heart size={16} aria-hidden="true" />
+        {state === "sending" ? t.sending : book.submit} <Heart size={16} aria-hidden="true" />
       </button>
     </fieldset>
     <p className={`feedback ${state === "success" ? "feedback-success" : ""}`} role="status">

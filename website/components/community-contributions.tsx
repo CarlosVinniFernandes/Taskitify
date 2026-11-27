@@ -46,15 +46,22 @@ function GuestSignatures({ locale, thanked, onWrite }: {
   const [revision, setRevision] = useState(0);
   const result = usePage<GuestbookPage>(`/api/community/guestbook?offset=${offsets.at(-1)}`, revision);
   const next = result && result !== "error" ? result.nextOffset : null;
-  const names = result && result !== "error" ? result.names : [];
+  const signatures = result && result !== "error" ? result.signatures ?? [] : [];
+  const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" });
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { heading.current?.focus({ preventScroll: true }); }, []);
 
   return <div className={styles.signatures} aria-busy={result === null}>
     <h3 ref={heading} tabIndex={-1}>{t.names}</h3>
     {thanked && <p className={styles.thanks} role="status"><Heart size={15} aria-hidden="true" /> {t.thanks}</p>}
-    {names.length > 0 ? <ul className={styles.names} aria-label={t.names}>
-      {names.map((name, index) => <li key={index}><bdi>{name}</bdi></li>)}
+    {signatures.length > 0 ? <ul className={styles.names} aria-label={t.names}>
+      {signatures.map((signature, index) => <li key={index}>
+        <bdi className={styles.visitorName}>{signature.name}</bdi>
+        <span className={styles.signatureDetails}>
+          <time dateTime={signature.date}>{date.format(new Date(signature.date))}</time>
+          {signature.country && <bdi>{signature.country}</bdi>}
+        </span>
+      </li>)}
     </ul> : <p className={styles.bookMessage} role="status">{result === "error" ? t.error
       : result === null ? t.loading : next !== null || offsets.length > 1 ? t.emptyPage : t.empty}</p>}
     {result === "error" && <button className={styles.paperLink} type="button" onClick={() => setRevision(revision + 1)}>{retry}</button>}

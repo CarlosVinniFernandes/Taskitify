@@ -1,6 +1,6 @@
 import { createHmac, randomUUID } from "node:crypto";
 import { isIP } from "node:net";
-import { limits, type Fields } from "./suggestion-fields.ts";
+import { countryLimit, limits, type Fields } from "./suggestion-fields.ts";
 
 const payloadLimit = 4096;
 const windowMs = 60_000;
@@ -13,6 +13,7 @@ export type Suggestion = {
   submittedAt: string;
   status: "pending" | "suggested" | "added" | "hidden";
   publishName?: boolean;
+  country?: string;
 };
 
 type Options = {
@@ -71,12 +72,17 @@ async function readPayload(request: Request) {
   }
 }
 
-function validate(data: unknown): (Fields & { publishSuggestion: boolean; publishName: boolean }) | null {
+function validate(data: unknown): (Fields & { country?: string; publishSuggestion: boolean; publishName: boolean }) | null {
   if (!data || typeof data !== "object" || Array.isArray(data)) return null;
   const fields = data as Record<string, unknown>;
-  if (Object.keys(fields).some((key) => !["song", "artist", "name", "website", "publishSuggestion", "publishName"].includes(key))) return null;
+  if (Object.keys(fields).some((key) => !["song", "artist", "name", "country", "website", "publishSuggestion", "publishName"].includes(key))) return null;
   if (fields.website !== undefined && fields.website !== "") return null;
   if ([fields.publishSuggestion, fields.publishName].some((value) => value !== undefined && typeof value !== "boolean")) return null;
+
+  if (fields.country !== undefined && (typeof fields.country !== "string"
+    || fields.country.length > countryLimit || /[\p{Cc}\u202a-\u202e\u2066-\u2069]/u.test(fields.country))) return null;
+  const country = typeof fields.country === "string" ? fields.country.normalize("NFC").trim() : "";
+  if (country.length > countryLimit) return null;
 
   const result: Fields = { song: "", artist: "", name: "" };
   for (const key of Object.keys(limits) as (keyof Fields)[]) {
@@ -86,7 +92,7 @@ function validate(data: unknown): (Fields & { publishSuggestion: boolean; publis
     if (value.length > limits[key] || !value) return null;
     result[key] = value;
   }
-  return { ...result, publishSuggestion: fields.publishSuggestion === true, publishName: fields.publishName !== false };
+  return { ...result, ...(country ? { country } : {}), publishSuggestion: fields.publishSuggestion === true, publishName: fields.publishName !== false };
 }
 
 export async function handleSuggestion(request: Request, options: Options): Promise<Response> {
@@ -116,6 +122,7 @@ export async function handleSuggestion(request: Request, options: Options): Prom
     song: fields.song,
     artist: fields.artist,
     name: fields.name,
+    ...(fields.country ? { country: fields.country } : {}),
     submittedAt: now.toISOString(),
     status: publish ? "suggested" : "pending",
     ...(publish ? { publishName: true } : {}),

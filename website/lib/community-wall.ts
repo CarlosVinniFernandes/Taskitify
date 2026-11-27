@@ -1,4 +1,4 @@
-import { limits } from "./suggestion-fields.ts";
+import { countryLimit, limits } from "./suggestion-fields.ts";
 import type { Suggestion } from "./suggestions.ts";
 
 export const wallPrefix = "suggestions/wall/";
@@ -25,16 +25,17 @@ export type WallEntry = {
   status: "suggested" | "added";
 };
 
-export type GuestbookPage = { names: string[]; nextOffset: number | null };
+export type GuestSignature = { name: string; date: string; country?: string };
+export type GuestbookPage = { names: string[]; signatures: GuestSignature[]; nextOffset: number | null };
 
 export const communityWallPageSizes = { preview: 12, full: 30 } as const;
 export type WallPageSize = typeof communityWallPageSizes[keyof typeof communityWallPageSizes];
 
 export type WallPage = { entries: WallEntry[]; hasMore: boolean; totalPages: number };
 
-export function publicSuggestion(value: unknown): WallEntry | null {
+export function publicSuggestion(value: unknown): (WallEntry & { country?: string }) | null {
   if (!value || typeof value !== "object") return null;
-  const { id, song, artist, name, submittedAt, status, publishName } = value as Partial<Suggestion>;
+  const { id, song, artist, name, submittedAt, status, publishName, country } = value as Partial<Suggestion>;
   if (status !== "suggested" && status !== "added") return null;
   if (typeof id !== "string" || !/^[a-f0-9-]{36}$/.test(id)
       || typeof submittedAt !== "string" || !Number.isFinite(Date.parse(submittedAt))) return null;
@@ -45,6 +46,6 @@ export function publicSuggestion(value: unknown): WallEntry | null {
   for (const char of id) seed = Math.imul(seed ^ char.charCodeAt(0), 16777619);
   return {
     artSeed: seed >>> 0, song, artist, date: new Date(submittedAt).toISOString().slice(0, 10), status,
-    ...(publishName === true && validText(name, limits.name) ? { name } : {}),
+    ...(publishName === true && validText(name, limits.name) ? { name, ...(validText(country, countryLimit) ? { country } : {}) } : {}),
   };
 }

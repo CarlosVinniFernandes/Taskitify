@@ -35,3 +35,15 @@ test("requires signatures on new posts and preserves earlier anonymity", async (
   }
   assert.ok(wallPath({ ...named, submittedAt: "2026-11-26T19:05:01Z" }) < wallPath(named));
 });
+
+test("stores an optional country with the public signature", async () => {
+  const { response, saved } = await submit({ publishSuggestion: true, country: "  Brazil  " });
+  assert.equal(response.status, 201);
+  assert.equal(saved?.country, "Brazil");
+  assert.equal(publicSuggestion(saved)?.country, "Brazil");
+  assert.equal(publicSuggestion({ ...saved!, publishName: false })?.country, undefined);
+  assert.equal((await submit({ publishSuggestion: true, country: "" })).saved?.country, undefined);
+  for (const country of [42, "x".repeat(61), "a\nb"]) {
+    assert.equal((await submit({ publishSuggestion: true, country })).response.status, 400);
+  }
+});

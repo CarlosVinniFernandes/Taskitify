@@ -4,11 +4,6 @@
   font-display: swap;
 }
 @font-face {
-  font-family: "Guestbook Note";
-  src: url("/fonts/guestbook-note.woff2") format("woff2");
-  font-display: swap;
-}
-@font-face {
   font-family: "Guestbook Signature";
   src: url("/fonts/guestbook-signature.woff2") format("woff2");
   font-display: swap;
@@ -16,9 +11,8 @@
 
 .guestbook, .wall {
   --paper: #eeece6;
-  --ink: #263745;
+  --ink: #192b36;
   --hand: "Guestbook Cursive", "Segoe Print", cursive;
-  --note: "Guestbook Note", "Segoe Print", cursive;
   width: min(100% - var(--gutter) * 2, 970px);
   scroll-margin-top: 20px;
 }
@@ -68,7 +62,7 @@
 .leftPage {
   border-radius: 4px 19px 2px 7px / 5px 4px 2px 4px;
   background-image: linear-gradient(90deg, transparent 89%, #3842490c 96%, #38424929);
-  font: 400 clamp(1.06rem, 2vw, 1.18rem)/1.53 var(--note);
+  font: 400 clamp(1.02rem, 1.5vw, 1.15rem)/1.6 "Figtree", sans-serif;
 }
 .rightPage {
   border-radius: 19px 3px 6px 2px / 4px 5px 4px 2px;
@@ -78,10 +72,10 @@
 .letterHeader { margin-bottom: 15px; }
 .letterHeader h2, .paper h3 {
   color: var(--ink);
-  font: 400 clamp(1.7rem, 3.2vw, 2.39rem)/1.12 var(--hand);
+  font: 600 clamp(1.65rem, 2.8vw, 2.18rem)/1.16 "Figtree", sans-serif;
   letter-spacing: 0;
 }
-.paper h3 { font-size: clamp(1.48rem, 2.7vw, 2.05rem); }
+.paper h3 { font-size: clamp(1.4rem, 2.4vw, 1.85rem); }
 .leftPage > p + p { margin-top: 12px; }
 .noteCaption { color: #4d6068; font: 500 .79rem/1.4 "Figtree", sans-serif; margin-bottom: 9px; }
 .signature { margin-top: 17px; font: 500 .87rem/1.12 "Figtree", sans-serif; }
@@ -112,7 +106,8 @@
 .rightPage :global(.song-form) { margin-top: 13px; padding: 0; border: 0; background: transparent; }
 .rightPage :global(.song-form fieldset) { gap: 12px; }
 .rightPage :global(.form-pair) { grid-template-columns: 1fr; gap: 12px; }
-.rightPage :global(.song-form label) { color: #364a56; font: 500 .86rem/1.3 "Figtree", sans-serif; }
+.rightPage :global(.song-form label) { color: var(--ink); font: 600 .94rem/1.35 "Figtree", sans-serif; }
+.rightPage :global(.signature-fields) { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
 .rightPage :global(.song-form input) {
   margin-top: 2px;
   min-height: 40px;
@@ -134,12 +129,22 @@
   font: 500 .89rem/1.2 "Figtree", sans-serif;
 }
 .rightPage :global(.song-form .button:hover) { background: #243d4b; }
-.rightPage :global(.song-form .form-note) { font-size: .8rem; color: #425964; }
+.rightPage :global(.song-form .form-note) { font-size: .88rem; line-height: 1.45; color: #354b57; }
 .rightPage :global(.song-form .feedback:not(:empty)) { color: #8a3239; }
 .rightPage :global(.song-form .feedback-success:not(:empty)) { color: #345547; }
 .rightPage > .paperLink { margin-top: 5px; }
 .names { list-style: none; margin: 13px 0 8px; padding: 0; border-top: 1px solid #62747d55; }
-.names li { padding: 5px 0; border-bottom: 1px solid #62747d55; font: 400 1.45rem/1.18 var(--hand); }
+.names li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 3px 14px;
+  padding: 9px 0;
+  border-bottom: 1px solid #62747d55;
+}
+.visitorName { font-size: 1rem; font-weight: 600; }
+.signatureDetails { display: flex; flex-wrap: wrap; gap: 3px 10px; color: #354b57; font-size: .87rem; }
 .thanks, .bookMessage { margin-top: 10px; color: #415962; font-size: .88rem; }
 .thanks { display: flex; align-items: center; gap: 7px; }
 .bookNav { display: flex; justify-content: space-between; align-items: center; gap: 9px 16px; }
@@ -240,6 +245,7 @@
   .rightPage { border-top: 2px solid #b1b7b6; }
 }
 @media (max-width: 420px) {
+  .rightPage :global(.signature-fields) { grid-template-columns: 1fr; }
   .tracks { grid-template-columns: repeat(auto-fill, minmax(min(100%, 118px), 1fr)); gap: 15px; }
   .board { padding: 15px; }
 }
@@ -286,3 +292,22 @@
 @media (min-width: 1360px) {
   .wallFull .tracks { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
+
+/* Let the surface grow with the collection and keep the first notes prominent. */
+.wall[data-sparse="0"], .wall[data-sparse="1"] { --sparse-width: 470px; }
+.wall[data-sparse="2"] { --sparse-width: 660px; }
+.wall[data-sparse="3"] { --sparse-width: 920px; }
+.wall[data-sparse] { width: min(100% - var(--gutter) * 2, var(--sparse-width)); }
+.wall[data-sparse] .tracks {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: clamp(16px, 3vw, 36px);
+}
+.wall[data-sparse] .recommendation {
+  width: min(100%, calc(var(--note-width) + 62px));
+  min-height: 172px;
+}
+.wall[data-sparse] .track :is(h2, h3) { font-size: 1.1rem; }
+.wall[data-sparse] .track p { font-size: .94rem; }
+.wall[data-sparse] .track .attribution { font-size: 1.52rem; }
+.wall[data-sparse] .track .meta, .wall[data-sparse] .spotify { font-size: .84rem; }
+.wall[data-sparse] .boardFooter { justify-content: center; }
