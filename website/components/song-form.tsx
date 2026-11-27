@@ -20,14 +20,18 @@ export function SongForm({ locale, initial, wallEnabled, onSaved }: {
     if (sending.current) return;
     const form = event.currentTarget;
     const values = new FormData(form);
-    const { publishName, ...fields } = Object.fromEntries(values);
+    const fields = Object.fromEntries(values);
+    if (typeof fields.name !== "string" || !fields.name.trim()) {
+      setState("invalid");
+      return;
+    }
     sending.current = true;
     setState("sending");
     try {
       const response = await fetch("/api/community/suggestions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...fields, publishSuggestion: wallEnabled, publishName: wallEnabled && publishName === "on" }),
+        body: JSON.stringify({ ...fields, publishSuggestion: wallEnabled }),
       });
       const result: unknown = await response.json().catch(() => null);
       if (response.status === 201 && result && typeof result === "object" && "ok" in result && result.ok === true) {
@@ -60,13 +64,10 @@ export function SongForm({ locale, initial, wallEnabled, onSaved }: {
                  placeholder={t.artistPlaceholder} autoComplete="off" />
         </label>
       </div>
-      <label htmlFor="name">{t.nickname} <span className="optional">({t.optional})</span>
-        <input id="name" name="name" maxLength={limits.name} defaultValue={initial.name}
+      <label htmlFor="name">{t.nickname}
+        <input id="name" name="name" required maxLength={limits.name} defaultValue={initial.name}
                placeholder={t.namePlaceholder} autoComplete="nickname" />
       </label>
-      {wallEnabled && <label className="publish-name">
-        <input name="publishName" type="checkbox" /> {t.wall.publishName}
-      </label>}
       <div className="honeypot" aria-hidden="true">
         <label htmlFor="website">Website
           <input id="website" name="website" tabIndex={-1} autoComplete="off" />

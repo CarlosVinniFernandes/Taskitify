@@ -81,13 +81,12 @@ function validate(data: unknown): (Fields & { publishSuggestion: boolean; publis
   const result: Fields = { song: "", artist: "", name: "" };
   for (const key of Object.keys(limits) as (keyof Fields)[]) {
     const raw = fields[key];
-    if (key === "name" && raw === undefined) continue;
     if (typeof raw !== "string" || raw.length > limits[key] || /[\p{Cc}\u202a-\u202e\u2066-\u2069]/u.test(raw)) return null;
     const value = raw.normalize("NFC").trim();
-    if (value.length > limits[key] || (key !== "name" && !value)) return null;
+    if (value.length > limits[key] || !value) return null;
     result[key] = value;
   }
-  return { ...result, publishSuggestion: fields.publishSuggestion === true, publishName: fields.publishName === true };
+  return { ...result, publishSuggestion: fields.publishSuggestion === true, publishName: fields.publishName !== false };
 }
 
 export async function handleSuggestion(request: Request, options: Options): Promise<Response> {
@@ -98,7 +97,7 @@ export async function handleSuggestion(request: Request, options: Options): Prom
   const payload = await readPayload(request);
   if ("tooLarge" in payload) return reply(413, "size");
   const fields = validate(payload.data);
-  if (!fields) return reply(400, "fields");
+  if (!fields || (options.wallEnabled && fields.publishSuggestion && fields.publishName === false)) return reply(400, "fields");
 
   const address = options.address?.trim() ?? "";
   const addressVersion = isIP(address);
@@ -116,10 +115,10 @@ export async function handleSuggestion(request: Request, options: Options): Prom
     id: randomUUID(),
     song: fields.song,
     artist: fields.artist,
-    name: fields.name || null,
+    name: fields.name,
     submittedAt: now.toISOString(),
     status: publish ? "suggested" : "pending",
-    ...(publish ? { publishName: fields.publishName && Boolean(fields.name) } : {}),
+    ...(publish ? { publishName: true } : {}),
   };
 
   try {

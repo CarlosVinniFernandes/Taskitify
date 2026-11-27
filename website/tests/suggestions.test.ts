@@ -8,7 +8,7 @@ import { handleSuggestion, type Suggestion } from "../lib/suggestions.ts";
 
 const url = "https://taskitify.example/api/community/suggestions";
 const now = new Date("2026-08-23T01:02:12.000Z");
-const valid = { song: " Águas de Março ", artist: " Elis Regina & Tom Jobim " };
+const valid = { song: " Águas de Março ", artist: " Elis Regina & Tom Jobim ", name: "Demo" };
 const options = { address: "203.0.113.1", secret: "x".repeat(32), now: () => now };
 
 function request(input: unknown, headers: Record<string, string> = {}) {
@@ -48,7 +48,7 @@ test("creates independent JSON records and rate-limits a concurrent submission",
     assert.match(saved.id, /^[0-9a-f-]{36}$/);
     assert.deepEqual(saved, {
       id: saved.id, song: "Águas de Março", artist: "Elis Regina & Tom Jobim",
-      name: null, submittedAt: now.toISOString(), status: "pending",
+      name: "Demo", submittedAt: now.toISOString(), status: "pending",
     });
     assert.equal((await handleSuggestion(request({ ...valid, name: "C" }), {
       ...options, now: () => new Date(now.getTime() + 60_000), create,

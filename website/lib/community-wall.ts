@@ -17,6 +17,7 @@ export function wallPath(suggestion: Suggestion) {
 }
 
 export type WallEntry = {
+  artSeed: number;
   song: string;
   artist: string;
   name?: string;
@@ -26,7 +27,7 @@ export type WallEntry = {
 
 export type GuestbookPage = { names: string[]; nextOffset: number | null };
 
-export type WallPage = { entries: WallEntry[]; hasMore: boolean };
+export type WallPage = { entries: WallEntry[]; hasMore: boolean; totalPages: number };
 
 export function publicSuggestion(value: unknown): WallEntry | null {
   if (!value || typeof value !== "object") return null;
@@ -37,8 +38,10 @@ export function publicSuggestion(value: unknown): WallEntry | null {
   const validText = (text: unknown, limit: number): text is string => typeof text === "string"
     && Boolean(text.trim()) && text.length <= limit && !/[\p{Cc}\u202a-\u202e\u2066-\u2069]/u.test(text);
   if (!validText(song, limits.song) || !validText(artist, limits.artist)) return null;
+  let seed = 2166136261;
+  for (const char of id) seed = Math.imul(seed ^ char.charCodeAt(0), 16777619);
   return {
-    song, artist, date: new Date(submittedAt).toISOString().slice(0, 10), status,
+    artSeed: seed >>> 0, song, artist, date: new Date(submittedAt).toISOString().slice(0, 10), status,
     ...(publishName === true && validText(name, limits.name) ? { name } : {}),
   };
 }

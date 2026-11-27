@@ -21,20 +21,17 @@ async function submit(flags: Record<string, unknown>, wallEnabled = true) {
   return { response, saved };
 }
 
-test("publishes only opted-in suggestions and omits nicknames without explicit consent", async () => {
-  const anonymous = await submit({ publishSuggestion: true });
-  assert.equal(anonymous.response.status, 201);
-  assert.equal(anonymous.saved?.name, data.name);
-  assert.deepEqual(publicSuggestion(anonymous.saved), {
-    song: data.song, artist: data.artist, date: "2026-11-26", status: "suggested",
-  });
-  const named = (await submit({ publishSuggestion: true, publishName: true })).saved!;
-  assert.equal(publicSuggestion(named)?.name, data.name);
-  assert.equal(publicSuggestion({ ...named, status: "added" })?.status, "added");
+test("requires signatures on new posts and preserves earlier anonymity", async () => {
+  const named = (await submit({ publishSuggestion: true })).saved!;
+  const publicRow = publicSuggestion(named);
+  assert.equal(publicRow?.name, data.name);
+  assert.equal(publicSuggestion({ ...named, status: "added" })?.artSeed, publicRow?.artSeed);
+  assert.equal(publicSuggestion({ ...named, song: "Corrected title" })?.artSeed, publicRow?.artSeed);
+  assert.equal(publicSuggestion({ ...named, publishName: false })?.name, undefined);
   assert.equal(publicSuggestion({ ...named, status: "hidden" }), null);
-  assert.equal(publicSuggestion((await submit({ publishName: true })).saved), null);
-  assert.equal(publicSuggestion((await submit({ publishSuggestion: true, publishName: true }, false)).saved), null);
-  assert.equal((await submit({ publishSuggestion: true, publishName: "yes" })).response.status, 400);
-  assert.equal((await submit({ song: "Bad\u202eTitle" })).response.status, 400);
+  assert.equal(publicSuggestion((await submit({}, false)).saved), null);
+  for (const flags of [{ name: undefined }, { name: " " }, { publishName: false }, { publishName: "yes" }]) {
+    assert.equal((await submit({ publishSuggestion: true, ...flags })).response.status, 400);
+  }
   assert.ok(wallPath({ ...named, submittedAt: "2026-11-26T19:05:01Z" }) < wallPath(named));
 });

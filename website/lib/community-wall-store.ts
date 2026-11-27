@@ -25,7 +25,7 @@ const readEntry = unstable_cache(async (_store: string, path: string) => {
   const result = await get(path, { access: "private", useCache: false, token, abortSignal: AbortSignal.timeout(6000) });
   if (result?.statusCode !== 200 || result.blob.size > 4096) return null;
   return publicSuggestion(await new Response(result.stream).json().catch(() => null));
-}, ["community-wall-record-v1"], { tags: [wallEntryTag], revalidate: cacheSeconds });
+}, ["community-wall-record-v2"], { tags: [wallEntryTag], revalidate: cacheSeconds });
 
 function storeCacheKey() {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
@@ -38,9 +38,10 @@ export async function getWallPage(page: number): Promise<WallPage> {
   const store = storeCacheKey();
   const index = await wallIndex(store);
   const start = (page - 1) * pageSize;
-  if (start >= index.length) return { entries: [], hasMore: false };
+  const totalPages = Math.ceil(index.length / pageSize);
+  if (start >= index.length) return { entries: [], hasMore: false, totalPages };
   const rows = await Promise.all(index.slice(start, start + pageSize).map((path) => readEntry(store, path)));
-  return { entries: rows.filter((row): row is WallEntry => row !== null), hasMore: start + pageSize < index.length };
+  return { entries: rows.filter((row): row is WallEntry => row !== null), hasMore: page < totalPages, totalPages };
 }
 
 export async function getGuestbookPage(offset: number): Promise<GuestbookPage> {
