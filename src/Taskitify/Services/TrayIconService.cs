@@ -9,13 +9,16 @@ public sealed class TrayIconService : IDisposable
     private readonly Forms.NotifyIcon _icon;
     private readonly Forms.ToolStripMenuItem _debugItem;
 
-    public TrayIconService(Action showSettings, Action showMiniPlayer, Action showLyricCard, Action showDebug, Action exit)
+    public TrayIconService(Action showSettings, Action showMiniPlayer, Action showLyricCard, Action showDebug, Action exit, Action? showTour = null)
     {
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add(LocalizationService.Get("ShowPlayer"), null, (_, _) => showMiniPlayer());
         var cardItem = new Forms.ToolStripMenuItem(LocalizationService.Get("LyricCardOpen"), null, (_, _) => showLyricCard());
         menu.Items.Add(cardItem);
         menu.Items.Add(LocalizationService.Get("Settings"), null, (_, _) => showSettings());
+        // Temporary, for reviewing the welcome tour before it is wired into the first run.
+        if (showTour is not null)
+            menu.Items.Add(LocalizationService.Get("TourOpen"), null, (_, _) => showTour());
         _debugItem = new Forms.ToolStripMenuItem(LocalizationService.Get("Diagnostics"), null, (_, _) => showDebug());
         menu.Items.Add(_debugItem);
         menu.Items.Add(new Forms.ToolStripSeparator());

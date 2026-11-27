@@ -16,6 +16,7 @@ public sealed class SettingsService
     };
 
     private readonly DispatcherTimer _saveTimer;
+    private bool _inMemory;
 
     public SettingsService()
     {
@@ -26,6 +27,9 @@ public sealed class SettingsService
             Save();
         };
     }
+
+    /// <summary>Settings that live only in memory (the welcome tour's demonstrations): never saved, never change the language.</summary>
+    public static SettingsService InMemory(AppSettings current) => new() { Current = current, _inMemory = true };
 
     public static string FilePath { get; } = Path.Combine(AppPaths.RoamingDirectory, "settings.json");
 
@@ -64,6 +68,11 @@ public sealed class SettingsService
     public void Update(Action<AppSettings> change)
     {
         change(Current);
+        if (_inMemory)
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
+            return;
+        }
         LocalizationService.SetLanguage(Current.Language);
         Changed?.Invoke(this, EventArgs.Empty);
         _saveTimer.Stop();

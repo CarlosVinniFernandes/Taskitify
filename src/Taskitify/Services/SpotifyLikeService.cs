@@ -42,6 +42,22 @@ public sealed class SpotifyLikeService : IDisposable
     private bool _watching;
     private bool _wasEnabled;
     private string? _albumId;
+    private readonly bool _offline;
+
+    /// <summary>A song shown as liked, never checked or changed (the welcome tour's demonstrations).</summary>
+    internal SpotifyLikeService(ISpotifyMonitor monitor, LyricsSyncService sync, SettingsService settings, bool liked)
+    {
+        _monitor = monitor;
+        _sync = sync;
+        _settings = settings;
+        _session = null!;
+        _provider = null!;
+        _library = null!;
+        _checkTimer = new DispatcherTimer();
+        _watchTimer = new DispatcherTimer();
+        _offline = true;
+        IsLiked = liked;
+    }
 
     public SpotifyLikeService(ISpotifyMonitor monitor, LyricsSyncService sync, SettingsService settings, ISpotifyLyricsSession session,
         SpotifyLyricsProvider provider, SpotifyLibraryClient library, Dispatcher dispatcher)
@@ -88,6 +104,8 @@ public sealed class SpotifyLikeService : IDisposable
     /// <summary>Check again (the user may have liked it in Spotify meanwhile).</summary>
     public void Refresh()
     {
+        if (_offline)
+            return;
         if (IsAvailable && !IsBusy && !_checkTimer.IsEnabled)
             _ = CheckAsync(_generation);
     }
@@ -98,6 +116,8 @@ public sealed class SpotifyLikeService : IDisposable
     /// </summary>
     public async Task ToggleAsync()
     {
+        if (_offline)
+            return;
         if (!IsAvailable || IsBusy || _monitor.Track is not { } track)
             return;
         var generation = _generation;

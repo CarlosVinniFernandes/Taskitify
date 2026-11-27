@@ -180,7 +180,7 @@ public partial class App : Application
         _miniPlayer = new MiniPlayerWindow(_miniPlayerVm, () => _settings.Current.EnableAnimations,
             () => _settings.Current.Background == Models.OverlayBackground.AlbumGradient);
 
-        _tray = new TrayIconService(ShowSettings, ShowMiniPlayerFromTray, ShowLyricCard, ShowDebug, Shutdown)
+        _tray = new TrayIconService(ShowSettings, ShowMiniPlayerFromTray, ShowLyricCard, ShowDebug, Shutdown, ShowTour)
         {
             CanMakeLyricCard = () => _monitor?.Track is not null,
         };
@@ -204,7 +204,9 @@ public partial class App : Application
                 "Taskitify", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
-        if (_settings.IsFirstRun)
+        if (e.Args.Contains("--tour", StringComparer.OrdinalIgnoreCase))
+            ShowTour();
+        else if (_settings.IsFirstRun)
             ShowWelcome();
         else if (!background && _tray.Visible)
             _tray.ShowBalloon("Taskitify", LocalizationService.Get("BackgroundNotice"));
@@ -269,6 +271,24 @@ public partial class App : Application
         WindowInterop.SetDarkTitleBar(_settingsWindow, !_theme!.AppsUseLightTheme);
         _settingsWindow.Show();
         _settingsWindow.Activate();
+    }
+
+    private TourWindow? _tour;
+
+    /// <summary>The welcome tour (for now opened from the tray menu or with --tour).</summary>
+    public void ShowTour()
+    {
+        if (_tour is not null)
+        {
+            _tour.Activate();
+            return;
+        }
+        _miniPlayer?.HidePopup();
+        _tour = new TourWindow(page => { ShowSettings(page); return true; }, _settings!.Current.SpotifyLyricsEnabled);
+        _tour.Closed += (_, _) => _tour = null;
+        WindowInterop.SetDarkTitleBar(_tour, true);
+        _tour.Show();
+        _tour.Activate();
     }
 
     /// <summary>First run: LRCLIB alone or Spotify + LRCLIB, and what the Spotify connection does.</summary>

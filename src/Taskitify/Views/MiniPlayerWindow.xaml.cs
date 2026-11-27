@@ -245,6 +245,25 @@ public partial class MiniPlayerWindow : Window
             Dispatcher.BeginInvoke(() => _vm.Volume.IsOpen = false);
     }
 
+    /// <summary>Shown far off-screen for the welcome tour, which displays snapshots of it: no position, no hooks.</summary>
+    internal void ShowOffscreen()
+    {
+        _vm.IsActive = true;
+        ApplyLayout();
+        ApplyControlsStyle();
+        UpdatePlayGlyph();
+        UpdateProgressValue();
+        ApplyBackground();
+        Topmost = false;
+        Left = -20000;
+        Top = -20000;
+        Opacity = 1;
+        Show();
+        UpdateLayout();
+        ScrollToCurrent(animate: false);
+        QueueLyrics(animate: false);
+    }
+
     public void ShowAt(PixelRect anchor, PixelRect workArea, double scale, bool preview = false)
     {
         // Opened by the user (a click): a regular popup again, even if it was a preview.
