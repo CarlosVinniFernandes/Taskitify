@@ -21,7 +21,7 @@ using Taskitify.Views;
 // to Spotify or a lyrics provider. Lyrics and cover art are original demonstration material.
 //
 //   dotnet run --project marketing/microsoft-store/source -- <repo root>
-internal static class Program
+internal static partial class Program
 {
     const int W = 3840, H = 2160;
     static string _out = "";
@@ -38,6 +38,7 @@ internal static class Program
     [STAThread]
     static void Main(string[] args)
     {
+        if (args.Contains("--campaign")) { Campaign(Path.GetFullPath(args[0])); return; }
         var root = Path.GetFullPath(args.Length > 0 ? args[0] : ".");
         _out = Path.Combine(root, "marketing", "microsoft-store");
         _fonts = Path.Combine(root, "src", "Taskitify", "Resources", "Fonts");
@@ -172,14 +173,14 @@ internal static class Program
 
     /// <summary>The taskbar player shown off-screen (it docks only when the app's service places it),
     /// so its lyric flow paints the way it does on the taskbar.</summary>
-    static BitmapSource RenderShown(Window window, double width, double height, double scale)
+    static BitmapSource RenderShown(Window window, double width, double height, double scale, Brush? background = null)
     {
         window.Left = -20000; window.Top = -20000; window.Width = width; window.Height = height;
         window.ShowActivated = false; window.Topmost = false;
         TextOptions.SetTextFormattingMode(window, TextFormattingMode.Ideal);
         window.Show();
         // On the taskbar it paints the taskbar's own colour; here, the composed taskbar's.
-        window.Background = new SolidColorBrush(TaskbarColor);
+        window.Background = background ?? new SolidColorBrush(TaskbarColor);
         Pump();
         window.UpdateLayout();
         Pump();

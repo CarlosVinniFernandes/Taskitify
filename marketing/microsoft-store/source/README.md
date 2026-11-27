@@ -19,3 +19,15 @@ Both editions use original demonstration lyrics and an original cover painted in
 The tool runs on an isolated data folder (`%TEMP%\taskitify-store-shot`): it never reads or writes the user's
 settings, never contacts Spotify or a lyrics provider, and does not start `Taskitify.App`, so a running
 Taskitify is left alone. Build in Release when the app is running from the Debug folder.
+
+## Campaign (five screenshots and the super hero art)
+
+```powershell
+dotnet run --project marketing/microsoft-store/source -c Release -- . --campaign   # app components
+python marketing/microsoft-store/source/compose.py                                 # all six arts
+python marketing/microsoft-store/source/compose.py 02 05                           # only some
+```
+
+`compose.py` combines the real Windows captures in `raw-captures/desktop`, the components and the CC0 photos into
+`campaign/` (3840 × 2160) and `campaign/reduced/` (1280 × 720, 308 × 173 and a contact sheet).
+Sources and licenses: `../SOURCES.md`. Page simulation: `../store-page-preview.html`.
