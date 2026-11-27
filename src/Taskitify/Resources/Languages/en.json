@@ -386,12 +386,11 @@
   "TourGroupSong": "Song",
   "TourMinimalEyebrow": "Just you and the lyrics.",
   "TourMinimalTitle": "Sometimes, the lyrics are all you need.",
-  "TourMinimalBody": "No distractions. Just you and the music: only the line being sung, floating over your desktop.",
-  "TourMinimalMove": "Move it and resize it wherever it suits you.",
-  "TourMinimalAbove": "Keep it above other windows, on a clear or soft background.",
-  "TourMinimalAlone": "It works on its own: the taskbar player and mini player rest while it's on, to save resources. You'll be able to change that.",
-  "TourMinimalOff": "It's never turned on by default.",
-  "TourMinimalSoon": "Coming soon · concept preview",
+  "TourMinimalBody": "No distractions. Just you and the music: the verses being sung, floating over your desktop.",
+  "TourMinimalMove": "Drag it anywhere; resize it from its edges or the corner grip.",
+  "TourMinimalAbove": "Above other windows, games in borderless full screen too, on a clear, soft or album background.",
+  "TourMinimalAlone": "On its own by default: the taskbar player rests while it's on. You can keep it, and open the mini player from the lyrics.",
+  "TourMinimalOff": "Off until you turn it on, in Settings or from the notification area icon.",
   "TourMinimalSoft": "Soft background",
   "TourMinimalClear": "Transparent",
   "TourMinimalSize": "Text size",
@@ -549,5 +548,7 @@
   "OffsetAppliedHint": "All songs plus this one, within ±5 s. The same in the bar, the mini player and Minimal Mode.",
   "TrackOffsetsClear": "Clear song adjustments",
   "TrackOffsetsClearQuestion": "Remove the adjustment of every song ({0})? The adjustment for all songs stays.",
-  "OffsetAll": "All songs"
+  "OffsetAll": "All songs",
+  "TourMinimalSetUp": "Set up Minimal Mode",
+  "TourHomeAddSong": "Add a song to the playlist"
 }

@@ -386,12 +386,11 @@
   "TourGroupSong": "Chanson",
   "TourMinimalEyebrow": "Juste vous et les paroles.",
   "TourMinimalTitle": "Parfois, les paroles suffisent.",
-  "TourMinimalBody": "Aucune distraction. Juste vous et la musique : seulement la ligne chantée, flottant sur votre bureau.",
-  "TourMinimalMove": "Déplacez-les et redimensionnez-les où vous voulez.",
-  "TourMinimalAbove": "Gardez-les au-dessus des autres fenêtres, sur un fond transparent ou doux.",
-  "TourMinimalAlone": "Il fonctionne seul : le lecteur de la barre et le mini lecteur se mettent en pause pendant ce temps, pour économiser les ressources. Vous pourrez changer cela.",
-  "TourMinimalOff": "Il n'est jamais activé par défaut.",
-  "TourMinimalSoon": "Bientôt · aperçu du concept",
+  "TourMinimalBody": "Sans distractions. Juste vous et la musique : les vers chantés, flottant sur votre bureau.",
+  "TourMinimalMove": "Faites-le glisser n'importe où ; redimensionnez-le par les bords ou le coin.",
+  "TourMinimalAbove": "Au-dessus des autres fenêtres, jeux en plein écran sans bordure compris, sur un fond transparent, doux ou de l'album.",
+  "TourMinimalAlone": "Seul par défaut : le lecteur de la barre se repose tant qu'il est activé. Vous pouvez le garder et ouvrir le mini lecteur depuis les paroles.",
+  "TourMinimalOff": "Désactivé jusqu'à ce que vous l'activiez, dans les Réglages ou depuis l'icône de la zone de notification.",
   "TourMinimalSoft": "Fond doux",
   "TourMinimalClear": "Transparent",
   "TourMinimalSize": "Taille du texte",
@@ -549,5 +548,7 @@
   "OffsetAppliedHint": "Tous les morceaux plus celui-ci, dans la limite de ±5 s. Le même dans la barre, le mini lecteur et le Minimal Mode.",
   "TrackOffsetsClear": "Effacer les réglages par morceau",
   "TrackOffsetsClearQuestion": "Supprimer le réglage de chaque morceau ({0}) ? Le réglage général est conservé.",
-  "OffsetAll": "Tous les morceaux"
+  "OffsetAll": "Tous les morceaux",
+  "TourMinimalSetUp": "Configurer le Minimal Mode",
+  "TourHomeAddSong": "Ajouter un morceau à la playlist"
 }

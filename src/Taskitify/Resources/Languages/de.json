@@ -386,12 +386,11 @@
   "TourGroupSong": "Song",
   "TourMinimalEyebrow": "Nur du und der Text.",
   "TourMinimalTitle": "Manchmal ist der Text alles, was du brauchst.",
-  "TourMinimalBody": "Keine Ablenkung. Nur du und die Musik: allein die gesungene Zeile, schwebend über deinem Desktop.",
-  "TourMinimalMove": "Verschiebe und skaliere ihn, wo es dir passt.",
-  "TourMinimalAbove": "Behalte ihn über anderen Fenstern, mit transparentem oder sanftem Hintergrund.",
-  "TourMinimalAlone": "Er funktioniert eigenständig: Taskleisten-Player und Mini-Player ruhen währenddessen, um Ressourcen zu sparen. Das wirst du ändern können.",
-  "TourMinimalOff": "Er ist nie standardmäßig eingeschaltet.",
-  "TourMinimalSoon": "Bald verfügbar · Konzeptvorschau",
+  "TourMinimalBody": "Keine Ablenkung. Nur du und die Musik: die gesungenen Zeilen, schwebend über deinem Desktop.",
+  "TourMinimalMove": "Zieh ihn überallhin; ändere die Größe an den Rändern oder der Ecke.",
+  "TourMinimalAbove": "Über anderen Fenstern, auch über Spielen im randlosen Vollbild, mit transparentem, dezentem oder Album-Hintergrund.",
+  "TourMinimalAlone": "Standardmäßig allein: Der Taskleisten-Player ruht, solange er an ist. Du kannst ihn behalten und den Mini-Player über den Songtext öffnen.",
+  "TourMinimalOff": "Aus, bis du ihn einschaltest – in den Einstellungen oder über das Symbol im Infobereich.",
   "TourMinimalSoft": "Sanfter Hintergrund",
   "TourMinimalClear": "Transparent",
   "TourMinimalSize": "Textgröße",
@@ -549,5 +548,7 @@
   "OffsetAppliedHint": "Alle Songs plus dieser, innerhalb von ±5 s. Gleich in Leiste, Mini-Player und Minimal Mode.",
   "TrackOffsetsClear": "Song-Anpassungen löschen",
   "TrackOffsetsClearQuestion": "Die Anpassung aller Songs ({0}) entfernen? Die allgemeine Einstellung bleibt.",
-  "OffsetAll": "Alle Songs"
+  "OffsetAll": "Alle Songs",
+  "TourMinimalSetUp": "Minimal Mode einrichten",
+  "TourHomeAddSong": "Song zur Playlist hinzufügen"
 }

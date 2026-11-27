@@ -828,7 +828,7 @@ public sealed class TourWindow : Window
         };
     }
 
-    // ---- 06 Minimal Mode (concept) ---------------------------------------------------------------
+    // ---- 06 Minimal Mode ------------------------------------------------------------------------
 
     private FrameworkElement BuildMinimal()
     {
@@ -838,37 +838,72 @@ public sealed class TourWindow : Window
         foreach (var key in new[] { "MinimalMove", "MinimalAbove", "MinimalAlone", "MinimalOff" })
         {
             var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
-            row.Children.Add(new TextBlock { Text = "", FontFamily = Icons, FontSize = 12, Foreground = Turquoise, Margin = new Thickness(0, 3, 10, 0), VerticalAlignment = VerticalAlignment.Top });
+            row.Children.Add(new TextBlock { Text = "\uE73E", FontFamily = Icons, FontSize = 12, Foreground = Turquoise, Margin = new Thickness(0, 3, 10, 0), VerticalAlignment = VerticalAlignment.Top });
             row.Children.Add(new TextBlock { Text = T(key), FontSize = 13.5, Foreground = Muted, TextWrapping = TextWrapping.Wrap, MaxWidth = 320 });
             left.Children.Add(row);
         }
-        var badge = new Border
-        {
-            Margin = new Thickness(0, 18, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, CornerRadius = new CornerRadius(12), Padding = new Thickness(12, 5, 12, 6),
-            Background = Frozen(Color.FromArgb(0x2C, 0xE2, 0xC4, 0x6F)), BorderBrush = Frozen(Color.FromArgb(0x80, 0xE2, 0xC4, 0x6F)), BorderThickness = new Thickness(1),
-            Child = new TextBlock { Text = T("MinimalSoon"), FontSize = 12.5, FontWeight = FontWeights.SemiBold, Foreground = Frozen(Color.FromRgb(0xF0, 0xD8, 0x96)) },
-        };
-        left.Children.Add(badge);
+        var setUp = Ghost("\uE713  " + T("MinimalSetUp"), () => _openSettings(SettingsPage.Minimal));
+        setUp.Margin = new Thickness(0, 20, 0, 0);
+        setUp.HorizontalAlignment = HorizontalAlignment.Left;
+        left.Children.Add(setUp);
         grid.Children.Add(left);
 
-        // A desktop with the floating lyrics on it. Only an illustration: it can be dragged and restyled here.
+        // A desktop with the floating lyrics as the real window draws them: the verses around the
+        // one being sung, its own buttons and the corner grip. It can be dragged and restyled here.
         var screen = new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Background = PhotoBrush("fuji.jpg", 0, Stretch.UniformToFill), Margin = new Thickness(36, 0, 0, 0) };
         var canvas = new Canvas { ClipToBounds = true, Background = Brushes.Transparent };
         screen.Child = canvas;
-        var lyric = new TextBlock { FontFamily = Display, FontWeight = FontWeights.Bold, FontSize = 30, TextAlignment = TextAlignment.Center };
-        var caption = new Border
-        {
-            Padding = new Thickness(26, 12, 26, 14), CornerRadius = new CornerRadius(18), Cursor = Cursors.SizeAll, Child = lyric,
-            Effect = new DropShadowEffect { BlurRadius = 18, ShadowDepth = 0, Opacity = .55, Color = Colors.Black },
-        };
         var song = TourSong.All[0];
         var line = 2;
+        TextBlock Verse(double size, double opacity) => new()
+        {
+            FontFamily = Display, FontWeight = FontWeights.Bold, FontSize = size, TextAlignment = TextAlignment.Center, Foreground = Brushes.White,
+            Opacity = opacity, Margin = new Thickness(0, 3, 0, 3), TextTrimming = TextTrimming.CharacterEllipsis,
+        };
+        var previous = Verse(24, .5);
+        var lyric = Verse(30, 1);
+        var next = Verse(24, .5);
+        var verses = new StackPanel { Width = 470, Margin = new Thickness(0, 2, 0, 0) };
+        verses.Children.Add(previous);
+        verses.Children.Add(lyric);
+        verses.Children.Add(next);
+        var toolbar = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Opacity = .6 };
+        foreach (var glyph in new[] { "\uE8A7", "\uE713", "\uE785", "\uE711" })
+            toolbar.Children.Add(new TextBlock { Text = glyph, FontFamily = Icons, FontSize = 12, Foreground = Brushes.White, Width = 28, TextAlignment = TextAlignment.Center });
+        var grip = new System.Windows.Shapes.Path
+        {
+            Data = Geometry.Parse("M16,4 L4,16 M16,9 L9,16 M16,14 L14,16"), Stroke = Brushes.White, StrokeThickness = 1.6, Opacity = .6,
+            StrokeStartLineCap = PenLineCap.Round, StrokeEndLineCap = PenLineCap.Round, HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(0, 0, -10, -4),
+        };
+        var body = new Grid();
+        body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        body.RowDefinitions.Add(new RowDefinition());
+        body.Children.Add(toolbar);
+        Grid.SetRow(verses, 1);
+        body.Children.Add(verses);
+        Grid.SetRow(grip, 1);
+        body.Children.Add(grip);
+        var shadow = new DropShadowEffect { BlurRadius = 12, ShadowDepth = 1.5, Direction = 270, Opacity = .7, Color = Colors.Black };
+        verses.Effect = shadow;
+        var caption = new Border
+        {
+            Padding = new Thickness(18, 6, 18, 12), CornerRadius = new CornerRadius(14), Cursor = Cursors.SizeAll, Child = body,
+        };
+
         var start = DateTime.UtcNow;
         var fill = new LinearGradientBrush { StartPoint = new Point(0, 0), EndPoint = new Point(1, 0) };
         var stops = new[] { new GradientStop(Colors.White, 0), new GradientStop(Colors.White, 0), new GradientStop(Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF), 0), new GradientStop(Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF), 1) };
-        foreach (var s in stops) fill.GradientStops.Add(s);
+        foreach (var gs in stops) fill.GradientStops.Add(gs);
         lyric.Foreground = fill;
-        lyric.Text = song.Lines[line];
+        void ShowLines()
+        {
+            var n = song.Lines.Length;
+            previous.Text = song.Lines[(line + n - 1) % n];
+            lyric.Text = song.Lines[line];
+            next.Text = song.Lines[(line + 1) % n];
+        }
+        ShowLines();
         Every(step, 33, () =>
         {
             var t = (DateTime.UtcNow - start).TotalSeconds / 3.4;
@@ -876,7 +911,7 @@ public sealed class TourWindow : Window
             {
                 start = DateTime.UtcNow;
                 line = (line + 1) % song.Lines.Length;
-                lyric.Text = song.Lines[line];
+                ShowLines();
                 t = 0;
             }
             var p = Math.Min(1, t);
@@ -887,9 +922,7 @@ public sealed class TourWindow : Window
         var soft = true;
         void Style()
         {
-            caption.Background = soft ? Frozen(Color.FromArgb(0x66, 0x0A, 0x14, 0x1E)) : Brushes.Transparent;
-            caption.BorderBrush = soft ? Frozen(Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF)) : null;
-            caption.BorderThickness = new Thickness(soft ? 1 : 0);
+            caption.Background = soft ? Frozen(Color.FromArgb(0x8C, 0x0C, 0x10, 0x16)) : Brushes.Transparent;
         }
         Style();
         canvas.Children.Add(caption);
@@ -897,7 +930,7 @@ public sealed class TourWindow : Window
         {
             caption.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             Canvas.SetLeft(caption, (canvas.ActualWidth - caption.DesiredSize.Width) / 2);
-            Canvas.SetTop(caption, canvas.ActualHeight * .62);
+            Canvas.SetTop(caption, canvas.ActualHeight * .5);
         };
         Point? grab = null;
         caption.MouseLeftButtonDown += (_, e) => { grab = e.GetPosition(caption); caption.CaptureMouse(); };
@@ -917,9 +950,13 @@ public sealed class TourWindow : Window
         Select(softB, true);
         tools.Children.Add(softB);
         tools.Children.Add(clearB);
-        var size = new Slider { Minimum = 22, Maximum = 44, Value = 30, Width = 110, Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, ToolTip = T("MinimalSize") };
+        var size = new Slider { Minimum = 22, Maximum = 40, Value = 30, Width = 110, Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center, ToolTip = T("MinimalSize") };
         if (Application.Current.TryFindResource("SettingsSlider") is Style slider) size.Style = slider;
-        size.ValueChanged += (_, e) => lyric.FontSize = e.NewValue;
+        size.ValueChanged += (_, e) =>
+        {
+            lyric.FontSize = e.NewValue;
+            previous.FontSize = next.FontSize = e.NewValue * .8;
+        };
         tools.Children.Add(size);
         var hint = new TextBlock { Text = T("MinimalDrag"), FontSize = 12.5, Foreground = CreamBrush, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(18, 0, 0, 14) };
         hint.Effect = new DropShadowEffect { BlurRadius = 8, ShadowDepth = 0, Opacity = .8, Color = Colors.Black };
@@ -1154,6 +1191,13 @@ public sealed class TourWindow : Window
         offers.ColumnDefinitions.Add(new ColumnDefinition());
         var star = Offer("\uE735", gold, T("HomeFavor"), T("HomeStarShort"), Ghost("\uE735  " + T("HomeGitHub"), () => Open(ContactInfo.Repository)));
         var playlist = Offer("\uE7F6", Turquoise, T("HomeDiscover"), T("HomeDiscoverBody"), Ghost("\uE8D6  " + T("CommunityListen"), () => OfficialLinks.Open(OfficialLinks.Playlist)));
+        // A second way in, right under the first: adding a song of one's own to the playlist.
+        var add = Ghost("\uE710  " + T("HomeAddSong"), () => OfficialLinks.Open(OfficialLinks.SuggestSong));
+        add.Margin = new Thickness(0, 8, 0, 0);
+        add.HorizontalAlignment = HorizontalAlignment.Stretch;
+        add.BorderBrush = Turquoise;
+        add.Background = Frozen(Color.FromArgb(0x18, ((SolidColorBrush)Turquoise).Color.R, ((SolidColorBrush)Turquoise).Color.G, ((SolidColorBrush)Turquoise).Color.B));
+        playlist.Children.Add(add);
         star.Margin = new Thickness(0, 0, 32, 0);
         playlist.Margin = new Thickness(32, 0, 0, 0);
         offers.Children.Add(star);

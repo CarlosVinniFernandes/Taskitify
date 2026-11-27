@@ -386,12 +386,11 @@
   "TourGroupSong": "Música",
   "TourMinimalEyebrow": "Só você e a letra.",
   "TourMinimalTitle": "Às vezes, a letra é tudo de que você precisa.",
-  "TourMinimalBody": "Sem distrações. Só você e a música: apenas o verso cantado, flutuando sobre a área de trabalho.",
-  "TourMinimalMove": "Mova e redimensione onde preferir.",
-  "TourMinimalAbove": "Deixe acima das outras janelas, com fundo transparente ou suave.",
-  "TourMinimalAlone": "Funciona sozinho: o player da barra e o mini player descansam enquanto ele está ligado, para economizar recursos. Você poderá mudar isso.",
-  "TourMinimalOff": "Nunca vem ligado por padrão.",
-  "TourMinimalSoon": "Em breve · prévia do conceito",
+  "TourMinimalBody": "Sem distrações. Só você e a música: os versos sendo cantados, flutuando sobre a área de trabalho.",
+  "TourMinimalMove": "Arraste para qualquer lugar; redimensione pelas bordas ou pela alça do canto.",
+  "TourMinimalAbove": "Acima das outras janelas, inclusive jogos em tela cheia sem bordas, com fundo transparente, suave ou do álbum.",
+  "TourMinimalAlone": "Sozinho por padrão: o player da barra descansa enquanto ele está ligado. Você pode mantê-lo e abrir o mini player pelas letras.",
+  "TourMinimalOff": "Desligado até você ligar, nas Configurações ou pelo ícone da área de notificação.",
   "TourMinimalSoft": "Fundo suave",
   "TourMinimalClear": "Transparente",
   "TourMinimalSize": "Tamanho do texto",
@@ -549,5 +548,7 @@
   "OffsetAppliedHint": "Todas as músicas mais esta, dentro de ±5 s. O mesmo na barra, no mini player e no Minimal Mode.",
   "TrackOffsetsClear": "Limpar ajustes por música",
   "TrackOffsetsClearQuestion": "Remover o ajuste de todas as músicas ({0})? O ajuste geral continua.",
-  "OffsetAll": "Todas as músicas"
+  "OffsetAll": "Todas as músicas",
+  "TourMinimalSetUp": "Configurar o Minimal Mode",
+  "TourHomeAddSong": "Adicionar música na playlist"
 }
