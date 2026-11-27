@@ -210,7 +210,6 @@ figcaption { color: var(--muted); font-size: .84rem; }
 .soundtrack-copy h1 em, .soundtrack-copy h2 em { color: var(--gold); }
 .soundtrack-copy > p:not(.eyebrow) { margin-top: 19px; max-width: 540px; }
 .soundtrack-copy .actions { margin-top: 25px; }
-.soundtrack-copy .availability { margin-top: 9px; font-size: .87rem; color: #c4d4d5; }
 .record-art { position: relative; isolation: isolate; width: 100%; aspect-ratio: 1.26; max-width: 450px; justify-self: center; }
 .record-sleeve {
   position: absolute;

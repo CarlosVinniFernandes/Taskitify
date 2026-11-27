@@ -5,6 +5,7 @@ export const repository = "https://github.com/CarlosVinniFernandes/Taskitify";
 export const releases = `${repository}/releases/latest`;
 export const store = "https://apps.microsoft.com/detail/9nc2227dj01d";
 export const issues = `${repository}/issues/new`;
+export const communityPlaylist = "https://open.spotify.com/playlist/0CMy9wXwlq6FRRdrIvvcWD";
 export type Page = "home" | "community" | "privacy";
 
 export function pathFor(locale: Locale, page: Page = "home") {
@@ -21,18 +22,6 @@ export function siteOrigin() {
   } catch {
     return undefined;
   }
-}
-
-export function playlistUrl() {
-  try {
-    const value = new URL(process.env.SPOTIFY_PLAYLIST_URL ?? "");
-    if (value.origin === "https://open.spotify.com" && /^\/playlist\/[A-Za-z0-9]+\/?$/.test(value.pathname)) {
-      return `${value.origin}${value.pathname}`;
-    }
-  } catch {
-    // A playlist can be announced separately from the site.
-  }
-  return undefined;
 }
 
 export function contactUrl() {

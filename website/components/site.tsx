@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Github, Headphones, Mail, Music2, Grid2X2 } from "lucide-react";
 import { copy, type Locale } from "@/lib/copy";
-import { contactUrl, issues, pathFor, playlistUrl, repository, store, type Page } from "@/lib/site";
+import { communityPlaylist, contactUrl, issues, pathFor, repository, store, type Page } from "@/lib/site";
 
 export function SiteShell({ locale, page, children }: { locale: Locale; page: Page; children: ReactNode }) {
   const t = copy[locale];
@@ -66,14 +66,7 @@ export function ContactLink({ locale }: { locale: Locale }) {
 
 export function PlaylistLink({ locale }: { locale: Locale }) {
   const t = copy[locale].community;
-  const url = playlistUrl();
-  return url ? (
-    <a className="button button-spotify" href={url}><Headphones size={18} aria-hidden="true" /> {t.listen}</a>
-  ) : (
-    <button className="button button-outline" type="button" disabled aria-describedby="playlist-status">
-      <Headphones size={18} aria-hidden="true" /> {t.listen}
-    </button>
-  );
+  return <a className="button button-spotify" href={communityPlaylist}><Headphones size={18} aria-hidden="true" /> {t.listen}</a>;
 }
 
 export function RecordArt() {
