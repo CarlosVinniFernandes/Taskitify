@@ -536,5 +536,11 @@
   "LookUpdate": "Aggiorna",
   "LookUpdateHint": "Sostituisci questo aspetto con le impostazioni attuali",
   "LookDelete": "Elimina",
-  "LookPersonalName": "Il mio aspetto {0}"
+  "LookPersonalName": "Il mio aspetto {0}",
+  "LookEffect": "Atmosfera",
+  "LookEffectNone": "Solo Aurora, Atmosfera e Velluto hanno nuvole di colore da intensificare o ammorbidire.",
+  "LookDim": "Scurisci",
+  "LookDimNone": "Lo sfondo del tema segue Windows e non viene scurito.",
+  "LookBlur": "Sfocatura",
+  "LookBlurNone": "Solo la copertina sfocata ha una sfocatura da regolare."
 }

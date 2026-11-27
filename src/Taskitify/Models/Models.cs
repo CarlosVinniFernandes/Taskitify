@@ -543,6 +543,29 @@ public sealed class MiniPlayerStyle
 
     public ControlsLook Controls { get; set; } = ControlsLook.Classic;
 
+    /// <summary>The atmospheric backgrounds' colour clouds: 0.3 (faint) to 1.5 (vivid); 1 as they always were.</summary>
+    public double BackgroundEffect { get; set; } = 1;
+
+    /// <summary>How much the album backgrounds are darkened: 0 (as always) to 0.6.</summary>
+    public double BackgroundDim { get; set; }
+
+    /// <summary>The blurred cover's blur: 0.4 to 1.8; 1 as it always was.</summary>
+    public double BackgroundBlur { get; set; } = 1;
+
+    public static double ClampEffect(double v) => Math.Clamp(Math.Round(v * 20) / 20, 0.3, 1.5);
+    public static double ClampDim(double v) => Math.Clamp(Math.Round(v * 20) / 20, 0, 0.6);
+    public static double ClampBlur(double v) => Math.Clamp(Math.Round(v * 20) / 20, 0.4, 1.8);
+
+    /// <summary>Which of the intensity settings the background has (the others have nothing to act on).</summary>
+    public static (bool Effect, bool Dim, bool Blur) Tunable(MiniPlayerBackground background, bool defaultIsGradient) => background switch
+    {
+        MiniPlayerBackground.Aurora or MiniPlayerBackground.Atmosphere or MiniPlayerBackground.Velvet => (true, true, false),
+        MiniPlayerBackground.BlurredCover => (false, true, true),
+        MiniPlayerBackground.AlbumGradient => (false, true, false),
+        MiniPlayerBackground.Default => (false, defaultIsGradient, false),
+        _ => (false, false, false),
+    };
+
     public MiniPlayerStyle Clone() => (MiniPlayerStyle)MemberwiseClone();
 
     /// <summary>Copies every part of the look except the layout: a look never turns a vertical player wide or back.</summary>

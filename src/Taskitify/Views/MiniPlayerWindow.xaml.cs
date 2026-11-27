@@ -459,7 +459,7 @@ public partial class MiniPlayerWindow : Window
         {
             // A small image made once per cover and style, stretched: it is all soft gradients.
             var (w, h) = _vm.IsCinema ? (192, 112) : (128, 176);
-            var image = MiniPlayerBackdrop.Render(_vm.Cover as BitmapSource, look, w, h);
+            var image = MiniPlayerBackdrop.Render(_vm.Cover as BitmapSource, look, w, h, BackdropTuning.From(_vm.Look));
             var brush = new ImageBrush(image) { Stretch = Stretch.Fill };
             RenderOptions.SetBitmapScalingMode(brush, BitmapScalingMode.HighQuality);
             brush.Freeze();
@@ -467,7 +467,8 @@ public partial class MiniPlayerWindow : Window
         }
         else
         {
-            var gradient = new LinearGradientBrush(end, start, new Point(0, 0), new Point(1, 1));
+            var dim = MiniPlayerStyle.ClampDim(_vm.Look.BackgroundDim);
+            var gradient = new LinearGradientBrush(MiniPlayerBackdrop.Dimmed(end, dim), MiniPlayerBackdrop.Dimmed(start, dim), new Point(0, 0), new Point(1, 1));
             gradient.Freeze();
             ContentCard.Background = gradient;
         }

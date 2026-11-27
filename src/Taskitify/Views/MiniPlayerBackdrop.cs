@@ -14,6 +14,15 @@ namespace Taskitify.Views;
 /// cleanly), drawn once per cover and style and cached; nothing is animated or redrawn while
 /// the player is open, and nothing at all while it is closed.
 /// </summary>
+/// <summary>How strong a background is drawn; the defaults are the backgrounds as they always were.</summary>
+public readonly record struct BackdropTuning(double Effect, double Dim, double Blur)
+{
+    public static BackdropTuning Default { get; } = new(1, 0, 1);
+
+    public static BackdropTuning From(MiniPlayerStyle look) =>
+        new(MiniPlayerStyle.ClampEffect(look.BackgroundEffect), MiniPlayerStyle.ClampDim(look.BackgroundDim), MiniPlayerStyle.ClampBlur(look.BackgroundBlur));
+}
+
 public static class MiniPlayerBackdrop
 {
     private const int CacheSize = 8;
@@ -29,9 +38,10 @@ public static class MiniPlayerBackdrop
         style is MiniPlayerBackground.Aurora or MiniPlayerBackground.Atmosphere or MiniPlayerBackground.Velvet or MiniPlayerBackground.BlurredCover;
 
     /// <summary>The background for this cover, <paramref name="width"/> × <paramref name="height"/> pixels (small: it is stretched).</summary>
-    public static BitmapSource Render(BitmapSource? cover, MiniPlayerBackground style, int width, int height)
+    public static BitmapSource Render(BitmapSource? cover, MiniPlayerBackground style, int width, int height, BackdropTuning? tuning = null)
     {
-        var key = (cover, style, width, height);
+        var t = tuning ?? BackdropTuning.Default;
+        var key = (cover, style, width, height, t);
         foreach (var entry in Cache)
         {
             if (entry.Key.Equals(key))
@@ -40,10 +50,10 @@ public static class MiniPlayerBackdrop
         var swatches = Swatches(cover);
         var image = style switch
         {
-            MiniPlayerBackground.Atmosphere => Atmosphere(swatches, width, height),
-            MiniPlayerBackground.Velvet => Velvet(swatches, width, height),
-            MiniPlayerBackground.BlurredCover when cover is not null => BlurredCover(cover, width, height),
-            _ => Aurora(swatches, width, height),
+            MiniPlayerBackground.Atmosphere => Atmosphere(swatches, width, height, t),
+            MiniPlayerBackground.Velvet => Velvet(swatches, width, height, t),
+            MiniPlayerBackground.BlurredCover when cover is not null => BlurredCover(cover, width, height, t),
+            _ => Aurora(swatches, width, height, t),
         };
         Cache.AddFirst((key, image));
         if (Cache.Count > CacheSize)
@@ -54,7 +64,7 @@ public static class MiniPlayerBackdrop
     // ---- the styles ----
 
     /// <summary>Several wide clouds of the album's colours over a dark tone of its main one.</summary>
-    private static BitmapSource Aurora(IReadOnlyList<(Rgb Color, double Share)> swatches, int w, int h)
+    private static BitmapSource Aurora(IReadOnlyList<(Rgb Color, double Share)> swatches, int w, int h, BackdropTuning t)
     {
         // The colours that say the most about the cover: present and colourful, and distinct.
         var ranked = swatches.OrderByDescending(s => s.Share * (0.25 + AlbumPalette.ToHsl(s.Color).S)).Select(s => s.Color).ToList();
@@ -74,26 +84,26 @@ public static class MiniPlayerBackdrop
                 var (_, sat, _) = AlbumPalette.ToHsl(colors[i]);
                 // Colourful ones a touch richer; greys stay grey.
                 var c = Shade(colors[i], maxS: 0.9, minL: 0.34, maxL: 0.56, saturation: sat > 0.25 ? 1.15 : 1);
-                Blob(dc, w, h, spots[i], c, 1);
+                Blob(dc, w, h, spots[i], c, t.Effect);
             }
-        }, blur: 0.13);
+        }, blur: 0.13, dim: t.Dim);
     }
 
     /// <summary>The main colour, lit softly in two places by its neighbours: calm, low contrast.</summary>
-    private static BitmapSource Atmosphere(IReadOnlyList<(Rgb Color, double Share)> swatches, int w, int h)
+    private static BitmapSource Atmosphere(IReadOnlyList<(Rgb Color, double Share)> swatches, int w, int h, BackdropTuning t)
     {
         var main = swatches[0].Color;
         var second = swatches.Count > 1 && AlbumPalette.Distance(swatches[1].Color, main) < 200 ? swatches[1].Color : Hue(main, 0.03);
         var baseColor = Shade(main, maxS: 0.6, minL: 0.14, maxL: 0.22);
         return Compose(w, h, baseColor, dc =>
         {
-            Blob(dc, w, h, (0.2, 0.05, 1.0), Shade(main, maxS: 0.65, minL: 0.28, maxL: 0.36), 0.7);
-            Blob(dc, w, h, (0.95, 0.95, 0.9), Shade(second, maxS: 0.5, minL: 0.22, maxL: 0.3), 0.6);
-        }, blur: 0.25);
+            Blob(dc, w, h, (0.2, 0.05, 1.0), Shade(main, maxS: 0.65, minL: 0.28, maxL: 0.36), 0.7 * t.Effect);
+            Blob(dc, w, h, (0.95, 0.95, 0.9), Shade(second, maxS: 0.5, minL: 0.22, maxL: 0.3), 0.6 * t.Effect);
+        }, blur: 0.25, dim: t.Dim);
     }
 
     /// <summary>Muted, deep colours in wide sweeps, a vignette and a fine grain: matte.</summary>
-    private static BitmapSource Velvet(IReadOnlyList<(Rgb Color, double Share)> swatches, int w, int h)
+    private static BitmapSource Velvet(IReadOnlyList<(Rgb Color, double Share)> swatches, int w, int h, BackdropTuning t)
     {
         var colors = Variants(swatches, 2);
         var a = Shade(colors[0], maxS: 0.42, minL: 0.2, maxL: 0.28, saturation: 0.6);
@@ -101,18 +111,18 @@ public static class MiniPlayerBackdrop
         var image = Compose(w, h, b, dc =>
         {
             dc.DrawRectangle(new LinearGradientBrush(a, b, new Point(0, 0), new Point(1, 1)), null, new Rect(0, 0, w, h));
-            Blob(dc, w, h, (0.3, 0.0, 0.9), Color.FromArgb(0xFF, (byte)Math.Min(255, a.R + 18), (byte)Math.Min(255, a.G + 18), (byte)Math.Min(255, a.B + 18)), 0.5);
-            var vignette = new RadialGradientBrush(Colors.Transparent, Color.FromArgb(0x70, 0, 0, 0)) { RadiusX = 0.75, RadiusY = 0.75 };
+            Blob(dc, w, h, (0.3, 0.0, 0.9), Color.FromArgb(0xFF, (byte)Math.Min(255, a.R + 18), (byte)Math.Min(255, a.G + 18), (byte)Math.Min(255, a.B + 18)), 0.5 * t.Effect);
+            var vignette = new RadialGradientBrush(Colors.Transparent, Color.FromArgb((byte)Math.Min(255, 0x70 * t.Effect), 0, 0, 0)) { RadiusX = 0.75, RadiusY = 0.75 };
             dc.DrawRectangle(vignette, null, new Rect(0, 0, w, h));
-        }, blur: 0.12);
+        }, blur: 0.12, dim: t.Dim);
         return Grain(image, 5);
     }
 
     /// <summary>The cover itself, blurred past recognition, a little desaturated and darkened.</summary>
-    private static BitmapSource BlurredCover(BitmapSource cover, int w, int h)
+    private static BitmapSource BlurredCover(BitmapSource cover, int w, int h, BackdropTuning t)
     {
         var size = new Size(w, h);
-        var radius = Math.Max(w, h) * 0.22;
+        var radius = Math.Max(w, h) * 0.22 * t.Blur;
         var host = new Grid { Width = w, Height = h, ClipToBounds = true, Background = Brushes.Black };
         host.Children.Add(new Image
         {
@@ -123,12 +133,12 @@ public static class MiniPlayerBackdrop
         });
         host.Children.Add(new Border { Background = new SolidColorBrush(Color.FromArgb(0x22, 0x80, 0x80, 0x80)) });
         var bitmap = RenderElement(host, size);
-        return Legible(bitmap, extra: 0.1);
+        return Legible(bitmap, extra: 0.1 + ((1 - 0.1) * t.Dim));
     }
 
     // ---- building blocks ----
 
-    private static BitmapSource Compose(int w, int h, Color baseColor, Action<DrawingContext> draw, double blur)
+    private static BitmapSource Compose(int w, int h, Color baseColor, Action<DrawingContext> draw, double blur, double dim)
     {
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen())
@@ -148,7 +158,8 @@ public static class MiniPlayerBackdrop
             Margin = new Thickness(-radius),
             Effect = new BlurEffect { Radius = radius, KernelType = KernelType.Gaussian, RenderingBias = RenderingBias.Quality },
         });
-        return Legible(RenderElement(host, new Size(w, h)), extra: 0);
+        // Darkening only ever adds to what legibility needs: the text never gets harder to read.
+        return Legible(RenderElement(host, new Size(w, h)), extra: dim);
     }
 
     private static void Blob(DrawingContext dc, int w, int h, (double X, double Y, double R) spot, Color color, double strength)
@@ -157,8 +168,8 @@ public static class MiniPlayerBackdrop
         {
             GradientStops =
             {
-                new GradientStop(Color.FromArgb((byte)(255 * strength), color.R, color.G, color.B), 0),
-                new GradientStop(Color.FromArgb((byte)(130 * strength), color.R, color.G, color.B), 0.45),
+                new GradientStop(Color.FromArgb((byte)Math.Min(255, 255 * strength), color.R, color.G, color.B), 0),
+                new GradientStop(Color.FromArgb((byte)Math.Min(255, 130 * strength), color.R, color.G, color.B), 0.45),
                 new GradientStop(Color.FromArgb(0, color.R, color.G, color.B), 1),
             },
         };
@@ -176,6 +187,10 @@ public static class MiniPlayerBackdrop
         bitmap.Freeze();
         return bitmap;
     }
+
+    /// <summary>A gradient's colour darkened by <paramref name="dim"/> (0: as is).</summary>
+    public static Color Dimmed(Color c, double dim) =>
+        Color.FromRgb((byte)(c.R * (1 - dim)), (byte)(c.G * (1 - dim)), (byte)(c.B * (1 - dim)));
 
     /// <summary>Darkened just enough (if at all) that white lyrics and controls read well on it.</summary>
     private static BitmapSource Legible(BitmapSource image, double extra)

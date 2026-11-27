@@ -482,9 +482,49 @@
                     </Border>
 
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookBackground}" />
-                    <Border Style="{StaticResource Group}" Padding="18,14,18,8">
-                        <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Backgrounds}"
-                                 SelectedItem="{Binding MiniLook.Background}" AutomationProperties.Name="{DynamicResource Loc.LookBackground}" />
+                    <Border Style="{StaticResource Group}">
+                        <StackPanel>
+                            <Border Style="{StaticResource FirstRow}" Padding="18,14,18,8">
+                                <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Backgrounds}"
+                                         SelectedItem="{Binding MiniLook.Background}" AutomationProperties.Name="{DynamicResource Loc.LookBackground}" />
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <StackPanel>
+                                    <DockPanel IsEnabled="{Binding MiniLook.HasEffect}">
+                                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource ValueText}" Text="{Binding MiniLook.EffectPercent, StringFormat={}{0:0}%}" />
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookEffect}" />
+                                    </DockPanel>
+                                    <Slider Minimum="30" Maximum="150" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,8,0,0" IsEnabled="{Binding MiniLook.HasEffect}"
+                                            Value="{Binding MiniLook.EffectPercent}" AutomationProperties.Name="{DynamicResource Loc.LookEffect}" />
+                                    <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.LookEffectNone}"
+                                               Visibility="{Binding MiniLook.NoEffect, Converter={StaticResource BoolToVisibility}}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <StackPanel>
+                                    <DockPanel IsEnabled="{Binding MiniLook.HasDim}">
+                                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource ValueText}" Text="{Binding MiniLook.DimPercent, StringFormat={}{0:0}%}" />
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookDim}" />
+                                    </DockPanel>
+                                    <Slider Minimum="0" Maximum="60" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,8,0,0" IsEnabled="{Binding MiniLook.HasDim}"
+                                            Value="{Binding MiniLook.DimPercent}" AutomationProperties.Name="{DynamicResource Loc.LookDim}" />
+                                    <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.LookDimNone}"
+                                               Visibility="{Binding MiniLook.NoDim, Converter={StaticResource BoolToVisibility}}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <StackPanel>
+                                    <DockPanel IsEnabled="{Binding MiniLook.HasBlur}">
+                                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource ValueText}" Text="{Binding MiniLook.BlurPercent, StringFormat={}{0:0}%}" />
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookBlur}" />
+                                    </DockPanel>
+                                    <Slider Minimum="40" Maximum="180" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,8,0,0" IsEnabled="{Binding MiniLook.HasBlur}"
+                                            Value="{Binding MiniLook.BlurPercent}" AutomationProperties.Name="{DynamicResource Loc.LookBlur}" />
+                                    <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.LookBlurNone}"
+                                               Visibility="{Binding MiniLook.NoBlur, Converter={StaticResource BoolToVisibility}}" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
                     </Border>
 
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookLyrics}" />

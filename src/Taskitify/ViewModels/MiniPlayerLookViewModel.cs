@@ -35,7 +35,7 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     private bool _active;
     private bool _showLooks;
     private (Color Start, Color End)? _pickerPalette;
-    private (BitmapSource? Cover, Color Start, Color End, Color Theme, bool AlbumGradient)? _backgroundKey;
+    private (BitmapSource? Cover, Color Start, Color End, Color Theme, bool AlbumGradient, BackdropTuning Tuning)? _backgroundKey;
     private Color? _diagramColor;
     private Brush? _pickerBackground;
     private object? _presetsKey;
@@ -317,6 +317,36 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
         set { if (value is not null && value.Value != Look.Controls) Change(s => s.MiniPlayerLook.Controls = value.Value); }
     }
 
+    // ---- The background's intensity: only what the chosen background has is enabled ----
+
+    private (bool Effect, bool Dim, bool Blur) Tunable =>
+        MiniPlayerStyle.Tunable(Look.Background, _settings.Current.Background == OverlayBackground.AlbumGradient);
+
+    public bool HasEffect => Tunable.Effect;
+    public bool HasDim => Tunable.Dim;
+    public bool HasBlur => Tunable.Blur;
+    public bool NoEffect => !HasEffect;
+    public bool NoDim => !HasDim;
+    public bool NoBlur => !HasBlur;
+
+    public double EffectPercent
+    {
+        get => Math.Round(MiniPlayerStyle.ClampEffect(Look.BackgroundEffect) * 100);
+        set { var v = MiniPlayerStyle.ClampEffect(value / 100); if (v != Look.BackgroundEffect) Change(s => s.MiniPlayerLook.BackgroundEffect = v); }
+    }
+
+    public double DimPercent
+    {
+        get => Math.Round(MiniPlayerStyle.ClampDim(Look.BackgroundDim) * 100);
+        set { var v = MiniPlayerStyle.ClampDim(value / 100); if (v != Look.BackgroundDim) Change(s => s.MiniPlayerLook.BackgroundDim = v); }
+    }
+
+    public double BlurPercent
+    {
+        get => Math.Round(MiniPlayerStyle.ClampBlur(Look.BackgroundBlur) * 100);
+        set { var v = MiniPlayerStyle.ClampBlur(value / 100); if (v != Look.BackgroundBlur) Change(s => s.MiniPlayerLook.BackgroundBlur = v); }
+    }
+
     /// <summary>The lyrics' size in percent.</summary>
     public double LyricsPercent
     {
@@ -349,12 +379,14 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
         var themeBackground = ResourceColor("PopupBackgroundBrush");
         var themeText = ResourceColor("TextPrimaryBrush");
         var albumGradient = _settings.Current.Background == OverlayBackground.AlbumGradient;
-        var key = (cover, palette.Item1, palette.Item2, themeBackground, albumGradient);
+        var tuning = BackdropTuning.From(Look);
+        var key = (cover, palette.Item1, palette.Item2, themeBackground, albumGradient, tuning);
         if (_backgroundKey != key)
         {
             _backgroundKey = key;
+            // The pictures show the intensity chosen, on every background it applies to.
             foreach (var option in Backgrounds)
-                option.Thumbnail = MiniPlayerLookThumbnails.Background(option.Value, cover, palette, themeBackground, albumGradient);
+                option.Thumbnail = MiniPlayerLookThumbnails.Background(option.Value, cover, palette, themeBackground, albumGradient, tuning);
         }
 
         if (_diagramColor != themeText)
@@ -394,7 +426,11 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
         foreach (var option in Presets)
         {
             var look = option.Value.Personal is { } p ? LookPreset.FromPersonal(p) : option.Value;
-            option.Thumbnail = MiniPlayerLookThumbnails.Player(Look.Layout, look, sample, Backdrop(look.Background), Ink(look.Background));
+            // A personal look is drawn with the background intensity it was saved with.
+            var backdrop = option.Value.Personal is { } own && BackdropTuning.From(own.Look) != tuning
+                ? MiniPlayerLookThumbnails.Background(look.Background, cover, palette, themeBackground, albumGradient, BackdropTuning.From(own.Look))
+                : Backdrop(look.Background);
+            option.Thumbnail = MiniPlayerLookThumbnails.Player(Look.Layout, look, sample, backdrop, Ink(look.Background));
         }
 
     }

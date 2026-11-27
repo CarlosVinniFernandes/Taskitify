@@ -18,12 +18,13 @@ internal static class MiniPlayerLookThumbnails
     private static readonly Geometry Next = Geometry.Parse("M3,-4 H5 V4 H3 Z M-4,-5 L3,0 -4,5 Z");
 
     public static ImageSource Background(MiniPlayerBackground kind, BitmapSource? cover,
-        (Color Start, Color End) palette, Color theme, bool albumGradient)
+        (Color Start, Color End) palette, Color theme, bool albumGradient, BackdropTuning tuning)
     {
         if (MiniPlayerBackdrop.IsAtmospheric(kind))
-            return MiniPlayerBackdrop.Render(cover, kind, 72, 96);
+            return MiniPlayerBackdrop.Render(cover, kind, 72, 96, tuning);
         var useTheme = kind == MiniPlayerBackground.Theme || (kind == MiniPlayerBackground.Default && !albumGradient);
-        Brush fill = useTheme ? Ink(theme) : new LinearGradientBrush(palette.End, palette.Start, new Point(0, 0), new Point(1, 1));
+        Brush fill = useTheme ? Ink(theme) : new LinearGradientBrush(MiniPlayerBackdrop.Dimmed(palette.End, tuning.Dim),
+            MiniPlayerBackdrop.Dimmed(palette.Start, tuning.Dim), new Point(0, 0), new Point(1, 1));
         return Draw(72, 96, (dc, bounds) => dc.DrawRectangle(fill, null, bounds));
     }
 

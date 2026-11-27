@@ -536,5 +536,11 @@
   "LookUpdate": "Update",
   "LookUpdateHint": "Replace this look with the current settings",
   "LookDelete": "Delete",
-  "LookPersonalName": "My look {0}"
+  "LookPersonalName": "My look {0}",
+  "LookEffect": "Atmosphere",
+  "LookEffectNone": "Only Aurora, Atmosphere and Velvet have colour clouds to strengthen or soften.",
+  "LookDim": "Darken",
+  "LookDimNone": "The theme background follows Windows and is not darkened.",
+  "LookBlur": "Blur",
+  "LookBlurNone": "Only the blurred cover has a blur to adjust."
 }

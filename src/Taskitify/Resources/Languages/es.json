@@ -536,5 +536,11 @@
   "LookUpdate": "Actualizar",
   "LookUpdateHint": "Reemplazar este aspecto con la configuración actual",
   "LookDelete": "Eliminar",
-  "LookPersonalName": "Mi aspecto {0}"
+  "LookPersonalName": "Mi aspecto {0}",
+  "LookEffect": "Atmósfera",
+  "LookEffectNone": "Solo Aurora, Atmósfera y Terciopelo tienen nubes de color para intensificar o suavizar.",
+  "LookDim": "Oscurecer",
+  "LookDimNone": "El fondo del tema sigue a Windows y no se oscurece.",
+  "LookBlur": "Desenfoque",
+  "LookBlurNone": "Solo la portada difuminada tiene desenfoque para ajustar."
 }

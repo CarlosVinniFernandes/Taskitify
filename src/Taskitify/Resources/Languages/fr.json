@@ -536,5 +536,11 @@
   "LookUpdate": "Mettre à jour",
   "LookUpdateHint": "Remplacer cette apparence par les réglages actuels",
   "LookDelete": "Supprimer",
-  "LookPersonalName": "Mon apparence {0}"
+  "LookPersonalName": "Mon apparence {0}",
+  "LookEffect": "Atmosphère",
+  "LookEffectNone": "Seuls Aurore, Atmosphère et Velours ont des nuages de couleur à renforcer ou adoucir.",
+  "LookDim": "Assombrir",
+  "LookDimNone": "Le fond du thème suit Windows et n'est pas assombri.",
+  "LookBlur": "Flou",
+  "LookBlurNone": "Seule la pochette floutée a un flou à régler."
 }

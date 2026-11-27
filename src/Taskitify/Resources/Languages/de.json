@@ -536,5 +536,11 @@
   "LookUpdate": "Aktualisieren",
   "LookUpdateHint": "Diesen Look durch die aktuellen Einstellungen ersetzen",
   "LookDelete": "Löschen",
-  "LookPersonalName": "Mein Look {0}"
+  "LookPersonalName": "Mein Look {0}",
+  "LookEffect": "Atmosphäre",
+  "LookEffectNone": "Nur Aurora, Atmosphäre und Samt haben Farbwolken zum Verstärken oder Abschwächen.",
+  "LookDim": "Abdunkeln",
+  "LookDimNone": "Der Design-Hintergrund folgt Windows und wird nicht abgedunkelt.",
+  "LookBlur": "Unschärfe",
+  "LookBlurNone": "Nur das unscharfe Cover hat eine einstellbare Unschärfe."
 }

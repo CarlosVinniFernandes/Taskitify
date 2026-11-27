@@ -536,5 +536,11 @@
   "LookUpdate": "Atualizar",
   "LookUpdateHint": "Substituir este visual pelas configurações atuais",
   "LookDelete": "Excluir",
-  "LookPersonalName": "Meu visual {0}"
+  "LookPersonalName": "Meu visual {0}",
+  "LookEffect": "Atmosfera",
+  "LookEffectNone": "Só Aurora, Atmosphere e Velvet têm nuvens de cor para intensificar ou suavizar.",
+  "LookDim": "Escurecer",
+  "LookDimNone": "O fundo do tema segue o Windows e não é escurecido.",
+  "LookBlur": "Desfoque",
+  "LookBlurNone": "Só a capa desfocada tem desfoque para ajustar."
 }
