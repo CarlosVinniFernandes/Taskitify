@@ -190,21 +190,23 @@
                             Visibility="{Binding ShowVolume, Converter={StaticResource BoolToVisibility}}" />
                 </Grid>
 
-                <!-- Volume slider, opened by the volume button. Inline: a popup outside the card would count as a click outside. -->
-                <Grid x:Name="VolumePart" Margin="8,4,8,0" Visibility="{Binding Volume.IsOpen, Converter={StaticResource BoolToVisibility}}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Button Style="{StaticResource IconButton}" Width="32" Height="32" FontSize="14" Command="{Binding Volume.MuteCommand}"
-                            Content="{Binding Volume.Glyph}" ToolTip="{DynamicResource Loc.MuteUnmute}" AutomationProperties.Name="{DynamicResource Loc.MuteUnmute}" />
-                    <Slider x:Name="VolumeSlider" Grid.Column="1" Style="{StaticResource SettingsSlider}" Minimum="0" Maximum="100" Margin="6,0,10,0"
-                            VerticalAlignment="Center" IsMoveToPointEnabled="True" SmallChange="1" LargeChange="10"
-                            Value="{Binding Volume.Percent, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Volume}" />
-                    <TextBlock Grid.Column="2" Text="{Binding Volume.Percent, StringFormat={}{0:0}}" Width="26" TextAlignment="Right"
-                               VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" />
-                </Grid>
+                <Popup x:Name="VolumePopup" PlacementTarget="{Binding ElementName=VolumeButton}" Placement="Custom"
+                       StaysOpen="True" AllowsTransparency="True" IsOpen="{Binding Volume.IsOpen, Mode=TwoWay}">
+                    <!-- Include the flyout's shadow margin in its placement size. -->
+                    <Grid>
+                        <Border Style="{StaticResource FlyoutCard}">
+                            <StackPanel Orientation="Horizontal">
+                                <Button Style="{StaticResource IconButton}" Command="{Binding Volume.MuteCommand}" Content="{Binding Volume.Glyph}"
+                                        ToolTip="{DynamicResource Loc.MuteUnmute}" AutomationProperties.Name="{DynamicResource Loc.MuteUnmute}" />
+                                <Slider x:Name="VolumeSlider" Style="{StaticResource SettingsSlider}" Width="170" Minimum="0" Maximum="100" Margin="6,0,10,0"
+                                        VerticalAlignment="Center" IsMoveToPointEnabled="True" SmallChange="1" LargeChange="10"
+                                        Value="{Binding Volume.Percent, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Volume}" />
+                                <TextBlock Text="{Binding Volume.Percent, StringFormat={}{0:0}}" Width="26" TextAlignment="Right"
+                                           VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Popup>
 
                 <!-- Unlike needs a confirmation, so a stray click does not drop a song from Liked Songs. -->
                 <Border x:Name="ConfirmPart" Margin="0,8,0,4" Padding="12,8" CornerRadius="6" Background="{DynamicResource SubtleFillHoverBrush}"

@@ -757,7 +757,7 @@ public static partial class LyricCardRenderer
             menu.Children.Add(new TextBlock { Text = item, FontFamily = Classic95, FontSize = 24 * u, Margin = new Thickness(0, 0, 28 * u, 0) });
         content.Children.Add(menu);
         content.Children.Add(Bevel(page, u, raised: false, padding: 0));
-        var window = Window95($"{ctx.C.Title}.txt", content, winW, u, active: true);
+        var window = Window95(new Studio(ctx).Text("title"), content, winW, u, active: true);
         window.HorizontalAlignment = HorizontalAlignment.Left;
         window.VerticalAlignment = VerticalAlignment.Top;
         window.Margin = new Thickness(70 * u, (landscape ? 70 : ctx.O.Format == LyricCardFormat.Story ? 170 : 70) * u, 0, 0);

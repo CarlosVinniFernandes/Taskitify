@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Windows;
 using Taskitify.Services;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -54,10 +55,18 @@ public partial class MiniPlayerWindow : Window
         {
             if (IsPreview)
                 return;
-            var inside = WindowInterop.GetBounds(_hwnd);
-            // Clicks on the overlay toggle the popup themselves.
-            if (!Contains(inside, x, y) && !Contains(_anchor, x, y))
+            if (VolumePopup.IsOpen && WindowInterop.PopupContains(VolumePopup.Child, x, y))
+                return;
+            if (ContentCard.ContextMenu is { IsOpen: true } menu
+                && (WindowInterop.PopupContains(menu, x, y)
+                    || menu.Items.OfType<MenuItem>().Any(item => item.IsSubmenuOpen
+                        && WindowInterop.PopupContains(item.Items.OfType<MenuItem>().FirstOrDefault(), x, y))))
+                return;
+            // Clicks on the overlay toggle the player themselves.
+            if (!Contains(WindowInterop.GetBounds(_hwnd), x, y) && !Contains(_anchor, x, y))
                 Dispatcher.BeginInvoke(HidePopup);
+            else if (VolumePopup.IsOpen && !ContainsVolumeButton(x, y))
+                Dispatcher.BeginInvoke(() => _vm.Volume.IsOpen = false);
         });
         Closed += (_, _) => _outsideClicks.Dispose();
 
@@ -84,6 +93,21 @@ public partial class MiniPlayerWindow : Window
         VolumeButton.PreviewMouseWheel += wheel;
         VolumeSlider.PreviewMouseWheel += wheel;
         VolumeButton.MouseEnter += (_, _) => _vm.Volume.Refresh();
+        VolumePopup.CustomPopupPlacementCallback = (popup, target, _) =>
+        [
+            new CustomPopupPlacement(new Point(target.Width - popup.Width, -popup.Height - 4), PopupPrimaryAxis.Horizontal),
+            new CustomPopupPlacement(new Point(target.Width - popup.Width, target.Height + 4), PopupPrimaryAxis.Horizontal),
+        ];
+        VolumePopup.Opened += (_, _) => WindowInterop.RaisePopup(VolumePopup.Child);
+        VolumePopup.PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Escape)
+            {
+                _vm.Volume.IsOpen = false;
+                VolumeButton.Focus();
+                e.Handled = true;
+            }
+        };
 
         _vm.Like.JustLiked += (_, _) => LikeIcon.Pulse();
         ContentCard.ContextMenu = BuildMenu();
@@ -127,12 +151,20 @@ public partial class MiniPlayerWindow : Window
     /// </summary>
     private ContextMenu BuildMenu()
     {
-        var menu = new ContextMenu();
+        var menu = new ContextMenu { Placement = PlacementMode.Top, PlacementTarget = ContentCard };
+        ContentCard.ContextMenuOpening += (_, e) =>
+        {
+            var point = e.CursorLeft < 0
+                ? new Point(ContentCard.ActualWidth / 2, ContentCard.ActualHeight / 2)
+                : Mouse.GetPosition(ContentCard);
+            menu.PlacementRectangle = new Rect(point, new Size(1, 1));
+        };
         var vertical = new MenuItem { IsCheckable = true };
         vertical.Click += (_, _) => _vm.SetLayout(MiniPlayerLayout.Vertical);
         var wide = new MenuItem { IsCheckable = true };
         wide.Click += (_, _) => _vm.SetLayout(MiniPlayerLayout.Cinema);
         var background = new MenuItem();
+        background.SubmenuOpened += (_, _) => WindowInterop.RaisePopup(background.Items.OfType<MenuItem>().FirstOrDefault());
         foreach (var style in Enum.GetValues<MiniPlayerBackground>())
         {
             var item = new MenuItem { Tag = style, IsCheckable = true };
@@ -155,6 +187,7 @@ public partial class MiniPlayerWindow : Window
         menu.Items.Add(settings);
         menu.Opened += (_, _) =>
         {
+            _vm.Volume.IsOpen = false;
             vertical.Header = LocalizationService.Get("ModeVertical");
             wide.Header = LocalizationService.Get("ModeWide");
             vertical.IsChecked = !_vm.IsCinema;
@@ -169,6 +202,7 @@ public partial class MiniPlayerWindow : Window
             share.Header = LocalizationService.Get("LyricCardOpen");
             spotify.Header = LocalizationService.Get("OpenInSpotify");
             settings.Header = LocalizationService.Get("MiniPlayerSettings");
+            WindowInterop.RaisePopup(menu);
         };
         return menu;
     }
@@ -300,7 +334,7 @@ public partial class MiniPlayerWindow : Window
     {
         base.OnDeactivated(e);
         // A preview stays while the settings are used; a menu of its own does not close it either.
-        if (IsPreview || ContentCard.ContextMenu is { IsOpen: true })
+        if (IsPreview || ContentCard.ContextMenu is { IsOpen: true } || VolumePopup.Child is { IsKeyboardFocusWithin: true })
             return;
         HidePopup();
     }
@@ -310,6 +344,11 @@ public partial class MiniPlayerWindow : Window
         base.OnKeyDown(e);
         switch (e.Key)
         {
+            case Key.Escape when _vm.Volume.IsOpen:
+                _vm.Volume.IsOpen = false;
+                VolumeButton.Focus();
+                e.Handled = true;
+                break;
             case Key.Escape:
                 HidePopup();
                 break;
@@ -431,6 +470,15 @@ public partial class MiniPlayerWindow : Window
 
     private static bool Contains(PixelRect r, int x, int y) => x >= r.Left && x < r.Right && y >= r.Top && y < r.Bottom;
 
+    private bool ContainsVolumeButton(int x, int y)
+    {
+        if (!VolumeButton.IsVisible)
+            return false;
+        var topLeft = VolumeButton.PointToScreen(new Point());
+        var bottomRight = VolumeButton.PointToScreen(new Point(VolumeButton.ActualWidth, VolumeButton.ActualHeight));
+        return x >= topLeft.X && x < bottomRight.X && y >= topLeft.Y && y < bottomRight.Y;
+    }
+
     private static readonly Geometry SolidPlay = Geometry.Parse("M7,4.2 L19.6,12 L7,19.8 Z");
     private static readonly Geometry SolidPause = Geometry.Parse("M6.2,4.5 L10.2,4.5 L10.2,19.5 L6.2,19.5 Z M13.8,4.5 L17.8,4.5 L17.8,19.5 L13.8,19.5 Z");
     private static readonly Geometry SolidPrevious = Geometry.Parse("M5,5 L7.6,5 L7.6,19 L5,19 Z M19,5 L19,19 L8.6,12 Z");
@@ -477,7 +525,7 @@ public partial class MiniPlayerWindow : Window
         LayoutRoot.ColumnDefinitions.Clear();
         HeaderPart.RowDefinitions.Clear();
         HeaderPart.ColumnDefinitions.Clear();
-        var rows = cinema ? 5 : 6;
+        var rows = cinema ? 4 : 5;
         for (var i = 0; i < rows; i++)
             LayoutRoot.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         if (cinema)
@@ -488,8 +536,7 @@ public partial class MiniPlayerWindow : Window
             Place(LyricsPart, 0, 1);
             Place(ProgressPart, 1, 0, span: 2);
             Place(ControlsPart, 2, 0, span: 2);
-            Place(VolumePart, 3, 0, span: 2);
-            Place(ConfirmPart, 4, 0, span: 2);
+            Place(ConfirmPart, 3, 0, span: 2);
             // The song: cover on top, title, artist, then the actions.
             for (var i = 0; i < 3; i++)
                 HeaderPart.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -513,8 +560,7 @@ public partial class MiniPlayerWindow : Window
             Place(LyricsPart, 1, 0);
             Place(ProgressPart, 2, 0);
             Place(ControlsPart, 3, 0);
-            Place(VolumePart, 4, 0);
-            Place(ConfirmPart, 5, 0);
+            Place(ConfirmPart, 4, 0);
             HeaderPart.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             HeaderPart.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             HeaderPart.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });

@@ -13,7 +13,7 @@ namespace Taskitify.ViewModels;
 public sealed class StudioFieldEditor(StudioField spec, string value, Action<string> apply)
 {
     private string _value = value;
-    public string Label => spec.Label;
+    public string Label => LocalizationService.Get(spec.Label);
     public IReadOnlyList<string>? Choices => spec.Choices;
     public bool HasChoices => Choices is not null;
 
@@ -141,7 +141,7 @@ public sealed partial class LyricCardViewModel
 
     private void QueueThumbnails()
     {
-        if (_closed || Tab != 1)
+        if (_closed)
             return;
         if (_tilesDirty)
         {
@@ -156,7 +156,7 @@ public sealed partial class LyricCardViewModel
 
     private void RenderThumbnail()
     {
-        if (_closed || Tab != 1 || !_pendingTiles.TryDequeue(out var tile))
+        if (_closed || !_pendingTiles.TryDequeue(out var tile))
         {
             _thumbnailTimer.Stop();
             return;

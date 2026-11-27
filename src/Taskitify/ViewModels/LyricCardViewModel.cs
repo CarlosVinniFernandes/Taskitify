@@ -103,7 +103,6 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
     private bool _previewQueued;
     private string? _status;
     private bool _updating;
-    private int _tab = 1;
     private string _customColor = "";
     private string _presetName = "";
 
@@ -180,7 +179,6 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
             variants.Remove(_options.Style);
             Apply(new LyricCardOptions { Style = _options.Style, Format = _options.Format, Variants = variants });
         });
-        SelectTabCommand = new RelayCommand(p => Tab = int.TryParse(p?.ToString(), out var t) ? t : 0);
 
         _thumbnailTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(20) };
         _thumbnailTimer.Tick += (_, _) => RenderThumbnail();
@@ -224,23 +222,6 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
     public ICommand DeletePresetCommand { get; }
 
     public ICommand ResetCommand { get; }
-
-    public ICommand SelectTabCommand { get; }
-
-    /// <summary>0 lines, 1 style, 2 customize.</summary>
-    public int Tab
-    {
-        get => _tab;
-        set
-        {
-            if (!Set(ref _tab, value))
-                return;
-            if (value == 1)
-                QueueThumbnails();
-            else
-                _thumbnailTimer.Stop();
-        }
-    }
 
     public bool HasLines => Lines.Count > 0;
 

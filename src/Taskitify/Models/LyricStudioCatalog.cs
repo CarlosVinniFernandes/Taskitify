@@ -41,7 +41,8 @@ public static class LyricStudioCatalog
             F("collection","Collection","Permanent collection"), F("id","Work identification","Sound and memory · 027"),
             F("year","Year",""), F("note","Description","Recorded sound. Private collection.")),
 
-        S(LyricCardStyle.Retro, StudioCategory.DigitalNostalgia, "Retro Desktop", LyricCardFont.Mono),
+        S(LyricCardStyle.Retro, StudioCategory.DigitalNostalgia, "Retro Desktop", LyricCardFont.Mono, false,
+            F("title", "StudioWindowTitle", "{title}.txt")),
         S(LyricCardStyle.MsnMessenger, StudioCategory.DigitalNostalgia, "MSN Messenger", image: true, fields:
         [F("model","Theme","XP Blue","Classic","XP Blue","XP Silver"), F("who","Contact","{artist}"), F("status","Status","Available"), F("time","Time","{time}"), F("note","Typing field","Send me a song…")]),
         S(LyricCardStyle.WindowsXpError, StudioCategory.DigitalNostalgia, "Windows XP Error", fields:

@@ -1,4 +1,6 @@
 using System.Windows;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using Microsoft.Win32;
@@ -188,7 +190,12 @@ public sealed class TaskbarOverlayService : IDisposable
 
     private System.Windows.Controls.ContextMenu BuildContextMenu()
     {
-        var menu = new System.Windows.Controls.ContextMenu();
+        var menu = new System.Windows.Controls.ContextMenu { Placement = PlacementMode.Top, PlacementTarget = _window };
+        _window.ContextMenuOpening += (_, e) =>
+        {
+            var x = e.CursorLeft < 0 ? _window.ActualWidth / 2 : Mouse.GetPosition(_window).X;
+            menu.PlacementRectangle = new Rect(Math.Clamp(x, 0, _window.ActualWidth), 0, 1, _window.ActualHeight);
+        };
         var share = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("LyricCardOpen"), Icon = MenuGlyph("\uE72D") };
         share.Click += (_, _) => ShareRequested?.Invoke(this, EventArgs.Empty);
         var player = new System.Windows.Controls.MenuItem { Header = LocalizationService.Get("ShowPlayer"), Icon = MenuGlyph("\uE90B") };
@@ -218,20 +225,15 @@ public sealed class TaskbarOverlayService : IDisposable
         }
         if (refetch.Items.Count == 0)
             refetch.Click += (_, _) => _ = _sync.ForceReloadAsync();
+        refetch.SubmenuOpened += (_, _) => WindowInterop.RaisePopup(refetch.Items.OfType<System.Windows.Controls.MenuItem>().FirstOrDefault());
         // The overlay never takes focus, so WPF cannot tell when the user clicks elsewhere;
         // a low-level mouse hook (only while the menu is open) closes it on an outside click.
         // The menu and its open submenu are separate popups.
         var outside = new OutsideClickWatcher((x, y) =>
         {
-            foreach (var part in refetch.Items.OfType<System.Windows.Media.Visual>().Take(1).Prepend(menu))
-            {
-                if (PresentationSource.FromVisual(part) is HwndSource popup)
-                {
-                    var r = WindowInterop.GetBounds(popup.Handle);
-                    if (x >= r.Left && x < r.Right && y >= r.Top && y < r.Bottom)
-                        return;
-                }
-            }
+            if (WindowInterop.PopupContains(menu, x, y)
+                || refetch.IsSubmenuOpen && WindowInterop.PopupContains(refetch.Items.OfType<System.Windows.Controls.MenuItem>().FirstOrDefault(), x, y))
+                return;
             menu.Dispatcher.BeginInvoke(() => menu.IsOpen = false);
         });
         menu.Opened += (_, _) =>
@@ -257,6 +259,7 @@ public sealed class TaskbarOverlayService : IDisposable
                 item.IsEnabled = _monitor.Track is not null && (source != "Spotify" || _settings.Current.SpotifyLyricsEnabled);
             }
             outside.Start();
+            WindowInterop.RaisePopup(menu);
             NativeMethods.GetAsyncKeyState(NativeMethods.VK_ESCAPE); // clear a stale "pressed since" bit
             _menuEsc.Start();
         };
@@ -306,7 +309,7 @@ public sealed class TaskbarOverlayService : IDisposable
     {
         UpdateFullscreen("foreground");
         if (_isShown)
-            WindowInterop.BringToTopmost(_hwnd);
+            RaiseOverlay();
     }
 
     /// <summary>
@@ -459,7 +462,19 @@ public sealed class TaskbarOverlayService : IDisposable
     {
         if (_hwnd == IntPtr.Zero || _bounds.IsEmpty || !_isShown)
             return;
-        WindowInterop.SetBounds(_hwnd, _bounds, topmost: true);
+        WindowInterop.SetBounds(_hwnd, _bounds, topmost: _window.ContextMenu is not { IsOpen: true });
+    }
+
+    private void RaiseOverlay()
+    {
+        if (_window.ContextMenu is not { IsOpen: true } menu)
+        {
+            WindowInterop.BringToTopmost(_hwnd);
+            return;
+        }
+        WindowInterop.RaisePopup(menu);
+        foreach (var item in menu.Items.OfType<System.Windows.Controls.MenuItem>().Where(item => item.IsSubmenuOpen))
+            WindowInterop.RaisePopup(item.Items.OfType<System.Windows.Controls.MenuItem>().FirstOrDefault());
     }
 
     private void CheckTaskbarShown()
@@ -485,7 +500,7 @@ public sealed class TaskbarOverlayService : IDisposable
         }
         if (!_isShown)
             return;
-        WindowInterop.BringToTopmost(_hwnd);
+        RaiseOverlay();
         SampleTaskbarColor();
     }
 

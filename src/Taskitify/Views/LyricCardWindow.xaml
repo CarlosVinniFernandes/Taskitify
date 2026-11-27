@@ -28,33 +28,6 @@
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
 
-        <!-- The three tabs: a segmented control, the current one filled. -->
-        <Style x:Key="TabButton" TargetType="Button">
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="FontSize" Value="13" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bg" CornerRadius="6" Padding="10,7" Background="Transparent">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SubtleFillBrush}" />
-                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-                            </Trigger>
-                            <Trigger Property="Tag" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SubtleFillHoverBrush}" />
-                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <!-- Choice chip (format, font, alignment, signature), accent outline when chosen. -->
         <Style x:Key="Chip" TargetType="ListBoxItem">
             <Setter Property="Cursor" Value="Hand" />
@@ -64,7 +37,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Bg" CornerRadius="16" Padding="13,6" Background="{DynamicResource SubtleFillHoverBrush}"
+                        <Border x:Name="Bg" CornerRadius="16" Padding="9,4" Background="{DynamicResource SubtleFillHoverBrush}"
                                 BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="1">
                             <TextBlock Text="{Binding Label}" FontSize="13" Foreground="{DynamicResource TextPrimaryBrush}" VerticalAlignment="Center" />
                         </Border>
@@ -75,7 +48,7 @@
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Bg" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
                                 <Setter TargetName="Bg" Property="BorderThickness" Value="2" />
-                                <Setter TargetName="Bg" Property="Padding" Value="12,5" />
+                                <Setter TargetName="Bg" Property="Padding" Value="8,3" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -106,7 +79,7 @@
                                                HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
                             </Grid>
-                            <TextBlock x:Name="Name" Text="{Binding Label}" FontSize="12" Margin="2,6,1,0" TextWrapping="Wrap"
+                            <TextBlock x:Name="Name" Text="{Binding Label}" FontSize="11" Margin="1,3,1,0" TextWrapping="Wrap"
                                        Foreground="{DynamicResource TextSecondaryBrush}" />
                         </StackPanel>
                         <ControlTemplate.Triggers>
@@ -203,290 +176,141 @@
             <Setter Property="Padding" Value="8,6" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
+        <Style x:Key="StudioToggle" TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid Background="Transparent" MinHeight="28">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ContentPresenter VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <Border x:Name="Track" Grid.Column="1" Width="36" Height="18" CornerRadius="9"
+                                    BorderBrush="{DynamicResource TextSecondaryBrush}" BorderThickness="1">
+                                <Ellipse x:Name="Knob" Width="10" Height="10" HorizontalAlignment="Left" Margin="3,0"
+                                         Fill="{DynamicResource TextSecondaryBrush}" />
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+                                <Setter TargetName="Knob" Property="Fill" Value="White" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="StudioSection" TargetType="Expander">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="Margin" Value="0,12,0,0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
     </Window.Resources>
+
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition x:Name="PreviewColumn" Width="2*" MinWidth="238" />
-            <ColumnDefinition Width="6" />
-            <ColumnDefinition x:Name="GalleryColumn" Width="3*" MinWidth="425" />
+            <ColumnDefinition Width="25*" MinWidth="210" />
+            <ColumnDefinition Width="37.5*" MinWidth="260" />
+            <ColumnDefinition Width="37.5*" MinWidth="290" />
         </Grid.ColumnDefinitions>
 
-        <!-- Preview: the exported card itself, scaled to fit; nothing of the window is in it. -->
-        <Border Background="{DynamicResource ControlBackgroundBrush}">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <!-- The shadow is its own layer: an effect over the image would re-rasterise it unsmoothed. -->
-                <Viewbox Margin="32,32,32,10" Stretch="Uniform">
-                    <Grid Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}">
-                        <Border Background="Black">
-                            <Border.Effect>
-                                <DropShadowEffect BlurRadius="70" ShadowDepth="12" Direction="270" Opacity="0.45" Color="Black" />
-                            </Border.Effect>
-                        </Border>
-                        <Image Source="{Binding Preview}" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" />
-                    </Grid>
-                </Viewbox>
-                <StackPanel Grid.Row="1" HorizontalAlignment="Center" Margin="0,0,0,16">
-                    <TextBlock Text="{Binding PreviewDimensions}" FontSize="12" TextAlignment="Center"
-                               Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <TextBlock Text="{Binding Credit}" FontSize="12" TextAlignment="Center" Margin="0,4,0,0"
-                               Foreground="{DynamicResource TextTertiaryBrush}" Visibility="{Binding Credit, Converter={StaticResource NullToCollapsed}}" />
-                </StackPanel>
-
-            </Grid>
-        </Border>
-
-        <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                      ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" ShowsPreview="True"
-                      Background="{DynamicResource PopupBorderBrush}" />
-
-        <DockPanel Grid.Column="2" Margin="20,18,22,14">
-            <StackPanel DockPanel.Dock="Top">
-                <TextBlock Text="Lyrics Studio" FontFamily="{StaticResource UiDisplayFont}" FontSize="24" FontWeight="SemiBold" />
-                <TextBlock Margin="0,4,0,0" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis">
-                    <Run Text="{Binding Title, Mode=OneWay}" /> · <Run Text="{Binding Artist, Mode=OneWay}" />
-                </TextBlock>
-
-                <Border Margin="0,16,0,4" Padding="3" CornerRadius="8" Background="{DynamicResource SubtleFillBrush}"
-                        BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="1">
-                    <UniformGrid Columns="3">
-                        <Button Command="{Binding SelectTabCommand}" CommandParameter="0" AutomationProperties.Name="{DynamicResource Loc.CardTabLines}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource TabButton}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Tab}" Value="0"><Setter Property="Tag" Value="True" /></DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{DynamicResource Loc.CardTabLines}" />
-                                <Border Margin="7,0,0,0" Padding="6,0,6,1" CornerRadius="8" Background="{DynamicResource AccentBrush}">
-                                    <TextBlock Text="{Binding Counter}" FontSize="11" Foreground="White" FontWeight="SemiBold" />
-                                </Border>
-                            </StackPanel>
-                        </Button>
-                        <Button Command="{Binding SelectTabCommand}" CommandParameter="1" Content="{DynamicResource Loc.CardTabStyle}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource TabButton}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Tab}" Value="1"><Setter Property="Tag" Value="True" /></DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                        <Button Command="{Binding SelectTabCommand}" CommandParameter="2" Content="{DynamicResource Loc.CardTabCustomize}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource TabButton}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Tab}" Value="2"><Setter Property="Tag" Value="True" /></DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                    </UniformGrid>
-                </Border>
-            </StackPanel>
-
-            <!-- Export -->
-            <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
-                <TextBlock Text="{Binding Status}" Style="{StaticResource Hint}" Margin="0,0,0,8" MinHeight="16" />
+        <Grid Margin="14,12,14,12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="3*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="2*" />
+            </Grid.RowDefinitions>
+            <DockPanel>
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,7">
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding Counter}" FontSize="12" Margin="8,0,0,0"
+                               Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+                    <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Command="{Binding ClearCommand}"
+                            Content="{DynamicResource Loc.CardClear}" VerticalAlignment="Center" />
+                    <TextBlock Text="{DynamicResource Loc.CardTabLines}" FontWeight="SemiBold"
+                               ToolTip="{DynamicResource Loc.CardLinesHint}" />
+                </DockPanel>
+            <Border Background="Transparent">
                 <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="10" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Button Style="{StaticResource FlatButton}" Command="{Binding SaveCommand}" Padding="12,9">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE74E;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                            <TextBlock Text="{DynamicResource Loc.CardSave}" />
-                        </StackPanel>
-                    </Button>
-                    <Button Grid.Column="2" Style="{StaticResource AccentButton}" Command="{Binding CopyCommand}" Padding="12,9">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE8C8;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                            <TextBlock Text="{DynamicResource Loc.CardCopy}" />
-                        </StackPanel>
-                    </Button>
-                </Grid>
-            </StackPanel>
-
-            <Grid>
-                <!-- Tab 0: lines -->
-                <DockPanel>
-                    <DockPanel.Style>
-                        <Style TargetType="DockPanel">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Tab}" Value="0"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DockPanel.Style>
-                    <Grid DockPanel.Dock="Top" Margin="0,12,0,8">
-                        <TextBlock Text="{DynamicResource Loc.CardLinesHint}" Style="{StaticResource Hint}" Margin="0,0,80,0" VerticalAlignment="Center" />
-                        <Button Style="{StaticResource LinkButton}" Command="{Binding ClearCommand}" Content="{DynamicResource Loc.CardClear}"
-                                HorizontalAlignment="Right" VerticalAlignment="Center" />
-                    </Grid>
-                    <Border CornerRadius="8" Background="{DynamicResource SubtleFillBrush}" BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="1">
-                        <Grid>
-                            <ScrollViewer x:Name="LinesScroll" VerticalScrollBarVisibility="Auto" Padding="4">
-                                <ItemsControl ItemsSource="{Binding Lines}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <ToggleButton IsChecked="{Binding IsSelected}" Cursor="Hand" Margin="0,1" AutomationProperties.Name="{Binding Text}">
-                                                <ToggleButton.Template>
-                                                    <ControlTemplate TargetType="ToggleButton">
-                                                        <Border x:Name="Bg" CornerRadius="6" Padding="10,7" Background="Transparent">
-                                                            <Grid>
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                    <ColumnDefinition Width="*" />
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                </Grid.ColumnDefinitions>
-                                                                <Grid Width="20" Height="20" Margin="0,0,10,0" VerticalAlignment="Top">
-                                                                    <Ellipse x:Name="Circle" Stroke="{DynamicResource TextSecondaryBrush}" StrokeThickness="1.5" />
-                                                                    <TextBlock x:Name="Check" Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="10"
-                                                                               Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
-                                                                </Grid>
-                                                                <TextBlock x:Name="Text" Grid.Column="1" Text="{Binding Text}" TextWrapping="Wrap" FontSize="13"
-                                                                           Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
-                                                                <TextBlock Grid.Column="2" Text="{Binding TimeText}" FontSize="11" Margin="8,2,0,0"
-                                                                           Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Top" />
-                                                            </Grid>
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SubtleFillHoverBrush}" />
-                                                                <Setter TargetName="Text" Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-                                                            </Trigger>
-                                                            <Trigger Property="IsChecked" Value="True">
-                                                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SubtleFillHoverBrush}" />
-                                                                <Setter TargetName="Text" Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-                                                                <Setter TargetName="Text" Property="FontWeight" Value="SemiBold" />
-                                                                <Setter TargetName="Circle" Property="Fill" Value="{DynamicResource AccentBrush}" />
-                                                                <Setter TargetName="Circle" Property="Stroke" Value="{DynamicResource AccentBrush}" />
-                                                                <Setter TargetName="Check" Property="Visibility" Value="Visible" />
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </ToggleButton.Template>
-                                            </ToggleButton>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                            <TextBlock Text="{DynamicResource Loc.CardNoLyrics}" TextAlignment="Center" VerticalAlignment="Center" Margin="20">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasLines}" Value="False"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </Grid>
-                    </Border>
-                </DockPanel>
-
-                <!-- Tab 1: style and format -->
-                <DockPanel Margin="0,4,0,0">
-                    <DockPanel.Style>
-                        <Style TargetType="DockPanel">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Tab}" Value="1"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </DockPanel.Style>
-                    <DockPanel DockPanel.Dock="Top" Margin="0,3,0,10">
-                        <StackPanel DockPanel.Dock="Left" Margin="0,0,18,0">
-                            <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardFormat}" Margin="0,6,0,8" />
-                            <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Formats}"
-                                     SelectedItem="{Binding SelectedFormat}" AutomationProperties.Name="{DynamicResource Loc.CardFormat}" />
-                        </StackPanel>
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.StudioSearch}" Margin="0,6,0,8" />
-                            <TextBox Style="{StaticResource Field}" Text="{Binding StyleSearch, UpdateSourceTrigger=PropertyChanged}"
-                                     AutomationProperties.Name="{DynamicResource Loc.StudioSearch}" />
-                        </StackPanel>
-                    </DockPanel>
-                    <ScrollViewer x:Name="GalleryScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel Margin="0,0,7,0">
-                            <TextBlock Text="{DynamicResource Loc.StudioNoResults}" Margin="0,10,0,0" TextWrapping="Wrap">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasStyleResults}" Value="False">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                            <ListBox x:Name="StudioGallery" Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource StyleTile}"
-                                     ItemsSource="{Binding Gallery}" SelectedItem="{Binding SelectedStyle}"
-                                     AutomationProperties.Name="{DynamicResource Loc.CardStyle}" HorizontalContentAlignment="Stretch">
-                                <ListBox.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <UniformGrid Columns="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource StudioColumnCount}}" />
-                                    </ItemsPanelTemplate>
-                                </ListBox.ItemsPanel>
-                                <ListBox.GroupStyle>
-                                    <GroupStyle>
-                                        <GroupStyle.ContainerStyle>
-                                            <Style TargetType="GroupItem">
-                                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                                                <Setter Property="Template">
-                                                    <Setter.Value>
-                                                        <ControlTemplate TargetType="GroupItem">
-                                                            <StackPanel>
-                                                                <ContentPresenter ContentTemplate="{TemplateBinding ContentTemplate}"
-                                                                                  Content="{TemplateBinding Content}" />
-                                                                <ItemsPresenter />
-                                                            </StackPanel>
-                                                        </ControlTemplate>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </Style>
-                                        </GroupStyle.ContainerStyle>
-                                        <GroupStyle.Panel>
-                                            <ItemsPanelTemplate><StackPanel /></ItemsPanelTemplate>
-                                        </GroupStyle.Panel>
-                                        <GroupStyle.HeaderTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Margin="0,13,0,9">
-                                                    <Border BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,9" />
-                                                    <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}"
-                                                               FontSize="14" FontWeight="SemiBold" />
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </GroupStyle.HeaderTemplate>
-                                    </GroupStyle>
-                                </ListBox.GroupStyle>
-                            </ListBox>
-                        </StackPanel>
+                    <ScrollViewer x:Name="LinesScroll" VerticalScrollBarVisibility="Auto" Padding="0,0,3,0">
+                        <ItemsControl ItemsSource="{Binding Lines}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <ToggleButton IsChecked="{Binding IsSelected}" Cursor="Hand" Margin="0,1" AutomationProperties.Name="{Binding Text}">
+                                        <ToggleButton.Template>
+                                            <ControlTemplate TargetType="ToggleButton">
+                                                <Border x:Name="Bg" CornerRadius="6" Padding="7,6" Background="{DynamicResource SubtleFillBrush}">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <Grid Width="15" Height="15" Margin="0,0,7,0" VerticalAlignment="Top">
+                                                            <Border x:Name="Circle" CornerRadius="3" BorderBrush="{DynamicResource TextSecondaryBrush}" BorderThickness="1" />
+                                                            <TextBlock x:Name="Check" Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="10"
+                                                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+                                                        </Grid>
+                                                        <TextBlock x:Name="Text" Grid.Column="1" Text="{Binding Text}" TextWrapping="Wrap" FontSize="12"
+                                                                   Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                                                        <TextBlock Grid.Column="2" Text="{Binding TimeText}" FontSize="11" Margin="5,1,0,0"
+                                                                   Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Top" />
+                                                    </Grid>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SubtleFillHoverBrush}" />
+                                                        <Setter TargetName="Text" Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsChecked" Value="True">
+                                                        <Setter TargetName="Bg" Property="Background" Value="{DynamicResource SubtleFillHoverBrush}" />
+                                                        <Setter TargetName="Bg" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                                        <Setter TargetName="Bg" Property="BorderThickness" Value="1,0,0,0" />
+                                                        <Setter TargetName="Text" Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                                                        <Setter TargetName="Text" Property="FontWeight" Value="SemiBold" />
+                                                        <Setter TargetName="Circle" Property="Background" Value="{DynamicResource AccentBrush}" />
+                                                        <Setter TargetName="Circle" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                                                        <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </ToggleButton.Template>
+                                    </ToggleButton>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </ScrollViewer>
-                </DockPanel>
+                    <TextBlock Text="{DynamicResource Loc.CardNoLyrics}" TextAlignment="Center" VerticalAlignment="Center" Margin="20">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasLines}" Value="False"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+            </Border>
+            </DockPanel>
 
-                <!-- Tab 2: customize -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <ScrollViewer.Style>
-                        <Style TargetType="ScrollViewer">
-                            <Setter Property="Visibility" Value="Collapsed" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Tab}" Value="2"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ScrollViewer.Style>
-                    <StackPanel Margin="0,0,8,0">
+            <Border Grid.Row="1" Height="1" Background="{DynamicResource PopupBorderBrush}" Margin="0,11,0,9" />
+
+            <DockPanel Grid.Row="2">
+                <TextBlock DockPanel.Dock="Top" Text="{DynamicResource Loc.CardTabCustomize}" FontWeight="SemiBold" Margin="0,0,0,8" />
+                <ScrollViewer x:Name="CustomizeScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="0,0,5,0">
                         <StackPanel Visibility="{Binding HasStyleFields, Converter={StaticResource BoolToVisibility}}">
-                            <TextBlock Style="{StaticResource Group}" Text="{Binding SelectedStyle.Label}" />
                             <ItemsControl ItemsSource="{Binding StyleFields}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -504,15 +328,34 @@
                                                     </Style>
                                                 </TextBox.Style>
                                             </TextBox>
-                                            <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding Value}"
-                                                      HorizontalAlignment="Left" MinWidth="145" AutomationProperties.Name="{Binding Label}"
+                                            <ComboBox Style="{StaticResource SettingsComboBox}" ItemsSource="{Binding Choices}" SelectedItem="{Binding Value}"
+                                                      MinWidth="0" AutomationProperties.Name="{Binding Label}"
                                                       Visibility="{Binding HasChoices, Converter={StaticResource BoolToVisibility}}" />
                                         </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
-
+                        <TextBlock>
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource Group}">
+                                    <Setter Property="Text" Value="{DynamicResource Loc.CardColor}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedStyle.Style}" Value="Retro">
+                                            <Setter Property="Text" Value="{DynamicResource Loc.StudioDesktopColor}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource SwatchItem}" ItemsSource="{Binding Swatches}"
+                                 SelectedItem="{Binding SelectedSwatch}" AutomationProperties.Name="{DynamicResource Loc.CardColor}" />
+                        <DockPanel Margin="0,4,0,0">
+                            <TextBox DockPanel.Dock="Right" Style="{StaticResource Field}" Width="86" FontFamily="Consolas"
+                                     Text="{Binding CustomColor, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Loc.CardCustomColor}" />
+                            <TextBlock Text="{DynamicResource Loc.CardCustomColor}" VerticalAlignment="Center" FontSize="13"
+                                       TextWrapping="Wrap" Margin="0,0,8,0" />
+                        </DockPanel>
                         <StackPanel Visibility="{Binding HasImageOptions, Converter={StaticResource BoolToVisibility}}">
                             <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.StudioImage}" />
                             <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Images}"
@@ -520,73 +363,203 @@
                             <Button Style="{StaticResource LinkButton}" Command="{Binding ChoosePhotoCommand}"
                                     Content="{DynamicResource Loc.StudioChoosePhoto}" HorizontalAlignment="Left" Margin="0,6,0,0" />
                         </StackPanel>
+                        <Expander Style="{StaticResource StudioSection}" Header="{DynamicResource Loc.StudioTypographyAndMark}">
+                            <StackPanel>
+                                <StackPanel Visibility="{Binding CanChooseTypeface, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardFont}" />
+                                    <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Fonts}"
+                                             SelectedItem="{Binding SelectedFont}" AutomationProperties.Name="{DynamicResource Loc.CardFont}" />
+                                </StackPanel>
 
-                        <StackPanel Visibility="{Binding CanChooseTypeface, Converter={StaticResource BoolToVisibility}}">
-                            <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardFont}" />
-                            <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Fonts}"
-                                     SelectedItem="{Binding SelectedFont}" AutomationProperties.Name="{DynamicResource Loc.CardFont}" />
-                        </StackPanel>
+                                <Grid Margin="0,12,0,0">
+                                    <TextBlock Text="{DynamicResource Loc.CardFontSize}" FontWeight="SemiBold" FontSize="13" />
+                                    <TextBlock Text="{Binding FontPercent, StringFormat={}{0:0}%}" HorizontalAlignment="Right" FontSize="13"
+                                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                                </Grid>
+                                <Slider Minimum="60" Maximum="150" SmallChange="5" LargeChange="10" TickFrequency="5" IsSnapToTickEnabled="True"
+                                        Value="{Binding FontPercent}" Margin="0,6,0,0" AutomationProperties.Name="{DynamicResource Loc.CardFontSize}" />
 
-                        <Grid Margin="0,12,0,0">
-                            <TextBlock Text="{DynamicResource Loc.CardFontSize}" FontWeight="SemiBold" FontSize="13" />
-                            <TextBlock Text="{Binding FontPercent, StringFormat={}{0:0}%}" HorizontalAlignment="Right" FontSize="13"
-                                       Foreground="{DynamicResource TextSecondaryBrush}" />
-                        </Grid>
-                        <Slider Minimum="60" Maximum="150" SmallChange="5" LargeChange="10" TickFrequency="5" IsSnapToTickEnabled="True"
-                                Value="{Binding FontPercent}" Margin="0,6,0,0" AutomationProperties.Name="{DynamicResource Loc.CardFontSize}" />
+                                <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardAlign}" />
+                                <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Aligns}"
+                                         SelectedItem="{Binding SelectedAlign}" AutomationProperties.Name="{DynamicResource Loc.CardAlign}" />
 
-                        <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardAlign}" />
-                        <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Aligns}"
-                                 SelectedItem="{Binding SelectedAlign}" AutomationProperties.Name="{DynamicResource Loc.CardAlign}" />
-
-                        <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardColor}" />
-                        <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource SwatchItem}" ItemsSource="{Binding Swatches}"
-                                 SelectedItem="{Binding SelectedSwatch}" AutomationProperties.Name="{DynamicResource Loc.CardColor}" />
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <TextBlock Text="{DynamicResource Loc.CardCustomColor}" VerticalAlignment="Center" FontSize="13" Margin="0,0,10,0" />
-                            <TextBox Style="{StaticResource Field}" Width="110" FontFamily="Consolas"
-                                     Text="{Binding CustomColor, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Loc.CardCustomColor}" />
-                        </StackPanel>
-
-                        <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardMark}" />
-                        <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Marks}"
-                                 SelectedItem="{Binding SelectedMark}" AutomationProperties.Name="{DynamicResource Loc.CardMark}" />
-
-                        <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding ShowCover}" Margin="0,16,0,0"
+                                <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardMark}" />
+                                <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Marks}"
+                                         SelectedItem="{Binding SelectedMark}" AutomationProperties.Name="{DynamicResource Loc.CardMark}" />
+                            </StackPanel>
+                        </Expander>
+                        <CheckBox Style="{StaticResource StudioToggle}" IsChecked="{Binding ShowCover}" Margin="0,8,0,0"
                                   Visibility="{Binding CanShowCoverToggle, Converter={StaticResource BoolToVisibility}}"
                                   Content="{DynamicResource Loc.CardShowCover}" Foreground="{DynamicResource TextPrimaryBrush}" />
-                        <CheckBox Style="{StaticResource ToggleSwitch}" IsChecked="{Binding ShowTimestamp}" Margin="0,12,0,0" IsEnabled="{Binding CanShowTimestamp}"
+                        <CheckBox Style="{StaticResource StudioToggle}" IsChecked="{Binding ShowTimestamp}" Margin="0,4,0,0" IsEnabled="{Binding CanShowTimestamp}"
                                   Content="{DynamicResource Loc.CardShowTimestamp}" Foreground="{DynamicResource TextPrimaryBrush}" />
-
-                        <TextBlock Style="{StaticResource Group}" Text="{DynamicResource Loc.CardPresets}" Margin="0,24,0,4" />
-                        <TextBlock Text="{DynamicResource Loc.CardPresetsHint}" Style="{StaticResource Hint}" Margin="0,0,0,8" />
-                        <DockPanel>
-                            <Button DockPanel.Dock="Right" Style="{StaticResource FlatButton}" Command="{Binding SavePresetCommand}" Content="{DynamicResource Loc.CardPresetSave}"
-                                    Padding="12,6" Margin="8,0,0,0" />
-                            <TextBox Style="{StaticResource Field}" Text="{Binding PresetName, UpdateSourceTrigger=PropertyChanged}" MaxLength="40"
-                                     AutomationProperties.Name="{DynamicResource Loc.CardPresetName}" />
-                        </DockPanel>
-                        <ItemsControl ItemsSource="{Binding SavedPresets}" Margin="0,8,0,0">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border CornerRadius="6" Background="{DynamicResource SubtleFillHoverBrush}" Margin="0,0,0,4">
-                                        <DockPanel>
-                                            <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Width="32" Height="32" FontSize="12" Content="&#xE74D;"
-                                                    Command="{Binding DataContext.DeletePresetCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"
-                                                    ToolTip="{DynamicResource Loc.CardPresetDelete}" AutomationProperties.Name="{DynamicResource Loc.CardPresetDelete}" />
-                                            <Button Style="{StaticResource LinkButton}" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13" Margin="12,0,0,0"
-                                                    VerticalAlignment="Center" HorizontalAlignment="Left" Content="{Binding Name}"
-                                                    Command="{Binding DataContext.ApplyPresetCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
-                                        </DockPanel>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <Button Style="{StaticResource LinkButton}" Command="{Binding ResetCommand}" Content="{DynamicResource Loc.CardReset}" Margin="0,14,0,8"
-                                HorizontalAlignment="Left" />
+                        <Expander Style="{StaticResource StudioSection}" Header="{DynamicResource Loc.CardPresets}">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Loc.CardPresetsHint}" Style="{StaticResource Hint}" Margin="0,0,0,8" />
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource FlatButton}" Command="{Binding SavePresetCommand}" Content="{DynamicResource Loc.CardPresetSave}"
+                                            Padding="12,6" Margin="8,0,0,0" />
+                                    <TextBox Style="{StaticResource Field}" Text="{Binding PresetName, UpdateSourceTrigger=PropertyChanged}" MaxLength="40"
+                                             AutomationProperties.Name="{DynamicResource Loc.CardPresetName}" />
+                                </DockPanel>
+                                <ItemsControl ItemsSource="{Binding SavedPresets}" Margin="0,8,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border CornerRadius="6" Background="{DynamicResource SubtleFillHoverBrush}" Margin="0,0,0,4">
+                                                <DockPanel>
+                                                    <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Width="32" Height="32" FontSize="12" Content="&#xE74D;"
+                                                            Command="{Binding DataContext.DeletePresetCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"
+                                                            ToolTip="{DynamicResource Loc.CardPresetDelete}" AutomationProperties.Name="{DynamicResource Loc.CardPresetDelete}" />
+                                                    <Button Style="{StaticResource FlatButton}" FontSize="12" Padding="7,3" Margin="3"
+                                                            VerticalAlignment="Center" HorizontalAlignment="Left" Content="{Binding Name}"
+                                                            Command="{Binding DataContext.ApplyPresetCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                                </DockPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Expander>
+                        <Button Style="{StaticResource FlatButton}" Command="{Binding ResetCommand}" Content="{DynamicResource Loc.CardReset}"
+                                Padding="8,5" FontSize="12" Margin="0,12,0,5" HorizontalAlignment="Left" />
                     </StackPanel>
                 </ScrollViewer>
+            </DockPanel>
+        </Grid>
+
+        <!-- Preview: the exported card itself, scaled to fit; nothing of the window is in it. -->
+        <Border Grid.Column="1" Background="{DynamicResource ControlBackgroundBrush}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <!-- The shadow is its own layer: an effect over the image would re-rasterise it unsmoothed. -->
+                <Viewbox Margin="22,22,22,8" Stretch="Uniform">
+                    <Grid Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}">
+                        <Border Background="Black">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="70" ShadowDepth="12" Direction="270" Opacity="0.45" Color="Black" />
+                            </Border.Effect>
+                        </Border>
+                        <Image Source="{Binding Preview}" Stretch="Fill" RenderOptions.BitmapScalingMode="HighQuality" />
+                    </Grid>
+                </Viewbox>
+                <StackPanel Grid.Row="1" HorizontalAlignment="Center" Margin="0,0,0,12">
+                    <TextBlock Text="{Binding PreviewDimensions}" FontSize="12" TextAlignment="Center"
+                               Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock Text="{Binding Credit}" FontSize="12" TextAlignment="Center" Margin="0,4,0,0"
+                               Foreground="{DynamicResource TextTertiaryBrush}" Visibility="{Binding Credit, Converter={StaticResource NullToCollapsed}}" />
+                </StackPanel>
             </Grid>
+        </Border>
+
+        <DockPanel Grid.Column="2" Margin="14,12,14,12">
+            <StackPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                <TextBlock Text="{DynamicResource Loc.CardTabStyle}" FontWeight="SemiBold" Margin="0,0,0,6" />
+                <ListBox Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Chip}" ItemsSource="{Binding Formats}"
+                         SelectedItem="{Binding SelectedFormat}" AutomationProperties.Name="{DynamicResource Loc.CardFormat}" />
+                <Grid Margin="0,2,0,0">
+                    <TextBox x:Name="StyleSearchBox" Style="{StaticResource Field}" Text="{Binding StyleSearch, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="{DynamicResource Loc.StudioSearch}" />
+                    <TextBlock Text="{DynamicResource Loc.StudioSearch}" FontSize="12" Margin="9,0,0,0"
+                               Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" IsHitTestVisible="False">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Text, ElementName=StyleSearchBox}" Value="">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsKeyboardFocused, ElementName=StyleSearchBox}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+            </StackPanel>
+            <!-- Export -->
+            <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                <TextBlock Text="{Binding Status}" Style="{StaticResource Hint}" Margin="0,0,0,5" MinHeight="16" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="10" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Style="{StaticResource FlatButton}" Command="{Binding SaveCommand}" Padding="8,8" FontSize="12">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE74E;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <TextBlock Text="{DynamicResource Loc.CardSave}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="2" Style="{StaticResource AccentButton}" Command="{Binding CopyCommand}" Padding="8,8" FontSize="12">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8C8;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <TextBlock Text="{DynamicResource Loc.CardCopy}" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </StackPanel>
+            <ScrollViewer x:Name="GalleryScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="0,0,7,0">
+                    <TextBlock Text="{DynamicResource Loc.StudioNoResults}" Margin="0,10,0,0" TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasStyleResults}" Value="False">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <ListBox x:Name="StudioGallery" Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource StyleTile}"
+                             ItemsSource="{Binding Gallery}" SelectedItem="{Binding SelectedStyle}"
+                             AutomationProperties.Name="{DynamicResource Loc.CardStyle}" HorizontalContentAlignment="Stretch">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource StudioColumnCount}}" />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.GroupStyle>
+                            <GroupStyle>
+                                <GroupStyle.ContainerStyle>
+                                    <Style TargetType="GroupItem">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="GroupItem">
+                                                    <StackPanel>
+                                                        <ContentPresenter ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                                          Content="{TemplateBinding Content}" />
+                                                        <ItemsPresenter />
+                                                    </StackPanel>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </GroupStyle.ContainerStyle>
+                                <GroupStyle.Panel>
+                                    <ItemsPanelTemplate><StackPanel /></ItemsPanelTemplate>
+                                </GroupStyle.Panel>
+                                <GroupStyle.HeaderTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Margin="0,9,0,5">
+                                            <Border BorderBrush="{DynamicResource PopupBorderBrush}" BorderThickness="0,1,0,0" Margin="0,0,0,5" />
+                                            <TextBlock Text="{Binding Name}" Foreground="{DynamicResource TextPrimaryBrush}"
+                                                       FontSize="13" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GroupStyle.HeaderTemplate>
+                            </GroupStyle>
+                        </ListBox.GroupStyle>
+                    </ListBox>
+                </StackPanel>
+            </ScrollViewer>
         </DockPanel>
     </Grid>
 </Window>

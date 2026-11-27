@@ -33,10 +33,16 @@ public partial class LyricCardWindow : Window
             }
         };
         Loaded += (_, _) => ScrollToSelection(vm);
+        var selectedStyle = vm.SelectedStyle;
         vm.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(LyricCardViewModel.StyleSearch))
                 GalleryScroll.ScrollToTop();
+            if (e.PropertyName == nameof(LyricCardViewModel.SelectedStyle) && selectedStyle != vm.SelectedStyle)
+            {
+                selectedStyle = vm.SelectedStyle;
+                CustomizeScroll.ScrollToTop();
+            }
         };
     }
 
@@ -53,7 +59,7 @@ public partial class LyricCardWindow : Window
 public sealed class StudioColumnCountConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
-        value is double width ? Math.Clamp((int)(width / 150), 3, 6) : 3;
+        value is double width ? Math.Clamp((int)(width / 104), 4, 7) : 4;
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => Binding.DoNothing;
 }

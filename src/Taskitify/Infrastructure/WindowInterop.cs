@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
 using Taskitify.Core.Layout;
 using static Taskitify.Infrastructure.NativeMethods;
 
@@ -61,6 +62,20 @@ internal static class WindowInterop
 
     public static void BringToTopmost(IntPtr hwnd) =>
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
+
+    public static void RaisePopup(Visual? content)
+    {
+        if (content is UIElement { IsVisible: true } && PresentationSource.FromVisual(content) is HwndSource popup)
+            BringToTopmost(popup.Handle);
+    }
+
+    public static bool PopupContains(Visual? content, int x, int y)
+    {
+        if (content is not UIElement { IsVisible: true } || PresentationSource.FromVisual(content) is not HwndSource popup)
+            return false;
+        var bounds = GetBounds(popup.Handle);
+        return x >= bounds.Left && x < bounds.Right && y >= bounds.Top && y < bounds.Bottom;
+    }
 
     public static PixelRect GetBounds(IntPtr hwnd) =>
         GetWindowRect(hwnd, out var r) ? PixelRect.FromLTRB(r.Left, r.Top, r.Right, r.Bottom) : default;
