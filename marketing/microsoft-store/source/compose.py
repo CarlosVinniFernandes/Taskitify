@@ -153,6 +153,11 @@ def desktop(name):
     if name in ("browse-1", "study-1"):
         # The temporary Edge profile picked up the Windows account picture.
         d.ellipse((1592, 115, 1621, 144), fill=img.getpixel((1588, 129)))
+    if name in ("browse-2", "study-2"):
+        d.rectangle((1690, 566, 1800, 596), fill=img.getpixel((1684, 581)))
+    if name == "work-2":
+        d.rectangle((1120, 526, 1296, 548), fill=img.getpixel((1110, 530)))
+        d.rectangle((1588, 524, 1724, 550), fill=img.getpixel((1580, 530)))
     if name == "work-1":
         # Excel's title bar: activation notice and the account name and picture.
         d.rectangle((455, 56, 632, 80), fill=img.getpixel((640, 60)))
@@ -205,52 +210,78 @@ def art01():
     return img
 
 
+def label_pill(img, text, x, y, size=46):
+    f = font("Medium", size)
+    w = f.getlength(text)
+    pill = rounded(Image.new("RGBA", (round(w + size * 1.2), round(size * 1.75)), (12, 22, 30, 200)), round(size * .875))
+    img.alpha_composite(pill, (x, y))
+    ImageDraw.Draw(img).text((x + size * .6, y + size * .32), text, font=f, fill=CREAM + (240,))
+
+
 def art02():
     img = atmosphere(warm=.3)
-    centred_text(img, "Your music. Never in the way.", "Bold", 132, 205)
-    centred_text(img, "Keep listening, whatever you're doing.", "Medium", 62, 300, opacity=205)
-    scenes = [("browse-1", "rain", "Browsing"), ("study-1", "planes", "Studying"), ("work-1", "golden", "Working"), ("relax-1", "north", "Relaxing")]
-    sw, sh = 1216, 760
-    gap_x, gap_y = 72, 40
-    left = (W - (sw * 2 + gap_x)) // 2
-    top = 380
-    label_font = font("Medium", 50)
-    for i, (cap, song, label) in enumerate(scenes):
-        shot = dock(desktop(cap), comp(f"bar-{song}-1x"), glow_ring=True)
-        shot = rounded(scale(shot, sw / 1920), 18)
-        x = left + (i % 2) * (sw + gap_x)
-        y = top + (i // 2) * (sh + 96 + gap_y)
-        place(img, shot, (x, y), blur=40, offset=(0, 18), opacity=130)
-        f = label_font
-        ImageDraw.Draw(img).text((x + sw / 2 - f.getlength(label) / 2, y + sh + 18), label, font=f, fill=CREAM + (225,))
+    centred_text(img, "Your music. Never in the way.", "Bold", 116, 150)
+    centred_text(img, "Keep listening, whatever you're doing.", "Medium", 56, 226, opacity=205)
+    # The right part of each real screen: the app at work above, the taskbar and the player below.
+    k = 1.6
+    cw, ch = 1125, 563
+    scenes = [("browse-2", "rain", "Browsing", 795), ("study-2", "planes", "Studying", 795), ("work-2", "golden", "Working", 795), ("relax-1", "north", "Relaxing", 795)]
+    tw, th = round(cw * k), round(ch * k)
+    gap_x, gap_y = 64, 48
+    left = (W - (tw * 2 + gap_x)) // 2
+    top = 268
+    for i, (cap, song, label, cx) in enumerate(scenes):
+        shot = scale(desktop(cap).crop((cx, 1200 - ch, cx + cw, 1200)), k)
+        widget = comp(f"bar-{song}-tile")
+        wx = round((DOCK_RIGHT - cx) * k) - widget.size[0]
+        wy = round((TASKBAR_TOP - (1200 - ch)) * k)
+        shot.alpha_composite(widget, (wx, wy))
+        outline(shot, (wx + 2 * k - 7, wy + 4 * k - 7, wx + widget.size[0] - 2 * k + 7, wy + widget.size[1] - 4 * k + 7), 6 * k + 7, width=3, alpha=190, glow_alpha=130)
+        shot = rounded(shot, 22)
+        x = left + (i % 2) * (tw + gap_x)
+        y = top + (i // 2) * (th + gap_y)
+        place(img, shot, (x, y), blur=40, offset=(0, 18), opacity=140)
+        label_pill(img, label, x + 28, y + 28)
     return img
 
 
 def art03():
     img = atmosphere(warm=.15)
-    centred_text(img, "As little or as much as you want.", "Bold", 132, 215)
-    centred_text(img, "A listening experience that adapts to you.", "Medium", 62, 310, opacity=205)
-    k = 1.875
+    centred_text(img, "As little or as much as you want.", "Bold", 124, 190)
+    centred_text(img, "A listening experience that adapts to you.", "Medium", 58, 272, opacity=205)
+    # The real taskbar without its empty middle: Start, search and pinned apps, then the player,
+    # the notification area and the clock, as on a narrower screen.
+    k = 3.08
     desk = raw("desktop", "desk-clean.png")
-    rows = [("bar-full", "Lyrics & controls"), ("bar-lyrics", "Just the lyrics"), ("bar-compact", "Compact player"), ("bar-minimal", "Minimal")]
-    slice_h = 70  # a strip of the real desktop above the taskbar
-    strip = desk.crop((0, TASKBAR_TOP - slice_h, 1920, 1200))
+    cut_left, cut_right = 480, DOCK_RIGHT - 360 - 24
+    bar = desk.crop((0, TASKBAR_TOP, cut_left, 1200))
+    rest = desk.crop((cut_right, TASKBAR_TOP, 1920, 1200))
+    joined = Image.new("RGBA", (bar.size[0] + rest.size[0], 48))
+    joined.paste(bar, (0, 0))
+    joined.paste(rest, (bar.size[0], 0))
+    slice_h = 36
+    wall = desk.crop((0, TASKBAR_TOP - slice_h, joined.size[0], TASKBAR_TOP))
+    strip = Image.new("RGBA", (joined.size[0], slice_h + 48))
+    strip.paste(wall, (0, 0))
+    strip.paste(joined, (0, slice_h))
     strip = scale(strip, k)
+    dock_x = round((bar.size[0] + DOCK_RIGHT - cut_right) * k)
+    rows = [("bar-full", "Lyrics & controls"), ("bar-lyrics", "Just the lyrics"), ("bar-compact", "Compact player"), ("bar-minimal", "Minimal")]
     left = (W - strip.size[0]) // 2
-    y = 400
-    f = font("Medium", 48)
+    y = 352
+    f = font("Medium", 50)
     for name, label in rows:
-        ImageDraw.Draw(img).text((left + 8, y), label, font=f, fill=CREAM + (230,))
+        ImageDraw.Draw(img).text((left + 6, y), label, font=f, fill=CREAM + (232,))
         y += 74
         row = strip.copy()
         widget = comp(name)
-        row.alpha_composite(widget, (round(DOCK_RIGHT * k) - widget.size[0], round(slice_h * k)))
-        row = rounded(row, 22)
+        wy = round(slice_h * k)
+        row.alpha_composite(widget, (dock_x - widget.size[0], wy))
+        x = dock_x - widget.size[0]
+        outline(row, (x + 2 * k - 7, wy + 4 * k - 7, x + widget.size[0] - 2 * k + 7, wy + widget.size[1] - 4 * k + 7), 6 * k + 7, width=3, alpha=170, glow_alpha=110)
+        row = rounded(row, 24)
         place(img, row, (left, y), blur=36, offset=(0, 14), opacity=140)
-        x = left + round(DOCK_RIGHT * k) - widget.size[0]
-        wy = y + round(slice_h * k)
-        outline(img, (x + 2 * k - 6, wy + 4 * k - 6, x + widget.size[0] - 2 * k + 6, wy + widget.size[1] - 4 * k + 6), 6 * k + 6, alpha=150, glow_alpha=90)
-        y += row.size[1] + 52
+        y += row.size[1] + 40
     return img
 
 

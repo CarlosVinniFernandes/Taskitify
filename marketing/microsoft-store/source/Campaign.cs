@@ -39,6 +39,9 @@ internal static partial class Program
 
     static string _comp = "";
 
+    /// <summary>Scale of the desktop crops in 02.</summary>
+    const double Tile = 1.6;
+
     static void Campaign(string root)
     {
         _out = Path.Combine(root, "marketing", "microsoft-store");
@@ -68,9 +71,12 @@ internal static partial class Program
 
         // Taskbar players at 1x, for the real desktop captures (02).
         foreach (var key in new[] { "rain", "echo", "planes", "golden", "north" })
+        {
             Widget(songs[key], full, 1, $"bar-{key}-1x");
+            Widget(songs[key], full, Tile, $"bar-{key}-tile");
+        }
         // The four configurations at the strip scale (03).
-        const double strip = 1.875;
+        const double strip = 3.08; // the taskbar without its empty middle (03)
         Widget(songs["rain"], Copy(full, 360), strip, "bar-full");
         Widget(songs["rain"], lyricsOnly, strip, "bar-lyrics");
         Widget(songs["rain"], compact, strip, "bar-compact", paused: true);

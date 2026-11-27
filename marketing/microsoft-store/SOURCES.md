@@ -19,6 +19,7 @@ Account pictures, the account name and Excel's activation notice are covered in 
 - `browse-1.png`: Microsoft Edge, Bing search "best places to visit in Italy". The search results show third-party thumbnails at small size.
 - `study-1.png`: Microsoft Edge, Wikipedia article "History of coffee" (text CC BY-SA 4.0; the painting *The Coffee Bearer*, 1857, is public domain).
 - `work-1.png`: Microsoft Excel with a fictional project budget (names and figures invented).
+- `browse-2.png`, `study-2.png`, `work-2.png`: the same pages and sheet with the window in the lower-right corner, used for 02.
 - `relax-1.png`, `desk-fuji.png`, `desk-clean.png`: the desktop and taskbar.
 
 The Windows UI on this PC is in Portuguese (taskbar language indicator, date format, Excel ribbon); web pages are in English.
