@@ -290,6 +290,11 @@
 .fullPagination button { border: 0; background: transparent; cursor: pointer; }
 .fullPagination button:disabled { opacity: .48; cursor: default; }
 .fullPagination li > :only-child { font-variant-numeric: tabular-nums; }
+.mobilePagination { display: none; }
+@media (max-width: 680px) {
+  .mobilePagination { display: flex; gap: 4px 16px; margin: 0 0 14px; }
+  .mobilePagination .paginationGap { min-width: 14px; padding-inline: 2px; }
+}
 @media (min-width: 1020px) {
   .tracks { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
@@ -316,4 +321,8 @@
   .vacantSlot:nth-child(n+5) { display: none; }
   .fullPagination ul { gap: 1px; }
   .fullPagination li :is(a, button, .currentPage) { min-width: 34px; padding-inline: 4px; }
+}
+
+@media (max-width: 365px) {
+  .mobilePagination li :is(a, button, .currentPage) { min-width: 31px; }
 }

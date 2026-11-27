@@ -52,7 +52,7 @@ function noteStyle(seed: number) {
   };
 }
 
-export function MusicBoard({ locale, result, page = 1, full, onRetry, onWrite, retryHref, actions, children }: {
+export function MusicBoard({ locale, result, page = 1, full, onRetry, onWrite, retryHref, actions, topPagination, children }: {
   locale: Locale;
   result: WallPage | "error" | null;
   page?: number;
@@ -61,6 +61,7 @@ export function MusicBoard({ locale, result, page = 1, full, onRetry, onWrite, r
   onWrite?: () => void;
   retryHref?: string;
   actions?: ReactNode;
+  topPagination?: ReactNode;
   children?: ReactNode;
 }) {
   const TrackHeading = full ? "h2" : "h3";
@@ -91,6 +92,7 @@ export function MusicBoard({ locale, result, page = 1, full, onRetry, onWrite, r
       </>}
       {actions}
     </header>
+    {topPagination}
     <div className={styles.board}>
       {publicEntries.length === 0 && !pinned && <p className={styles.boardMessage} role="status">{result === "error" ? t.error
         : result === null ? t.loading : hasMore || page > 1 ? t.emptyPage : t.empty}</p>}

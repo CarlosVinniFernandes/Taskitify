@@ -76,7 +76,7 @@ export const copy = {
         emptyPage: "There are no visible contributions on this page.",
         loading: "Loading contributions…", error: "The wall couldn’t load right now.", retry: "Try again",
         added: "In the playlist", spotify: "Find on Spotify",
-        pagination: "Community wall pages", previous: "Previous page", next: "Next page",
+        pagination: "Community wall pages", paginationTop: "Community wall pages above the songs", previous: "Previous page", next: "Next page",
       },
     },
     philosophy: {
@@ -189,7 +189,7 @@ export const copy = {
         emptyPage: "Não há contribuições visíveis nesta página.",
         loading: "Carregando contribuições…", error: "Não foi possível carregar o mural agora.", retry: "Tentar novamente",
         added: "Na playlist", spotify: "Buscar no Spotify",
-        pagination: "Páginas do mural", previous: "Página anterior", next: "Próxima página",
+        pagination: "Páginas do mural", paginationTop: "Páginas do mural acima das músicas", previous: "Página anterior", next: "Próxima página",
       },
     },
     philosophy: {

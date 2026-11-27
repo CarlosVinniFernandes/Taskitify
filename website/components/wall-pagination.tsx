@@ -7,12 +7,14 @@ type Navigation =
   | { href: (page: number) => string; jumpTo: string; onPage?: never }
   | { onPage: (page: number) => void; href?: never; jumpTo?: never };
 
-export function WallPagination({ locale, page, totalPages, href, onPage, jumpTo }: {
-  locale: Locale; page: number; totalPages: number;
+export function WallPagination({ locale, page, totalPages, href, onPage, jumpTo, mobileTop = false }: {
+  locale: Locale; page: number; totalPages: number; mobileTop?: boolean;
 } & Navigation) {
   const t = copy[locale].community.wall;
-  const start = Math.min(Math.max(page - 2, 1), Math.max(totalPages - 4, 1));
-  const window = Array.from({ length: Math.min(5, totalPages) }, (_, index) => start + index);
+  if (mobileTop && totalPages <= 1) return null;
+  const visible = mobileTop ? 3 : 5;
+  const start = Math.min(Math.max(page - Math.floor(visible / 2), 1), Math.max(totalPages - visible + 1, 1));
+  const window = Array.from({ length: Math.min(visible, totalPages) }, (_, index) => start + index);
   const numbers = [...new Set([1, ...window, totalPages])];
 
   function control(number: number, label: string, text: string | number, rel?: "prev" | "next") {
@@ -28,7 +30,7 @@ export function WallPagination({ locale, page, totalPages, href, onPage, jumpTo 
     if (Number.isInteger(number) && number >= 1 && number <= totalPages) onPage?.(number);
   }
 
-  return <nav aria-label={t.pagination} className={styles.fullPagination}>
+  return <nav aria-label={mobileTop ? t.paginationTop : t.pagination} className={mobileTop ? `${styles.fullPagination} ${styles.mobilePagination}` : styles.fullPagination}>
     <ul>
       <li>{control(page - 1, t.previous, "‹", "prev")}</li>
       {numbers.map((number, index) => <li key={number}>

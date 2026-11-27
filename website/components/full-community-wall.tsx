@@ -30,14 +30,16 @@ export async function FullCommunityWall({ locale, searchParams }: { locale: Loca
   }
   const totalPages = result === "error" ? 0 : result.totalPages;
   if (result !== "error" && page > Math.max(1, totalPages)) redirect(href(Math.max(1, totalPages)));
+  const navigation = { locale, page, totalPages: Math.max(1, totalPages), href: (number: number) => `${href(number)}#wall`, jumpTo: `${base}#wall` };
+
   return <SiteShell locale={locale} page="wall">
-    <MusicBoard locale={locale} result={result} page={page} full retryHref={href(page)} actions={
+    <MusicBoard locale={locale} result={result} page={page} full retryHref={href(page)} topPagination={<WallPagination {...navigation} mobileTop />} actions={
       <div className={styles.wallActions}>
         <Link className="button button-outline" href={community}>{t.back}</Link>
         <Link className="button button-light" href={`${community}#suggest`}>{t.contribute}</Link>
       </div>
     }>
-      <WallPagination locale={locale} page={page} totalPages={Math.max(1, totalPages)} href={href} jumpTo={base} />
+      <WallPagination {...navigation} />
     </MusicBoard>
   </SiteShell>;
 }

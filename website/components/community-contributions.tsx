@@ -100,7 +100,9 @@ export function CommunityContributions({ locale, initial, wallEnabled, privacyHr
 
   function selectPage(selected: number) {
     setPage(selected);
-    document.getElementById("wall-title")?.focus();
+    const title = document.getElementById("wall-title");
+    title?.focus({ preventScroll: true });
+    title?.scrollIntoView({ behavior: "instant", block: "start" });
   }
   const [open, setOpen] = useState<"form" | "names" | "signed">("form");
   const formHeading = useRef<HTMLHeadingElement>(null);
@@ -158,7 +160,8 @@ export function CommunityContributions({ locale, initial, wallEnabled, privacyHr
         </div>
       </div>
     </section>
-    {wallEnabled && <MusicBoard locale={locale} result={wall} page={page} onRetry={reloadFirst} onWrite={openForm}>
+    {wallEnabled && <MusicBoard locale={locale} result={wall} page={page} onRetry={reloadFirst} onWrite={openForm}
+      topPagination={<WallPagination locale={locale} page={page} totalPages={totalPages} onPage={selectPage} mobileTop />}>
       <WallPagination locale={locale} page={page} totalPages={totalPages} onPage={selectPage} />
       <div className={styles.explore}>
         <Link href={pathFor(locale, "wall")} prefetch={false} className="button button-outline">{t.wall.explore}</Link>
