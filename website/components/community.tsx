@@ -1,10 +1,30 @@
+import { Suspense } from "react";
 import { Music2 } from "lucide-react";
 import { copy, type Locale } from "@/lib/copy";
 import { pathFor } from "@/lib/site";
 import { prefill } from "@/lib/suggestion-fields";
-import { communityWallEnabled } from "@/lib/community-wall";
+import { communityWallEnabled, spotifySearchUrl } from "@/lib/community-wall";
+import { getFeaturedWallEntry } from "@/lib/community-wall-store";
 import { PlaylistLink, RecordArt, SiteShell } from "./site";
 import { CommunityContributions } from "./community-contributions";
+
+async function CommunityRecord({ locale }: { locale: Locale }) {
+  const song = communityWallEnabled() ? await getFeaturedWallEntry().catch(() => null) : null;
+  if (!song) return <RecordArt />;
+
+  const t = copy[locale].community;
+  const [beforeName, afterName] = t.featuredBy.split("{name}");
+  return <div className="community-record">
+    <RecordArt />
+    <aside className="community-featured" aria-label={t.featuredTitle}>
+      <p className="community-featured-label">{t.featuredTitle}</p>
+      <p className="community-featured-song" dir="auto">{song.song}</p>
+      <p className="community-featured-artist" dir="auto">{song.artist}</p>
+      {song.name && <p className="community-featured-by">{beforeName}<bdi>{song.name}</bdi>{afterName}</p>}
+      <a href={spotifySearchUrl(song)}>{t.wall.spotify}</a>
+    </aside>
+  </div>;
+}
 
 export type SearchParameters = Promise<Record<string, string | string[] | undefined>>;
 
@@ -15,7 +35,9 @@ export async function Community({ locale, searchParams }: { locale: Locale; sear
     <SiteShell locale={locale} page="community">
       <section className="community-intro" aria-labelledby="community-title">
         <div className="wrap soundtrack-inner">
-          <RecordArt />
+          <Suspense fallback={<RecordArt />}>
+            <CommunityRecord locale={locale} />
+          </Suspense>
           <div className="soundtrack-copy">
             <p className="eyebrow"><Music2 size={16} aria-hidden="true" /> {t.name}</p>
             <h1 id="community-title">{t.intro}<br /><em>{t.split}</em></h1>

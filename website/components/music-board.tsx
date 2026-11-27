@@ -4,7 +4,7 @@ import { useSyncExternalStore, type CSSProperties, type ReactNode } from "react"
 import { copy, type Locale } from "@/lib/copy";
 import { guestbookCopy } from "@/lib/guestbook-copy";
 import { pathFor } from "@/lib/site";
-import { communityWallPageSizes, type WallEntry, type WallPage } from "@/lib/community-wall";
+import { communityWallPageSizes, spotifySearchUrl, type WallEntry, type WallPage } from "@/lib/community-wall";
 import styles from "./community-wall.module.css";
 
 const receiptKey = "taskitify-community-contribution";
@@ -99,7 +99,6 @@ export function MusicBoard({ locale, result, page = 1, full, onRetry, onWrite, r
       <ul className={styles.tracks} data-packed={packed || undefined}>
         <li className={styles.openSpace}>{invite}</li>
         {entries.map((entry, index) => {
-          const query = `${entry.song} ${entry.artist}`.replace(/[\uD800-\uDFFF]/gu, "�");
           const { mount, style } = noteStyle(entry.artSeed);
           return <li className={styles.recommendation} key={`${entry.artSeed}-${index}`} data-mount={mount} style={style}>
             <div className={styles.track}>
@@ -113,7 +112,7 @@ export function MusicBoard({ locale, result, page = 1, full, onRetry, onWrite, r
                 {entry.status === "added" && <span className={styles.added}>{t.added}</span>}
               </p>
             </div>
-            <a className={styles.spotify} href={`https://open.spotify.com/search/${encodeURIComponent(query)}`}
+            <a className={styles.spotify} href={spotifySearchUrl(entry)}
               target="_blank" rel="noreferrer">{t.spotify}</a>
           </li>;
         })}

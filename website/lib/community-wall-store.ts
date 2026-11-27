@@ -46,6 +46,21 @@ export async function getWallPage(page: number, size: WallPageSize = pageSize): 
   return { entries, hasMore: page < totalPages, totalPages };
 }
 
+export async function getFeaturedWallEntry(now = new Date()): Promise<WallEntry | null> {
+  const store = storeCacheKey();
+  const index = await wallIndex(store);
+  if (!index.length) return null;
+  const day = Math.floor(now.getTime() / 86_400_000);
+  const start = day % index.length;
+  const featured = await readEntry(store, index[start]);
+  if (featured) return featured;
+  // Skip moderated entries without scanning the entire collection.
+  const candidates = Array.from({ length: Math.min(4, index.length - 1) },
+    (_, offset) => index[(start + offset + 1) % index.length]);
+  const entries = await Promise.all(candidates.map((path) => readEntry(store, path)));
+  return entries.find((entry) => entry !== null) ?? null;
+}
+
 export async function getGuestbookPage(offset: number): Promise<GuestbookPage> {
   const store = storeCacheKey();
   const index = await wallIndex(store);

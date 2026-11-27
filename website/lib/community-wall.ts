@@ -26,6 +26,11 @@ export type WallEntry = {
   status: "suggested" | "added";
 };
 
+export function spotifySearchUrl({ song, artist }: Pick<WallEntry, "song" | "artist">) {
+  const query = `${song} ${artist}`.replace(/[\uD800-\uDFFF]/gu, "\uFFFD");
+  return `https://open.spotify.com/search/${encodeURIComponent(query)}`;
+}
+
 export type GuestSignature = { name: string; date: string; country?: string };
 export type GuestbookPage = { names: string[]; signatures: GuestSignature[]; nextOffset: number | null };
 
