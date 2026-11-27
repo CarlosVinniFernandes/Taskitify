@@ -66,6 +66,26 @@ A fonte padrão, o LRCLIB, não precisa de Spicetify, login no Spotify nem Premi
 </p>
 <p align="center"><sub>Lyrics Studio (Beta). As músicas e letras destas imagens são conteúdo original de demonstração.</sub></p>
 
+## Minimal Mode e o player flutuante
+
+O **Minimal Mode** deixa só a letra: o verso que está sendo cantado e os vizinhos, flutuando sobre a área de trabalho, o navegador ou um jogo em tela cheia sem bordas.
+
+- Os cliques passam para o que está embaixo. **Ctrl + Alt + clique** na letra para mover, redimensionar ou usar os botões.
+- **Ctrl + Alt + L** liga e desliga de qualquer lugar, inclusive dentro de jogos (dá para escolher outras teclas).
+- Ele pode aparecer sozinho enquanto apps escolhidos estão em primeiro plano, como um jogo, e sumir quando você sai deles.
+- Fundo, título, controles, tamanho do texto e quantidade de versos ficam a seu critério. O player da barra descansa enquanto ele está ligado, a não ser que você queira os dois.
+
+<p align="center">
+  <img src="docs/images/minimal-mode.jpg" alt="Minimal Mode: três versos flutuando sobre uma janela do navegador" width="760" />
+</p>
+
+O **Not that minimal** é para quem quer mais: o mini player inteiro, flutuando onde você deixar, com todos os seus visuais. O mesmo atalho e os mesmos apps ligam e desligam, e ele também pode deixar os cliques passarem.
+
+<p align="center">
+  <img src="docs/images/not-that-minimal.jpg" alt="O mini player flutuando ao lado de um artigo da Wikipédia" width="760" />
+</p>
+<p align="center"><sub>Configurações → Minimal Mode e Configurações → Not that minimal. Os dois ficam desligados até você ligar.</sub></p>
+
 ## Instalação
 
 **Microsoft Store (recomendado):** [baixe o Taskitify](https://apps.microsoft.com/detail/9nc2227dj01d). As atualizações são automáticas.
@@ -168,9 +188,14 @@ As publicações self-contained levam só o que o Taskitify usa: a projeção do
 
 Para montar o zip portátil, compacte o `publish\Taskitify.exe` junto com o `dist\LEIA-ME.txt`. A arquitetura, as decisões técnicas e as limitações conhecidas estão em [**docs/COMO-FUNCIONA.md**](docs/COMO-FUNCIONA.md).
 
+## Sugestões e problemas
+
+Achou um bug ou tem uma ideia? [Abra uma issue](https://github.com/CarlosVinniFernandes/Taskitify/issues). Com **Configurações → Avançado → Modo de depuração** ligado, o item **Diagnóstico** do ícone na área de notificação mostra um log que você pode anexar. Os tokens de acesso do Spotify nunca são gravados nele.
+
 ## Créditos
 
-- Letras: [LRCLIB](https://lrclib.net) e, opcionalmente, o Spotify.
+- Letras: [LRCLIB](https://lrclib.net), o banco de letras gratuito e comunitário, e, com a conexão opcional com o Spotify, os parceiros de letras do Spotify, geralmente o [Musixmatch](https://www.musixmatch.com). O player e o Lyrics Studio mostram "Letra fornecida por …" sempre que a letra vem do Spotify.
+- Fontes do Lyrics Studio e dos players: Inter Display, Figtree, DM Serif Display, Caveat, Courier Prime, Pixelify Sans e VT323, todas sob a [SIL Open Font License](https://openfontlicense.org) (licenças em `src/Taskitify/Resources/Fonts`).
 - Inspiração visual: [Spicetify Lyric Miniplayer](https://github.com/FO-SS/Spictify-Lyric-Miniplayer). O Taskitify é um app nativo independente, não uma extensão do Spotify.
 - Spotify é marca registrada da Spotify AB. Este projeto não tem vínculo com o Spotify nem com a Microsoft.
 

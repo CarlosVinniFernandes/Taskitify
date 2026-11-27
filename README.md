@@ -64,6 +64,26 @@ No Spicetify, Spotify login or Premium is needed for the default LRCLIB source. 
 </p>
 <p align="center"><sub>Lyrics Studio (Beta). The songs and lyrics in these images are original demo content.</sub></p>
 
+## Minimal Mode and the floating player
+
+**Minimal Mode** keeps only the lyrics: the line being sung and its neighbours, floating over your desktop, your browser or a game in borderless full screen.
+
+- Clicks go through to whatever is underneath. **Ctrl + Alt + click** the lyrics to move, resize or use them.
+- **Ctrl + Alt + L** turns it on and off from anywhere, games included (you can choose other keys).
+- It can come up by itself while chosen apps are in front, like a game, and go away when you leave them.
+- Background, title, controls, text size and the number of verses are up to you. The taskbar player rests while it is on, unless you keep both.
+
+<p align="center">
+  <img src="docs/images/minimal-mode.jpg" alt="Minimal Mode: three lines of lyrics floating over a browser window" width="760" />
+</p>
+
+**Not that minimal** is for those who want more: the whole mini player, floating wherever you leave it, with all of its looks. The same shortcut and apps switch it on and off, and it can let clicks through too.
+
+<p align="center">
+  <img src="docs/images/not-that-minimal.jpg" alt="The mini player floating beside a Wikipedia article" width="760" />
+</p>
+<p align="center"><sub>Settings → Minimal Mode and Settings → Not that minimal. Both are off until you turn them on.</sub></p>
+
 ## Installation
 
 **Microsoft Store (recommended):** [get Taskitify](https://apps.microsoft.com/detail/9nc2227dj01d). It updates automatically.
@@ -166,9 +186,14 @@ Self-contained publishes only ship what Taskitify uses: the Windows SDK projecti
 
 To build the portable zip, compress `publish\Taskitify.exe` together with `dist\LEIA-ME.txt`. Architecture, technical decisions and known limitations are documented (in Portuguese) in [**docs/COMO-FUNCIONA.md**](docs/COMO-FUNCIONA.md).
 
+## Feedback
+
+Found a bug or have an idea? [Open an issue](https://github.com/CarlosVinniFernandes/Taskitify/issues). With **Settings → Advanced → Debug mode** on, **Diagnostics** in the notification area icon shows a log you can attach. Spotify access tokens are never written to it.
+
 ## Credits
 
-- Lyrics: [LRCLIB](https://lrclib.net) and, optionally, Spotify.
+- Lyrics: [LRCLIB](https://lrclib.net), the free community lyrics database, and, with the optional Spotify connection, Spotify's lyrics partners, usually [Musixmatch](https://www.musixmatch.com). The player and Lyrics Studio show "Lyrics provided by …" whenever lyrics come from Spotify.
+- Fonts in Lyrics Studio and the players: Inter Display, Figtree, DM Serif Display, Caveat, Courier Prime, Pixelify Sans and VT323, all under the [SIL Open Font License](https://openfontlicense.org) (licenses in `src/Taskitify/Resources/Fonts`).
 - Visual inspiration: [Spicetify Lyric Miniplayer](https://github.com/FO-SS/Spictify-Lyric-Miniplayer). Taskitify is a standalone native app, not a Spotify extension.
 - Spotify is a trademark of Spotify AB. This project is not affiliated with Spotify or Microsoft.
 
