@@ -27,6 +27,8 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     private readonly ThemeService _theme;
     private DispatcherOperation? _refresh;
     private bool _active;
+    private bool _showLooks;
+    private (Color Start, Color End)? _pickerPalette;
     private (BitmapSource? Cover, Color Start, Color End, Color Theme, bool AlbumGradient)? _backgroundKey;
     private Color? _diagramColor;
     private Brush? _pickerBackground;
@@ -58,12 +60,35 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     public string PreviewTitle => _monitor.Track?.Title ?? LocalizationService.Get("SongTitle");
     public string PreviewArtist => _monitor.Track?.Artist ?? LocalizationService.Get("Artist");
     public string PreviewLyric => _lyrics.CurrentLine?.Text ?? LocalizationService.Get("LyricsAlwaysShown");
+    public string PreviewPlayGlyph => _monitor.IsPlaying ? "\uE769" : "\uE768";
+    public string BarPreviewText => BarText.Main;
+    public string BarPreviewCaption => BarText.Caption;
     public Brush? PickerBackground { get => _pickerBackground; private set => Set(ref _pickerBackground, value); }
 
-    public void SetPreviewActive(bool active)
+    private (string Main, string Caption) BarText
+    {
+        get
+        {
+            if (_monitor.Track is not { } track)
+                return (LocalizationService.Get("SongLyrics"), LocalizationService.Get("SongArtist"));
+            var verse = _settings.Current.PrimaryText == PrimaryText.Lyrics && _lyrics.State == LyricsState.Synced
+                ? _lyrics.CurrentLine?.Text : null;
+            return TaskbarViewModel.FormatTrackText(track, verse);
+        }
+    }
+
+    public void SetPreviewActive(bool active, bool showLooks = true)
     {
         if (active == _active)
+        {
+            if (active && _showLooks != showLooks)
+            {
+                _showLooks = showLooks;
+                OnPreviewChanged(this, EventArgs.Empty);
+            }
             return;
+        }
+        _showLooks = showLooks;
         _active = active;
         if (active)
         {
@@ -200,6 +225,23 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
         var cover = PreviewCover as BitmapSource;
         var palette = cover is not null ? _monitor.Palette
             : (Color.FromRgb(32, 38, 46), Color.FromRgb(53, 68, 79));
+        if (_pickerPalette != palette)
+        {
+            _pickerPalette = palette;
+            var pickerBackground = new LinearGradientBrush(palette.Item2, palette.Item1, new Point(0, 0), new Point(1, 1));
+            pickerBackground.Freeze();
+            PickerBackground = pickerBackground;
+        }
+        OnPropertyChanged(nameof(PreviewCover));
+        OnPropertyChanged(nameof(PreviewTitle));
+        OnPropertyChanged(nameof(PreviewArtist));
+        OnPropertyChanged(nameof(PreviewLyric));
+        OnPropertyChanged(nameof(PreviewPlayGlyph));
+        OnPropertyChanged(nameof(BarPreviewText));
+        OnPropertyChanged(nameof(BarPreviewCaption));
+        if (!_showLooks)
+            return;
+
         var themeBackground = ResourceColor("PopupBackgroundBrush");
         var themeText = ResourceColor("TextPrimaryBrush");
         var albumGradient = _settings.Current.Background == OverlayBackground.AlbumGradient;
@@ -209,12 +251,6 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
             _backgroundKey = key;
             foreach (var option in Backgrounds)
                 option.Thumbnail = MiniPlayerLookThumbnails.Background(option.Value, cover, palette, themeBackground, albumGradient);
-            var pickerBackground = new ImageBrush(Backgrounds.First(option => option.Value == MiniPlayerBackground.AlbumGradient).Thumbnail)
-            {
-                Stretch = Stretch.Fill,
-            };
-            pickerBackground.Freeze();
-            PickerBackground = pickerBackground;
         }
 
         if (_diagramColor != themeText)
@@ -249,10 +285,6 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
         foreach (var option in Presets)
             option.Thumbnail = MiniPlayerLookThumbnails.Player(Look.Layout, option.Value, sample, Backdrop(option.Value.Background), Ink(option.Value.Background));
 
-        OnPropertyChanged(nameof(PreviewCover));
-        OnPropertyChanged(nameof(PreviewTitle));
-        OnPropertyChanged(nameof(PreviewArtist));
-        OnPropertyChanged(nameof(PreviewLyric));
     }
 
     private static Color ResourceColor(string key) => ((SolidColorBrush)Application.Current.FindResource(key)).Color;

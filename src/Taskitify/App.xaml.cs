@@ -381,7 +381,7 @@ public partial class App : Application
         OpenMiniPlayer(anchor);
     }
 
-    /// <summary>The mini player as a live preview (no focus, stays open) after an appearance change.</summary>
+    /// <summary>Show the mini player without taking focus after an appearance change.</summary>
     private void PreviewMiniPlayer()
     {
         if (_miniPlayer is null || _overlay is null)
@@ -389,6 +389,8 @@ public partial class App : Application
         // After the change is applied and the player has its new size.
         Dispatcher.InvokeAsync(() =>
         {
+            if (_settingsWindow is not { IsVisible: true })
+                return;
             var anchor = _overlay.IsShown ? _overlay.Bounds
                 : _overlay.Placement is { } p ? TaskbarPositionService.ComputeOverlayRect(p, _settings!.Current) : default;
             OpenMiniPlayer(anchor, preview: true);

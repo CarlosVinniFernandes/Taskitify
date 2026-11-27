@@ -271,7 +271,7 @@
   "CardLyricsLabel": "Songtext",
   "CardNowPlaying": "Läuft gerade",
   "LyricsCredit": "Songtext bereitgestellt von {0}",
-  "LookLayout": "Layout",
+  "LookTemplates": "Vorlagen",
   "LookLayoutVertical": "Klassisch vertikal",
   "LookLayoutCinema": "Kino breit",
   "LookBackground": "Hintergrund",

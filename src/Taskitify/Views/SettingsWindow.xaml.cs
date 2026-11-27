@@ -20,6 +20,12 @@ public partial class SettingsWindow : Window
         DataContext = vm;
         _spotify = spotify;
         _spotify.StatusChanged += OnSpotifyStatus;
+        Loaded += (_, _) => UpdatePlayerPreviews();
+        Pages.SelectionChanged += (_, e) =>
+        {
+            if (IsLoaded && ReferenceEquals(e.Source, Pages))
+                UpdatePlayerPreviews();
+        };
         Closed += (_, _) =>
         {
             _spotify.StatusChanged -= OnSpotifyStatus;
@@ -28,9 +34,12 @@ public partial class SettingsWindow : Window
         OnSpotifyStatus(this, EventArgs.Empty);
     }
 
-    private void OnMiniPlayerPageLoaded(object sender, RoutedEventArgs e) => _vm.MiniLook?.SetPreviewActive(true);
-
-    private void OnMiniPlayerPageUnloaded(object sender, RoutedEventArgs e) => _vm.MiniLook?.SetPreviewActive(false);
+    private void UpdatePlayerPreviews()
+    {
+        var page = (SettingsPage)Pages.SelectedIndex;
+        _vm.MiniLook?.SetPreviewActive(page is SettingsPage.Bar or SettingsPage.MinimizedBar or SettingsPage.MiniPlayer,
+            showLooks: page == SettingsPage.MiniPlayer);
+    }
 
     private void OnSpotifyStatus(object? sender, EventArgs e) =>
         SpotifyLyricsStatus.SetResourceReference(TextBlock.TextProperty, "Loc." + _spotify.StatusKey);

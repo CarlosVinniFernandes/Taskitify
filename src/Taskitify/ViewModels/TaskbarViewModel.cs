@@ -334,27 +334,19 @@ public sealed class TaskbarViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var trackLine = string.IsNullOrEmpty(track.Artist) ? track.Title : $"{track.Title} · {track.Artist}";
-
-        if (IsCompact || S.PrimaryText == PrimaryText.Track)
-        {
-            // Media-widget style: title on top, artist below.
-            MainText = track.Title;
-            Caption = track.Artist;
-        }
-        else if (_sync.State == LyricsState.Synced && _sync.CurrentLine is { } line)
-        {
-            // Empty LRC lines are instrumental gaps.
-            MainText = string.IsNullOrWhiteSpace(line.Text) ? "♪ ♪ ♪" : line.Text;
-            Caption = trackLine;
-        }
-        else
-        {
-            // Before the first line, or no synced lyrics: show the song, never invented lines.
-            MainText = track.Title;
-            Caption = track.Artist;
-        }
+        var verse = !IsCompact && S.PrimaryText == PrimaryText.Lyrics && _sync.State == LyricsState.Synced
+            ? _sync.CurrentLine?.Text : null;
+        (MainText, Caption) = FormatTrackText(track, verse);
         OnPropertyChanged(nameof(ShowCaption));
+    }
+
+    internal static (string Main, string Caption) FormatTrackText(TrackInfo track, string? verse)
+    {
+        if (verse is null)
+            return (track.Title, track.Artist);
+        // Empty LRC lines are instrumental gaps.
+        var caption = string.IsNullOrEmpty(track.Artist) ? track.Title : $"{track.Title} · {track.Artist}";
+        return (string.IsNullOrWhiteSpace(verse) ? "♪ ♪ ♪" : verse, caption);
     }
 
     private static SolidColorBrush Frozen(Color c)

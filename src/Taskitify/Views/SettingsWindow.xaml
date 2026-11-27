@@ -255,7 +255,9 @@
                             <TextBlock Style="{StaticResource SettingHint}" Margin="0" Text="{DynamicResource Loc.ElementsHint}" />
                             <Border Style="{StaticResource Stage}">
                                 <StackPanel>
-                                    <local:PlayerPicker DataContext="{Binding Bar}" MaxWidth="560" />
+                                    <local:PlayerPicker DataContext="{Binding Bar}" MaxWidth="560"
+                                                        PreviewText="{Binding DataContext.MiniLook.BarPreviewText, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        PreviewCaption="{Binding DataContext.MiniLook.BarPreviewCaption, RelativeSource={RelativeSource AncestorType=Window}}" />
                                     <ContentControl Template="{StaticResource Legend}" />
                                 </StackPanel>
                             </Border>
@@ -373,7 +375,9 @@
                             <TextBlock Style="{StaticResource SettingHint}" Margin="0" Text="{DynamicResource Loc.ElementsHint}" />
                             <Border Style="{StaticResource Stage}">
                                 <StackPanel>
-                                    <local:PlayerPicker DataContext="{Binding MinimizedBar}" MaxWidth="420" />
+                                    <local:PlayerPicker DataContext="{Binding MinimizedBar}" MaxWidth="420"
+                                                        PreviewText="{Binding DataContext.MiniLook.PreviewTitle, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        PreviewCaption="{Binding DataContext.MiniLook.PreviewArtist, RelativeSource={RelativeSource AncestorType=Window}}" />
                                     <ContentControl Template="{StaticResource Legend}" />
                                 </StackPanel>
                             </Border>
@@ -400,7 +404,7 @@
 
         <!-- ───────────── Mini player (popup) ───────────── -->
         <TabItem Style="{StaticResource NavItem}" Header="{DynamicResource Loc.NavMiniPlayer}" Tag="&#xE8A7;">
-            <ScrollViewer Style="{StaticResource Page}" Loaded="OnMiniPlayerPageLoaded" Unloaded="OnMiniPlayerPageUnloaded">
+            <ScrollViewer Style="{StaticResource Page}">
                 <StackPanel Style="{StaticResource PageBody}">
                     <TextBlock Style="{StaticResource PageTitle}" Text="{DynamicResource Loc.NavMiniPlayer}" />
                     <TextBlock Style="{StaticResource PageHint}" Text="{DynamicResource Loc.PageMiniPlayerHint}" />
@@ -424,10 +428,10 @@
                                  SelectedItem="{Binding MiniLook.Layout}" AutomationProperties.Name="{DynamicResource Loc.LookMode}" />
                     </Border>
 
-                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookLayout}" />
+                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookTemplates}" />
                     <Border Style="{StaticResource Group}" Padding="18,14,18,8">
                         <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Presets}"
-                                 SelectedItem="{Binding MiniLook.Preset}" AutomationProperties.Name="{DynamicResource Loc.LookLayout}" />
+                                 SelectedItem="{Binding MiniLook.Preset}" AutomationProperties.Name="{DynamicResource Loc.LookTemplates}" />
                     </Border>
 
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookBackground}" />

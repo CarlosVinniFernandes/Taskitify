@@ -51,23 +51,7 @@ public partial class MiniPlayerWindow : Window
         vm.LyricPositionChanged += (_, _) => QueueLyricInk();
         LyricsViewport.SizeChanged += (_, _) => QueueLyrics(animate: false);
 
-        _outsideClicks = new OutsideClickWatcher((x, y) =>
-        {
-            if (IsPreview)
-                return;
-            if (VolumePopup.IsOpen && WindowInterop.PopupContains(VolumePopup.Child, x, y))
-                return;
-            if (ContentCard.ContextMenu is { IsOpen: true } menu
-                && (WindowInterop.PopupContains(menu, x, y)
-                    || menu.Items.OfType<MenuItem>().Any(item => item.IsSubmenuOpen
-                        && WindowInterop.PopupContains(item.Items.OfType<MenuItem>().FirstOrDefault(), x, y))))
-                return;
-            // Clicks on the overlay toggle the player themselves.
-            if (!Contains(WindowInterop.GetBounds(_hwnd), x, y) && !Contains(_anchor, x, y))
-                Dispatcher.BeginInvoke(HidePopup);
-            else if (VolumePopup.IsOpen && !ContainsVolumeButton(x, y))
-                Dispatcher.BeginInvoke(() => _vm.Volume.IsOpen = false);
-        });
+        _outsideClicks = new OutsideClickWatcher(OnOutsideClick);
         Closed += (_, _) => _outsideClicks.Dispose();
 
         vm.PropertyChanged += OnViewModelChanged;
@@ -245,6 +229,22 @@ public partial class MiniPlayerWindow : Window
         HidePopup();
     }
 
+    private void OnOutsideClick(int x, int y)
+    {
+        if (VolumePopup.IsOpen && WindowInterop.PopupContains(VolumePopup.Child, x, y))
+            return;
+        if (ContentCard.ContextMenu is { IsOpen: true } menu
+            && (WindowInterop.PopupContains(menu, x, y)
+                || menu.Items.OfType<MenuItem>().Any(item => item.IsSubmenuOpen
+                    && WindowInterop.PopupContains(item.Items.OfType<MenuItem>().FirstOrDefault(), x, y))))
+            return;
+        // Clicks on the overlay toggle the player themselves.
+        if (!Contains(WindowInterop.GetBounds(_hwnd), x, y) && !Contains(_anchor, x, y))
+            Dispatcher.BeginInvoke(HidePopup);
+        else if (VolumePopup.IsOpen && !ContainsVolumeButton(x, y))
+            Dispatcher.BeginInvoke(() => _vm.Volume.IsOpen = false);
+    }
+
     public void ShowAt(PixelRect anchor, PixelRect workArea, double scale, bool preview = false)
     {
         // Opened by the user (a click): a regular popup again, even if it was a preview.
@@ -289,15 +289,14 @@ public partial class MiniPlayerWindow : Window
         SetBrowsing(false);
         ScrollToCurrent(animate: false);
         QueueLyrics(animate: false);
+        _outsideClicks.Start();
         if (IsPreview)
         {
             // Beside the settings, which keep the focus.
-            _outsideClicks.Stop();
             BeginAnimation(OpacityProperty, null);
             Opacity = 1;
             return;
         }
-        _outsideClicks.Start();
         FocusHelper.ForceForeground(_hwnd);
         Activate();
         if (wasVisible)
@@ -319,6 +318,7 @@ public partial class MiniPlayerWindow : Window
 
     public void HidePopup()
     {
+        IsPreview = false;
         if (!IsVisible)
             return;
         LastHidden = DateTime.UtcNow;
