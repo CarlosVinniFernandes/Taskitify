@@ -676,10 +676,10 @@ public partial class App : Application
             var m = _settings.Current.Minimal;
             _miniPlayer.ShowPinned(new Core.Layout.PixelRect(m.PlayerX, m.PlayerY, m.PlayerWidth, m.PlayerWidth > 0 ? 1 : 0),
                 new PinnedOptions(m.ClickThrough, m.Locked, m.Topmost, m.ShowClickThroughMark, m.AutoFit, m.ControlsOnHover, m.PlayerButtonsOnHover,
-                    m.PlayerWindowWidth, m.PlayerLyricsHeight,
+                    m.PlayerWindowWidth, m.PlayerLyricsHeight, m.PlayerZoom,
                     on => _settings.Update(s => s.Minimal.ClickThrough = on),
-                    (r, width, lyrics) => _settings.Update(s => (s.Minimal.PlayerX, s.Minimal.PlayerY, s.Minimal.PlayerWidth, s.Minimal.PlayerWindowWidth, s.Minimal.PlayerLyricsHeight)
-                        = (r.X, r.Y, r.Width, width, lyrics)),
+                    (r, width, lyrics, zoom) => _settings.Update(s => (s.Minimal.PlayerX, s.Minimal.PlayerY, s.Minimal.PlayerWidth, s.Minimal.PlayerWindowWidth, s.Minimal.PlayerLyricsHeight, s.Minimal.PlayerZoom)
+                        = (r.X, r.Y, r.Width, width, lyrics, zoom)),
                     locked => _settings.Update(s => s.Minimal.Locked = locked),
                     () => _settings.Update(s => s.Minimal.Enabled = false),
                     () => _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, false))));

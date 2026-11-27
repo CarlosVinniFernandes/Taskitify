@@ -529,6 +529,7 @@
   "MinimalUnlock": "Déverrouiller pour déplacer et redimensionner",
   "MinimalSettings": "Réglages du Minimal Mode",
   "MinimalClose": "Désactiver les paroles flottantes",
+  "PlayerResize": "Faites glisser pour redimensionner tout le lecteur. Maj + glisser : plus de largeur et de vers",
   "MinimalResize": "Faites glisser pour redimensionner",
   "MinimalTopmostHint": "Aussi au-dessus des jeux et apps en plein écran (sans bordure ou fenêtré). Le plein écran exclusif n'affiche aucune autre fenêtre.",
   "LookSave": "Enregistrer l'apparence actuelle",

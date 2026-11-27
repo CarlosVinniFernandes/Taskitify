@@ -529,6 +529,7 @@
   "MinimalUnlock": "Entsperren zum Verschieben und Ändern der Größe",
   "MinimalSettings": "Minimal-Mode-Einstellungen",
   "MinimalClose": "Schwebenden Songtext ausschalten",
+  "PlayerResize": "Ziehen, um den ganzen Player zu skalieren. Umschalt + Ziehen: mehr Breite und Zeilen",
   "MinimalResize": "Ziehen, um die Größe zu ändern",
   "MinimalTopmostHint": "Auch über Spielen und Apps im Vollbild (randlos oder im Fenster). Exklusiver Vollbildmodus zeigt kein anderes Fenster.",
   "LookSave": "Aktuellen Look speichern",

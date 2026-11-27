@@ -115,7 +115,14 @@ public partial class MiniPlayerWindow : Window
         PinnedGrip.MouseLeftButtonDown += OnGripDown;
         PinnedGrip.MouseMove += OnGripMove;
         PinnedGrip.MouseLeftButtonUp += OnGripUp;
-        PinnedGrip.LostMouseCapture += (_, _) => _gripping = false;
+        PinnedGrip.LostMouseCapture += (_, _) =>
+        {
+            if (!_gripping)
+                return;
+            _gripping = false;
+            CompositionTarget.Rendering -= ApplyGrip;
+            SavePinned();
+        };
         CoverPart.Cursor = Cursors.Hand;
         CoverPart.ToolTip = LocalizationService.Get("OpenInSpotify");
         CoverPart.MouseLeftButtonUp += (_, _) => OpenSpotify();
@@ -293,7 +300,30 @@ public partial class MiniPlayerWindow : Window
     private ForegroundWatcher? _pinnedForeground;
     private bool _gripping;
     private NativeMethods.POINT _gripStart;
-    private (double Width, double Lyrics) _gripFrom;
+    private (double Width, double Lyrics, double Zoom, double WindowWidth, double WindowHeight) _gripFrom;
+    private bool _gripShape;
+    private (double Width, double Lyrics, double Zoom)? _gripPending;
+
+    // Floating, the whole player scales with its grip (cover, text, buttons and lyrics together).
+    // Its shape (width and lyrics height) is kept unscaled, the window is that shape times the zoom.
+    private double _zoom = 1;
+    private double _baseWidth = 384;
+    private const double ShadowRoom = 24; // Chrome's 12 DIP margin on both sides, never scaled
+    private const double MinZoom = 0.7, MaxZoom = 2.5;
+
+    /// <summary>The window's width for a shape width at the current zoom.</summary>
+    private void SetBaseWidth(double width)
+    {
+        _baseWidth = width;
+        Width = ((width - ShadowRoom) * _zoom) + ShadowRoom;
+    }
+
+    private void SetZoom(double zoom)
+    {
+        _zoom = zoom;
+        Chrome.LayoutTransform = Math.Abs(zoom - 1) < 0.001 ? Transform.Identity : new ScaleTransform(zoom, zoom);
+        SetBaseWidth(_baseWidth);
+    }
 
     /// <summary>
     /// Shows the player floating at a saved place (or bottom right of the main screen), until
@@ -307,6 +337,8 @@ public partial class MiniPlayerWindow : Window
             HidePopup(force: true);
         IsPinned = true;
         IsPreview = false;
+        if (!_gripping)
+            _zoom = Math.Clamp(options.Zoom > 0 ? options.Zoom : 1, MinZoom, MaxZoom);
         if (IsVisible)
         {
             ApplyPinned();
@@ -350,6 +382,8 @@ public partial class MiniPlayerWindow : Window
         PinnedMark.Visibility = PinnedGrip.Visibility = Visibility.Collapsed;
         SetExStyle(transparent: false, noActivate: false);
         _vm.FitScale = 1;
+        _zoom = 1;
+        Chrome.LayoutTransform = Transform.Identity;
         Topmost = true;
         BeginAnimation(ToolbarShownProperty, null);
         SetValue(ToolbarShownProperty, 0.0);
@@ -445,15 +479,19 @@ public partial class MiniPlayerWindow : Window
     }
 
     private void SavePinned() =>
-        _pinned?.Saved(WindowInterop.GetBounds(_hwnd), (int)Math.Round(Width), (int)Math.Round(_lyricsBase));
+        _pinned?.Saved(WindowInterop.GetBounds(_hwnd), (int)Math.Round(_baseWidth), (int)Math.Round(_lyricsBase), Math.Round(_zoom, 3));
 
     private void OnGripDown(object sender, MouseButtonEventArgs e)
     {
         if (!IsPinned || _pinned is { Locked: true } or { ClickThrough: true })
             return;
         NativeMethods.GetCursorPos(out _gripStart);
-        _gripFrom = (Width, _lyricsBase);
+        _gripFrom = (_baseWidth, _lyricsBase, _zoom, ActualWidth, ActualHeight);
+        // Shift + drag: the old way, more width and more verses at the same size.
+        _gripShape = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
         _gripping = PinnedGrip.CaptureMouse();
+        if (_gripping)
+            CompositionTarget.Rendering += ApplyGrip;
         e.Handled = true;
     }
 
@@ -463,17 +501,53 @@ public partial class MiniPlayerWindow : Window
             return;
         NativeMethods.GetCursorPos(out var now);
         var scale = WindowInterop.GetScale(_hwnd);
-        var (min, max) = PinnedWidthRange(_vm.IsCinema);
-        Width = Math.Clamp(_gripFrom.Width + ((now.X - _gripStart.X) / scale), min, max);
-        ResizeLyrics(Math.Clamp(_gripFrom.Lyrics + ((now.Y - _gripStart.Y) / scale), 70, 900));
-        UpdateFit();
+        var dx = (now.X - _gripStart.X) / scale;
+        var dy = (now.Y - _gripStart.Y) / scale;
+        if (_gripShape)
+        {
+            var (min, max) = PinnedWidthRange(_vm.IsCinema);
+            _gripPending = (Math.Clamp(_gripFrom.Width + (dx / _zoom), min, max),
+                Math.Clamp(_gripFrom.Lyrics + (dy / _zoom), 70, 900), _zoom);
+            return;
+        }
+        // The whole player follows the corner, keeping its proportions: whichever way the
+        // pointer went further sets the size. Never past the screen it is on.
+        var factor = Math.Max((_gripFrom.WindowWidth + dx) / _gripFrom.WindowWidth, (_gripFrom.WindowHeight + dy) / _gripFrom.WindowHeight);
+        var zoom = _gripFrom.Zoom * factor;
+        var bounds = WindowInterop.GetBounds(_hwnd);
+        if (WindowInterop.MonitorForRect(bounds) is { } monitor && bounds.Width > 0 && bounds.Height > 0)
+        {
+            var room = Math.Min((double)(monitor.WorkArea.Right - bounds.Left) / bounds.Width * _zoom,
+                (double)(monitor.WorkArea.Bottom - bounds.Top) / bounds.Height * _zoom);
+            zoom = Math.Min(zoom, Math.Max(room, MinZoom));
+        }
+        _gripPending = (_gripFrom.Width, _gripFrom.Lyrics, Math.Clamp(zoom, MinZoom, MaxZoom));
+    }
+
+    /// <summary>Once per frame while the grip moves: one layout per frame, however fast the mouse.</summary>
+    private void ApplyGrip(object? sender, EventArgs e)
+    {
+        if (_gripPending is not { } next)
+            return;
+        _gripPending = null;
+        if (Math.Abs(next.Zoom - _zoom) > 0.0005)
+            SetZoom(next.Zoom);
+        if (Math.Abs(next.Width - _baseWidth) > 0.25)
+            SetBaseWidth(next.Width);
+        if (Math.Abs(next.Lyrics - _lyricsBase) > 0.25)
+        {
+            ResizeLyrics(next.Lyrics);
+            UpdateFit();
+        }
     }
 
     private void OnGripUp(object sender, MouseButtonEventArgs e)
     {
         if (!_gripping)
             return;
+        ApplyGrip(null, EventArgs.Empty);
         _gripping = false;
+        CompositionTarget.Rendering -= ApplyGrip;
         PinnedGrip.ReleaseMouseCapture();
         SavePinned();
     }
@@ -662,7 +736,7 @@ public partial class MiniPlayerWindow : Window
             case nameof(MiniPlayerViewModel.WindowWidth):
                 // Not a XAML binding: the window writes its HWND's size to Width, which drops one.
                 if (!(IsPinned && _pinned is { Width: > 0 }))
-                    Width = _vm.WindowWidth;
+                    SetBaseWidth(_vm.WindowWidth);
                 break;
             case nameof(MiniPlayerViewModel.StatusMessage):
                 StatusText.Visibility = string.IsNullOrEmpty(_vm.StatusMessage) ? Visibility.Collapsed : Visibility.Visible;
@@ -836,7 +910,11 @@ public partial class MiniPlayerWindow : Window
             LyricsPart.Margin = new Thickness(0, 12, 0, 6);
             SetLyricsHeight(IsPinned && _pinned is { LyricsHeight: > 0 } v ? v.LyricsHeight : 176);
         }
-        Width = IsPinned && _pinned is { Width: > 0 } w ? Math.Clamp(w.Width, PinnedWidthRange(cinema).Min, PinnedWidthRange(cinema).Max) : _vm.WindowWidth;
+        if (!IsPinned)
+            _zoom = 1;
+        if (!_gripping)
+            SetZoom(_zoom);
+        SetBaseWidth(IsPinned && _pinned is { Width: > 0 } w ? Math.Clamp(w.Width, PinnedWidthRange(cinema).Min, PinnedWidthRange(cinema).Max) : _vm.WindowWidth);
     }
 
     private static void Place(UIElement element, int row, int column, int span = 1)
@@ -1086,4 +1164,4 @@ public partial class MiniPlayerWindow : Window
 
 /// <summary>How the floating player behaves (Minimal Mode's settings) and where its changes go.</summary>
 public sealed record PinnedOptions(bool ClickThrough, bool Locked, bool Topmost, bool ShowMark, bool AutoFit, bool ControlsOnHover, bool PlayerButtonsOnHover,
-    int Width, int LyricsHeight, Action<bool> SetClickThrough, Action<PixelRect, int, int> Saved, Action<bool> SetLocked, Action TurnOff, Action SwitchMode);
+    int Width, int LyricsHeight, double Zoom, Action<bool> SetClickThrough, Action<PixelRect, int, int, double> Saved, Action<bool> SetLocked, Action TurnOff, Action SwitchMode);

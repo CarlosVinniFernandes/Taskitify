@@ -529,6 +529,7 @@
   "MinimalUnlock": "Desbloquear para mover y cambiar el tamaño",
   "MinimalSettings": "Configuración de Minimal Mode",
   "MinimalClose": "Desactivar letras flotantes",
+  "PlayerResize": "Arrastra para cambiar el tamaño de todo el reproductor. Mayús + arrastrar: más ancho y versos",
   "MinimalResize": "Arrastra para cambiar el tamaño",
   "MinimalTopmostHint": "También sobre juegos y apps a pantalla completa (sin bordes o en ventana). La pantalla completa exclusiva no muestra ninguna otra ventana.",
   "LookSave": "Guardar el aspecto actual",

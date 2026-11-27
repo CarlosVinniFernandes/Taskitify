@@ -529,6 +529,7 @@
   "MinimalUnlock": "Destravar para mover e redimensionar",
   "MinimalSettings": "Configurações do Minimal Mode",
   "MinimalClose": "Desligar letras flutuantes",
+  "PlayerResize": "Arraste para redimensionar o player inteiro. Shift + arrastar: mais largura e versos",
   "MinimalResize": "Arraste para redimensionar",
   "MinimalTopmostHint": "Também sobre jogos e apps em tela cheia (sem bordas ou em janela). A tela cheia exclusiva não mostra nenhuma outra janela.",
   "LookSave": "Salvar visual atual",

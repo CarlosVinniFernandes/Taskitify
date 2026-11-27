@@ -529,6 +529,7 @@
   "MinimalUnlock": "Unlock to move and resize",
   "MinimalSettings": "Minimal Mode settings",
   "MinimalClose": "Turn off floating lyrics",
+  "PlayerResize": "Drag to resize the whole player. Shift + drag: more width and verses",
   "MinimalResize": "Drag to resize",
   "MinimalTopmostHint": "Also over games and apps in full screen (borderless or windowed). Exclusive full screen shows no other window.",
   "LookSave": "Save current look",

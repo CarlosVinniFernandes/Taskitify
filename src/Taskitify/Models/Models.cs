@@ -764,6 +764,9 @@ public sealed class MinimalModeSettings
     /// <summary>The floating player's window width (DIPs), set with its grip; 0 for the mini player's.</summary>
     public int PlayerWindowWidth { get; set; }
 
+    /// <summary>The floating player's size: the whole player scaled by its grip (1 = the mini player's).</summary>
+    public double PlayerZoom { get; set; } = 1;
+
     /// <summary>Also keep the taskbar player while the floating lyrics are on (off: the lyrics alone).</summary>
     public bool KeepTaskbar { get; set; }
 
