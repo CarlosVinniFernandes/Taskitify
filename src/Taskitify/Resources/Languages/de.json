@@ -571,5 +571,9 @@
   "MinimalAutoFitHint": "Wird das Fenster kleiner, schrumpft der Text, damit die gewählten Zeilen weiter hineinpassen. Nie größer als die Größe.",
   "MinimalClickThroughTip": "Klicks durchlassen (Umschalt + Alt + Klick)",
   "MinimalShortcutTitle": "Umschalt + Alt + Klick auf den Songtext",
-  "MinimalShortcutHint": "Wechselt zwischen Klicks an das Spiel oder die App darunter durchlassen (der durchgestrichene Zeiger) und sie abfangen, um zu verschieben, zu skalieren oder die Schaltflächen zu nutzen."
+  "MinimalShortcutHint": "Wechselt zwischen Klicks an das Spiel oder die App darunter durchlassen (der durchgestrichene Zeiger) und sie abfangen, um zu verschieben, zu skalieren oder die Schaltflächen zu nutzen.",
+  "MinimalButtons": "Schwebende Schaltflächen",
+  "MinimalStateCatching": "Fängt Klicks ab",
+  "MinimalStateThrough": "Klicks gehen durch",
+  "MinimalMarkTip": "Durchgestrichener Zeiger, solange Klicks durchgehen"
 }

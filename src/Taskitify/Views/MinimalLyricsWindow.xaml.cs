@@ -280,7 +280,7 @@ public partial class MinimalLyricsWindow : Window
         UpdateTopmostWatch();
         Cursor = s.Locked ? null : Cursors.SizeAll;
         ResizeGrip.Visibility = s.Locked || s.ClickThrough ? Visibility.Collapsed : Visibility.Visible;
-        ClickThroughMark.Visibility = s.ClickThrough ? Visibility.Visible : Visibility.Collapsed;
+        ClickThroughMark.Visibility = s.ClickThrough && s.ShowClickThroughMark ? Visibility.Visible : Visibility.Collapsed;
         if (s.ClickThrough && IsVisible)
             _unlockClick.Start();
         else

@@ -571,5 +571,9 @@
   "MinimalAutoFitHint": "Ao diminuir a janela, a letra encolhe para os versos escolhidos continuarem cabendo. Nunca passa do Tamanho.",
   "MinimalClickThroughTip": "Deixar os cliques atravessarem (Shift + Alt + clique)",
   "MinimalShortcutTitle": "Shift + Alt + clique nas letras",
-  "MinimalShortcutHint": "Alterna entre deixar os cliques passarem para o jogo ou app embaixo (o cursor riscado) e capturá-los para mover, redimensionar ou usar os botões."
+  "MinimalShortcutHint": "Alterna entre deixar os cliques passarem para o jogo ou app embaixo (o cursor riscado) e capturá-los para mover, redimensionar ou usar os botões.",
+  "MinimalButtons": "Botões flutuantes",
+  "MinimalStateCatching": "Capturando cliques",
+  "MinimalStateThrough": "Cliques atravessando",
+  "MinimalMarkTip": "Cursor riscado enquanto os cliques atravessam"
 }

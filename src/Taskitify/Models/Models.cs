@@ -765,6 +765,16 @@ public sealed class MinimalModeSettings
     /// <summary>Previous, play/pause and next under the lyrics.</summary>
     public bool ShowControls { get; set; }
 
+    // The window's own buttons (shown while it catches clicks), each optional; and the small
+    // crossed-out pointer shown while clicks pass through. Shift + Alt + click, the tray and the
+    // settings always work, whatever is hidden.
+    public bool ShowMiniPlayerButton { get; set; } = true;
+    public bool ShowSettingsButton { get; set; } = true;
+    public bool ShowClickThroughButton { get; set; } = true;
+    public bool ShowLockButton { get; set; } = true;
+    public bool ShowCloseButton { get; set; } = true;
+    public bool ShowClickThroughMark { get; set; } = true;
+
     public int X { get; set; }
 
     public int Y { get; set; }

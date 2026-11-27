@@ -108,6 +108,11 @@ public sealed class MinimalLyricsViewModel : ObservableObject, IDisposable
     public Point ScaleOrigin => S.Alignment == LyricsAlignment.Left ? new(0, .5) : new(.5, .5);
     public double SongFontSize => Math.Max(12, LyricsFontSize * .44);
     public bool ShowSong => S.ShowSong;
+    public bool ShowMiniPlayerButton => S.ShowMiniPlayerButton;
+    public bool ShowSettingsButton => S.ShowSettingsButton;
+    public bool ShowClickThroughButton => S.ShowClickThroughButton;
+    public bool ShowLockButton => S.ShowLockButton;
+    public bool ShowCloseButton => S.ShowCloseButton;
     public bool ShowControls => S.ShowControls;
     public double ScrollMilliseconds { get; private set; }
     public LyricFill CurrentFill => _sync.Fill(CurrentIndex, FlowMode);

@@ -571,5 +571,9 @@
   "MinimalAutoFitHint": "When the window is resized smaller, the text shrinks so the verses chosen still fit. Never larger than Size.",
   "MinimalClickThroughTip": "Let clicks pass through (Shift + Alt + click)",
   "MinimalShortcutTitle": "Shift + Alt + click on the lyrics",
-  "MinimalShortcutHint": "Switches between letting clicks through to the game or app underneath (the crossed-out pointer) and catching them to move, resize or use the buttons."
+  "MinimalShortcutHint": "Switches between letting clicks through to the game or app underneath (the crossed-out pointer) and catching them to move, resize or use the buttons.",
+  "MinimalButtons": "Floating buttons",
+  "MinimalStateCatching": "Catching clicks",
+  "MinimalStateThrough": "Clicks pass through",
+  "MinimalMarkTip": "Crossed-out pointer while clicks pass through"
 }

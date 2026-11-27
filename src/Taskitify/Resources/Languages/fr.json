@@ -571,5 +571,9 @@
   "MinimalAutoFitHint": "Quand la fenêtre rétrécit, le texte se réduit pour que les vers choisis tiennent toujours. Jamais plus grand que la Taille.",
   "MinimalClickThroughTip": "Laisser passer les clics (Maj + Alt + clic)",
   "MinimalShortcutTitle": "Maj + Alt + clic sur les paroles",
-  "MinimalShortcutHint": "Bascule entre laisser passer les clics vers le jeu ou l'app en dessous (le pointeur barré) et les capter pour déplacer, redimensionner ou utiliser les boutons."
+  "MinimalShortcutHint": "Bascule entre laisser passer les clics vers le jeu ou l'app en dessous (le pointeur barré) et les capter pour déplacer, redimensionner ou utiliser les boutons.",
+  "MinimalButtons": "Boutons flottants",
+  "MinimalStateCatching": "Capte les clics",
+  "MinimalStateThrough": "Clics traversants",
+  "MinimalMarkTip": "Pointeur barré quand les clics traversent"
 }

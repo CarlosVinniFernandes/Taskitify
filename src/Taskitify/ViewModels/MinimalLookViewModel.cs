@@ -71,6 +71,12 @@ public sealed class MinimalLookViewModel : ObservableObject
     public bool ShowControls { get => S.ShowControls; set => Change(s => s.ShowControls = value); }
     public bool GraduatedSizes { get => S.GraduatedSizes; set => Change(s => s.GraduatedSizes = value); }
     public bool AutoFit { get => S.AutoFit; set => Change(s => s.AutoFit = value); }
+    public bool ShowMiniPlayerButton { get => S.ShowMiniPlayerButton; set => Change(s => s.ShowMiniPlayerButton = value); }
+    public bool ShowSettingsButton { get => S.ShowSettingsButton; set => Change(s => s.ShowSettingsButton = value); }
+    public bool ShowClickThroughButton { get => S.ShowClickThroughButton; set => Change(s => s.ShowClickThroughButton = value); }
+    public bool ShowLockButton { get => S.ShowLockButton; set => Change(s => s.ShowLockButton = value); }
+    public bool ShowCloseButton { get => S.ShowCloseButton; set => Change(s => s.ShowCloseButton = value); }
+    public bool ShowClickThroughMark { get => S.ShowClickThroughMark; set => Change(s => s.ShowClickThroughMark = value); }
 
     // ---- Lyrics ----
 

@@ -47,20 +47,20 @@
                            HorizontalAlignment="{Binding SongAlignment}" Margin="0,0,0,0" ToolTip="{Binding SongLine}"
                            Visibility="{Binding ShowSong, Converter={StaticResource BoolToVisibility}}" />
                 <StackPanel x:Name="Toolbar" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Opacity="0.6">
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE8A7;" Command="{Binding MiniPlayerCommand}"
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE8A7;" Command="{Binding MiniPlayerCommand}" Visibility="{Binding ShowMiniPlayerButton, Converter={StaticResource BoolToVisibility}}"
                             ToolTip="{DynamicResource Loc.ShowPlayer}" AutomationProperties.Name="{DynamicResource Loc.ShowPlayer}" />
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE713;" Command="{Binding SettingsCommand}"
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE713;" Command="{Binding SettingsCommand}" Visibility="{Binding ShowSettingsButton, Converter={StaticResource BoolToVisibility}}"
                             ToolTip="{DynamicResource Loc.MinimalSettings}" AutomationProperties.Name="{DynamicResource Loc.MinimalSettings}" />
-                    <Button Style="{StaticResource ToolButton}" Command="{Binding ClickThroughCommand}"
+                    <Button Style="{StaticResource ToolButton}" Command="{Binding ClickThroughCommand}" Visibility="{Binding ShowClickThroughButton, Converter={StaticResource BoolToVisibility}}"
                             ToolTip="{DynamicResource Loc.MinimalClickThroughTip}" AutomationProperties.Name="{DynamicResource Loc.MinimalClickThroughTip}">
                         <Grid Width="16" Height="16">
                             <Path Data="M4,2 L4,12 L6.5,9.6 L8.6,13.8 L10.2,13 L8.2,8.9 L11.6,8.9 Z" Fill="{DynamicResource TextPrimaryBrush}" />
                             <Path Data="M2.5,14 L13.5,2.5" Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
                         </Grid>
                     </Button>
-                    <Button x:Name="LockButton" Style="{StaticResource ToolButton}" Content="{Binding LockGlyph}" Command="{Binding ToggleLockCommand}"
+                    <Button x:Name="LockButton" Style="{StaticResource ToolButton}" Content="{Binding LockGlyph}" Command="{Binding ToggleLockCommand}" Visibility="{Binding ShowLockButton, Converter={StaticResource BoolToVisibility}}"
                             ToolTip="{Binding LockTip}" AutomationProperties.Name="{Binding LockTip}" />
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE711;" Command="{Binding CloseCommand}"
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE711;" Command="{Binding CloseCommand}" Visibility="{Binding ShowCloseButton, Converter={StaticResource BoolToVisibility}}"
                             ToolTip="{DynamicResource Loc.MinimalClose}" AutomationProperties.Name="{DynamicResource Loc.MinimalClose}" />
                 </StackPanel>
             </Grid>
