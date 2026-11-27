@@ -529,5 +529,12 @@
   "MinimalSettings": "Configuración de Minimal Mode",
   "MinimalClose": "Desactivar letras flotantes",
   "MinimalResize": "Arrastra para cambiar el tamaño",
-  "MinimalTopmostHint": "También sobre juegos y apps a pantalla completa (sin bordes o en ventana). La pantalla completa exclusiva no muestra ninguna otra ventana."
+  "MinimalTopmostHint": "También sobre juegos y apps a pantalla completa (sin bordes o en ventana). La pantalla completa exclusiva no muestra ninguna otra ventana.",
+  "LookSave": "Guardar el aspecto actual",
+  "LookSaveHint": "Guarda el fondo y su intensidad, las letras, los controles y los elementos visibles. El formato (vertical o amplio) y el ancho se mantienen.",
+  "LookName": "Nombre del aspecto",
+  "LookUpdate": "Actualizar",
+  "LookUpdateHint": "Reemplazar este aspecto con la configuración actual",
+  "LookDelete": "Eliminar",
+  "LookPersonalName": "Mi aspecto {0}"
 }

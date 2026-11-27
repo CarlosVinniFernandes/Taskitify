@@ -529,5 +529,12 @@
   "MinimalSettings": "Impostazioni di Minimal Mode",
   "MinimalClose": "Disattiva i testi fluttuanti",
   "MinimalResize": "Trascina per ridimensionare",
-  "MinimalTopmostHint": "Anche sopra giochi e app a schermo intero (senza bordi o in finestra). Lo schermo intero esclusivo non mostra altre finestre."
+  "MinimalTopmostHint": "Anche sopra giochi e app a schermo intero (senza bordi o in finestra). Lo schermo intero esclusivo non mostra altre finestre.",
+  "LookSave": "Salva l'aspetto attuale",
+  "LookSaveHint": "Salva lo sfondo e la sua intensità, i testi, i controlli e gli elementi visibili. Il formato (verticale o ampio) e la larghezza restano come sono.",
+  "LookName": "Nome dell'aspetto",
+  "LookUpdate": "Aggiorna",
+  "LookUpdateHint": "Sostituisci questo aspetto con le impostazioni attuali",
+  "LookDelete": "Elimina",
+  "LookPersonalName": "Il mio aspetto {0}"
 }

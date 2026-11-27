@@ -114,6 +114,24 @@ public sealed class BarLayout
     /// <summary>The range of <see cref="Width"/> (its slider's) for the normal and the minimized taskbar player.</summary>
     public static (int Min, int Max) WidthRange(bool minimized) => minimized ? (60, 600) : (100, 900);
 
+    public BarLayout Clone() => (BarLayout)MemberwiseClone();
+
+    /// <summary>Copies what is shown, not the width.</summary>
+    public void CopyElementsTo(BarLayout target)
+    {
+        var width = target.Width;
+        foreach (var property in typeof(BarLayout).GetProperties())
+        {
+            if (property.CanWrite)
+                property.SetValue(target, property.GetValue(this));
+        }
+        target.Width = width;
+    }
+
+    public bool SameElements(BarLayout other) => typeof(BarLayout).GetProperties()
+        .Where(p => p.CanWrite && p.Name != nameof(Width))
+        .All(p => Equals(p.GetValue(this), p.GetValue(other)));
+
     [JsonIgnore]
     public bool AnyControl => ShowShuffle || ShowPrevious || ShowPlayPause || ShowNext || ShowRepeat || ShowVolume || ShowLike;
 
@@ -210,6 +228,9 @@ public sealed class AppSettings
 
     /// <summary>Minimal Mode: the lyrics floating over the desktop, in a window of their own.</summary>
     public MinimalModeSettings Minimal { get; set; } = new();
+
+    /// <summary>Mini player looks the user saved under a name (shown with the ready-made templates).</summary>
+    public List<MiniPlayerPreset> MiniPlayerPresets { get; set; } = [];
 
     /// <summary>Card settings the user saved under a name.</summary>
     public List<LyricCardPreset> LyricCardPresets { get; set; } = [];
@@ -521,6 +542,51 @@ public sealed class MiniPlayerStyle
     public LyricsAlignment Alignment { get; set; } = LyricsAlignment.Center;
 
     public ControlsLook Controls { get; set; } = ControlsLook.Classic;
+
+    public MiniPlayerStyle Clone() => (MiniPlayerStyle)MemberwiseClone();
+
+    /// <summary>Copies every part of the look except the layout: a look never turns a vertical player wide or back.</summary>
+    public void CopyLookTo(MiniPlayerStyle target)
+    {
+        var layout = target.Layout;
+        foreach (var property in typeof(MiniPlayerStyle).GetProperties())
+        {
+            if (property.CanWrite)
+                property.SetValue(target, property.GetValue(this));
+        }
+        target.Layout = layout;
+    }
+
+    /// <summary>The same look, whatever the layout.</summary>
+    public bool SameLook(MiniPlayerStyle other) => typeof(MiniPlayerStyle).GetProperties()
+        .Where(p => p.Name is not (nameof(Layout) or nameof(Revision)))
+        .All(p => Equals(p.GetValue(this), p.GetValue(other)));
+}
+
+/// <summary>A mini player look saved by the user: everything but the layout and the width.</summary>
+public sealed class MiniPlayerPreset
+{
+    public string Name { get; set; } = "";
+
+    public MiniPlayerStyle Look { get; set; } = new();
+
+    /// <summary>The elements shown (cover, title, buttons, progress); the width stays the user's.</summary>
+    public BarLayout Elements { get; set; } = BarLayout.DefaultMiniPlayer();
+
+    public static MiniPlayerPreset From(string name, AppSettings settings) => new()
+    {
+        Name = name,
+        Look = settings.MiniPlayerLook.Clone(),
+        Elements = settings.MiniPlayer.Clone(),
+    };
+
+    public bool Matches(AppSettings settings) => Look.SameLook(settings.MiniPlayerLook) && Elements.SameElements(settings.MiniPlayer);
+
+    public void ApplyTo(AppSettings settings)
+    {
+        Look.CopyLookTo(settings.MiniPlayerLook);
+        Elements.CopyElementsTo(settings.MiniPlayer);
+    }
 }
 
 /// <summary>How many verses Minimal Mode shows around the one being sung.</summary>

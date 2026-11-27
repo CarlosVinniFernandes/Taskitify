@@ -33,6 +33,13 @@ public partial class SettingsWindow : Window
             _vm.MinimalLook?.SetActive(false);
         };
         OnSpotifyStatus(this, EventArgs.Empty);
+        // A saved look gets its name right away: the cursor waits in it, the default name selected.
+        if (vm.MiniLook is { } look)
+            look.LookSaved += (_, _) => Dispatcher.InvokeAsync(() =>
+            {
+                LookNameBox.Focus();
+                LookNameBox.SelectAll();
+            }, System.Windows.Threading.DispatcherPriority.Input);
     }
 
     private void UpdatePlayerPreviews()

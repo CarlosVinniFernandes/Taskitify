@@ -1,4 +1,6 @@
+using System.Collections.ObjectModel;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -12,9 +14,13 @@ namespace Taskitify.ViewModels;
 public sealed class LookOption<T>(T value, string label) : ObservableObject
 {
     private ImageSource? _thumbnail;
+    private string _label = label;
 
     public T Value { get; } = value;
-    public string Label { get; } = label;
+    public string Label { get => _label; internal set => Set(ref _label, value); }
+
+    /// <summary>Made by the user (the templates mark them discreetly).</summary>
+    public bool IsPersonal { get; init; }
     public ImageSource? Thumbnail { get => _thumbnail; internal set => Set(ref _thumbnail, value); }
 }
 
@@ -32,6 +38,7 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     private (BitmapSource? Cover, Color Start, Color End, Color Theme, bool AlbumGradient)? _backgroundKey;
     private Color? _diagramColor;
     private Brush? _pickerBackground;
+    private object? _presetsKey;
 
     public MiniPlayerLookViewModel(SettingsService settings, ISpotifyMonitor monitor, LyricsSyncService lyrics, ThemeService theme)
     {
@@ -45,7 +52,29 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
             new(MiniPlayerLayout.Cinema, LocalizationService.Get("LookLayoutCinema")),
         ];
         Backgrounds = Options<MiniPlayerBackground>("LookBackground");
-        Presets = LookPreset.All.Select(preset => new LookOption<LookPreset>(preset, LocalizationService.Get("LookPreset" + preset.Key))).ToArray();
+        Presets = new ObservableCollection<LookOption<LookPreset>>(
+            LookPreset.All.Select(preset => new LookOption<LookPreset>(preset, LocalizationService.Get("LookPreset" + preset.Key))));
+        foreach (var personal in _settings.Current.MiniPlayerPresets)
+            Presets.Add(PersonalOption(personal));
+        SaveLookCommand = new RelayCommand(SaveLook);
+        UpdateLookCommand = new RelayCommand(() =>
+        {
+            if (Editing?.Value.Personal is not { } p)
+                return;
+            _settings.Update(s => (p.Look, p.Elements) = (s.MiniPlayerLook.Clone(), s.MiniPlayer.Clone()));
+            _presetsKey = null;
+            OnPropertyChanged(nameof(Preset));
+            OnPreviewChanged(this, EventArgs.Empty);
+        }, () => Editing is not null);
+        DeleteLookCommand = new RelayCommand(() =>
+        {
+            if (Editing is not { Value.Personal: { } p } option)
+                return;
+            Presets.Remove(option);
+            Editing = null;
+            _settings.Update(s => s.MiniPlayerPresets.Remove(p));
+            OnPropertyChanged(nameof(Preset));
+        }, () => Editing is not null);
         Motions = Options<LyricMotionMode>("Motion");
         Highlights = Options<LyricsHighlight>("LookHighlight");
         Typefaces = Options<LyricsTypeface>("LookTypeface");
@@ -146,16 +175,91 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
 
     /// <summary>
     /// Ready-made looks (background, lyrics and controls together), for picking one instead of
-    /// building it; the mode (vertical or wide) is kept. Any part can still be changed after.
+    /// building it, then the user's own; the mode (vertical or wide) is kept. Any part can still
+    /// be changed after.
     /// </summary>
-    public IReadOnlyList<LookOption<LookPreset>> Presets { get; }
+    public ObservableCollection<LookOption<LookPreset>> Presets { get; }
 
-    /// <summary>The preset the current look is, if it is one.</summary>
+    /// <summary>The template the current look is, if it is one (the user's own first: they hold more).</summary>
     public LookOption<LookPreset>? Preset
     {
-        get => Presets.FirstOrDefault(p => p.Value.Matches(Look));
-        set { if (value is not null && !value.Value.Matches(Look)) Change(s => value.Value.ApplyTo(s.MiniPlayerLook)); }
+        get => Presets.FirstOrDefault(p => p.IsPersonal && p.Value.Personal!.Matches(_settings.Current))
+            ?? Presets.FirstOrDefault(p => !p.IsPersonal && p.Value.Matches(Look));
+        set
+        {
+            if (value is null)
+                return;
+            // Picking one of the user's looks makes it the one the name, update and delete act on.
+            Editing = value.IsPersonal ? value : null;
+            if (value.Value.Personal is { } personal)
+            {
+                if (!personal.Matches(_settings.Current))
+                    Change(s => personal.ApplyTo(s));
+            }
+            else if (!value.Value.Matches(Look))
+                Change(s => value.Value.ApplyTo(s.MiniPlayerLook));
+        }
     }
+
+    private LookOption<LookPreset>? _editing;
+
+    /// <summary>The user's look being named, updated or deleted (the last one picked or saved).</summary>
+    public LookOption<LookPreset>? Editing
+    {
+        get => _editing;
+        private set
+        {
+            if (Set(ref _editing, value))
+            {
+                OnPropertyChanged(nameof(IsEditing));
+                OnPropertyChanged(nameof(EditingName));
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+    }
+
+    public bool IsEditing => Editing is not null;
+
+    /// <summary>Renamed as it is typed; saved with the settings.</summary>
+    public string EditingName
+    {
+        get => Editing?.Label ?? "";
+        set
+        {
+            if (Editing is not { Value.Personal: { } p } option || value == p.Name)
+                return;
+            var name = value.Length > 40 ? value[..40] : value;
+            option.Label = name;
+            _settings.Update(_ => p.Name = name);
+        }
+    }
+
+    public ICommand SaveLookCommand { get; }
+    public ICommand UpdateLookCommand { get; }
+    public ICommand DeleteLookCommand { get; }
+
+    /// <summary>A look was saved: the view puts the cursor in its name.</summary>
+    public event EventHandler? LookSaved;
+
+    private void SaveLook()
+    {
+        var number = _settings.Current.MiniPlayerPresets.Count + 1;
+        string name;
+        do name = string.Format(LocalizationService.Get("LookPersonalName"), number++);
+        while (_settings.Current.MiniPlayerPresets.Any(p => p.Name == name));
+        var personal = MiniPlayerPreset.From(name, _settings.Current);
+        _settings.Update(s => s.MiniPlayerPresets.Add(personal));
+        var option = PersonalOption(personal);
+        Presets.Add(option);
+        Editing = option;
+        OnPropertyChanged(nameof(Preset));
+        _presetsKey = null;
+        OnPreviewChanged(this, EventArgs.Empty);
+        LookSaved?.Invoke(this, EventArgs.Empty);
+    }
+
+    private static LookOption<LookPreset> PersonalOption(MiniPlayerPreset personal) =>
+        new(LookPreset.FromPersonal(personal), personal.Name) { IsPersonal = true };
 
     public IReadOnlyList<LookOption<MiniPlayerLayout>> Layouts { get; }
 
@@ -279,11 +383,19 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
             background == MiniPlayerBackground.Theme || (background == MiniPlayerBackground.Default && !albumGradient)
                 ? themeText : Colors.White;
 
+        // The pictures show the song's verses: redrawn when those, the cover or a look changes, not on every event.
         var current = new LookPreset("", Look.Background, Look.Highlight, Look.Typeface, Look.Alignment, Look.Controls);
+        var presetsKey = (sample, Look.Layout, current, key, Presets.Count);
+        if (Equals(_presetsKey, presetsKey))
+            return;
+        _presetsKey = presetsKey;
         foreach (var option in Layouts)
             option.Thumbnail = MiniPlayerLookThumbnails.Player(option.Value, current, sample, Backdrop(current.Background), Ink(current.Background));
         foreach (var option in Presets)
-            option.Thumbnail = MiniPlayerLookThumbnails.Player(Look.Layout, option.Value, sample, Backdrop(option.Value.Background), Ink(option.Value.Background));
+        {
+            var look = option.Value.Personal is { } p ? LookPreset.FromPersonal(p) : option.Value;
+            option.Thumbnail = MiniPlayerLookThumbnails.Player(Look.Layout, look, sample, Backdrop(look.Background), Ink(look.Background));
+        }
 
     }
 
@@ -292,8 +404,12 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
 
 /// <summary>A ready-made mini player look: background, lyrics and controls that go together.</summary>
 public sealed record LookPreset(string Key, MiniPlayerBackground Background, LyricsHighlight Highlight, LyricsTypeface Typeface,
-    LyricsAlignment Alignment, ControlsLook Controls)
+    LyricsAlignment Alignment, ControlsLook Controls, MiniPlayerPreset? Personal = null)
 {
+    /// <summary>A user's look, as the templates' pictures draw it (from what it holds now).</summary>
+    public static LookPreset FromPersonal(MiniPlayerPreset p) =>
+        new("", p.Look.Background, p.Look.Highlight, p.Look.Typeface, p.Look.Alignment, p.Look.Controls, p);
+
     public static IReadOnlyList<LookPreset> All { get; } =
     [
         new("Classic", MiniPlayerBackground.Default, LyricsHighlight.Classic, LyricsTypeface.Modern, LyricsAlignment.Center, ControlsLook.Classic),

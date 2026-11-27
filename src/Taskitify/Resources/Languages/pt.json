@@ -529,5 +529,12 @@
   "MinimalSettings": "Configurações do Minimal Mode",
   "MinimalClose": "Desligar letras flutuantes",
   "MinimalResize": "Arraste para redimensionar",
-  "MinimalTopmostHint": "Também sobre jogos e apps em tela cheia (sem bordas ou em janela). A tela cheia exclusiva não mostra nenhuma outra janela."
+  "MinimalTopmostHint": "Também sobre jogos e apps em tela cheia (sem bordas ou em janela). A tela cheia exclusiva não mostra nenhuma outra janela.",
+  "LookSave": "Salvar visual atual",
+  "LookSaveHint": "Salva o fundo e sua intensidade, as letras, os controles e os elementos visíveis. O formato (vertical ou amplo) e a largura continuam como estão.",
+  "LookName": "Nome do visual",
+  "LookUpdate": "Atualizar",
+  "LookUpdateHint": "Substituir este visual pelas configurações atuais",
+  "LookDelete": "Excluir",
+  "LookPersonalName": "Meu visual {0}"
 }

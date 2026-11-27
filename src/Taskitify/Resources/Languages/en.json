@@ -529,5 +529,12 @@
   "MinimalSettings": "Minimal Mode settings",
   "MinimalClose": "Turn off floating lyrics",
   "MinimalResize": "Drag to resize",
-  "MinimalTopmostHint": "Also over games and apps in full screen (borderless or windowed). Exclusive full screen shows no other window."
+  "MinimalTopmostHint": "Also over games and apps in full screen (borderless or windowed). Exclusive full screen shows no other window.",
+  "LookSave": "Save current look",
+  "LookSaveHint": "Saves the background and its intensity, lyrics, controls and elements shown. The layout (vertical or wide) and the width stay as they are.",
+  "LookName": "Look name",
+  "LookUpdate": "Update",
+  "LookUpdateHint": "Replace this look with the current settings",
+  "LookDelete": "Delete",
+  "LookPersonalName": "My look {0}"
 }

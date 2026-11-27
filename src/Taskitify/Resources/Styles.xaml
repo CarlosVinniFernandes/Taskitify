@@ -262,6 +262,48 @@
         </Setter>
     </Style>
 
+    <!-- A mini player template: a ThumbTile whose user-made looks carry a small badge. -->
+    <Style x:Key="PresetTile" TargetType="ListBoxItem" BasedOn="{StaticResource ThumbTile}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <StackPanel>
+                        <Grid>
+                            <Border x:Name="Ring" CornerRadius="9" BorderThickness="2" BorderBrush="Transparent" Padding="3">
+                                <Image Source="{Binding Thumbnail}" Stretch="None" RenderOptions.BitmapScalingMode="HighQuality" />
+                            </Border>
+                            <Border x:Name="Check" Width="18" Height="18" CornerRadius="9" Background="{DynamicResource AccentBrush}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,6,0" Visibility="Collapsed">
+                                <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="9" Foreground="White"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Margin="3,4,0,0" MaxWidth="170" HorizontalAlignment="Left">
+                            <TextBlock x:Name="Badge" Text="&#xE77B;" FontFamily="{StaticResource IconFont}" FontSize="10" Margin="0,1,5,0" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" Visibility="Collapsed" />
+                            <TextBlock x:Name="Name" Text="{Binding Label}" FontSize="12" TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <DataTrigger Binding="{Binding IsPersonal}" Value="True">
+                            <Setter TargetName="Badge" Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource TextSecondaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Ring" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                            <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="Name" Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                            <Setter TargetName="Badge" Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Themed combo box: the stock one stays light in the dark theme. -->
     <Style x:Key="SettingsComboBoxItem" TargetType="ComboBoxItem">
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />

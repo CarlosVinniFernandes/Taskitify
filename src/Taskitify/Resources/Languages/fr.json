@@ -529,5 +529,12 @@
   "MinimalSettings": "Réglages du Minimal Mode",
   "MinimalClose": "Désactiver les paroles flottantes",
   "MinimalResize": "Faites glisser pour redimensionner",
-  "MinimalTopmostHint": "Aussi au-dessus des jeux et apps en plein écran (sans bordure ou fenêtré). Le plein écran exclusif n'affiche aucune autre fenêtre."
+  "MinimalTopmostHint": "Aussi au-dessus des jeux et apps en plein écran (sans bordure ou fenêtré). Le plein écran exclusif n'affiche aucune autre fenêtre.",
+  "LookSave": "Enregistrer l'apparence actuelle",
+  "LookSaveHint": "Enregistre le fond et son intensité, les paroles, les commandes et les éléments affichés. La disposition (verticale ou large) et la largeur restent telles quelles.",
+  "LookName": "Nom de l'apparence",
+  "LookUpdate": "Mettre à jour",
+  "LookUpdateHint": "Remplacer cette apparence par les réglages actuels",
+  "LookDelete": "Supprimer",
+  "LookPersonalName": "Mon apparence {0}"
 }

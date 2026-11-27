@@ -15,6 +15,15 @@
         <Style TargetType="ComboBox" BasedOn="{StaticResource SettingsComboBox}" />
         <Style TargetType="Slider" BasedOn="{StaticResource SettingsSlider}" />
         <Style TargetType="ScrollBar" BasedOn="{StaticResource ThinScrollBar}" />
+        <Style x:Key="NameField" TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource TextPrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource PopupBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
 
         <!-- Page layout: title, short description, then groups of rows. -->
         <Style x:Key="PageTitle" TargetType="TextBlock">
@@ -445,9 +454,31 @@
                     </Border>
 
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookTemplates}" />
-                    <Border Style="{StaticResource Group}" Padding="18,14,18,8">
-                        <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Presets}"
-                                 SelectedItem="{Binding MiniLook.Preset}" AutomationProperties.Name="{DynamicResource Loc.LookTemplates}" />
+                    <Border Style="{StaticResource Group}" Padding="18,14,18,14">
+                        <StackPanel>
+                            <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource PresetTile}" ItemsSource="{Binding MiniLook.Presets}"
+                                     SelectedItem="{Binding MiniLook.Preset}" AutomationProperties.Name="{DynamicResource Loc.LookTemplates}" />
+                            <!-- The user's own looks: save the current one here; the one picked or saved can be renamed, updated or deleted. -->
+                            <WrapPanel Margin="0,4,0,0">
+                                <Button Style="{StaticResource AccentButton}" Command="{Binding MiniLook.SaveLookCommand}" Margin="0,0,16,6"
+                                        AutomationProperties.Name="{DynamicResource Loc.LookSave}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE74E;" FontFamily="{StaticResource IconFont}" FontSize="13" Margin="0,1,8,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="{DynamicResource Loc.LookSave}" />
+                                    </StackPanel>
+                                </Button>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6" Visibility="{Binding MiniLook.IsEditing, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBox x:Name="LookNameBox" Style="{StaticResource NameField}" Width="190" MaxLength="40"
+                                             Text="{Binding MiniLook.EditingName, UpdateSourceTrigger=PropertyChanged}"
+                                             AutomationProperties.Name="{DynamicResource Loc.LookName}" ToolTip="{DynamicResource Loc.LookName}" />
+                                    <Button Style="{StaticResource FlatButton}" Command="{Binding MiniLook.UpdateLookCommand}" Margin="8,0,0,0"
+                                            Content="{DynamicResource Loc.LookUpdate}" ToolTip="{DynamicResource Loc.LookUpdateHint}" />
+                                    <Button Style="{StaticResource FlatButton}" Command="{Binding MiniLook.DeleteLookCommand}" Margin="8,0,0,0"
+                                            Content="{DynamicResource Loc.LookDelete}" />
+                                </StackPanel>
+                            </WrapPanel>
+                            <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.LookSaveHint}" />
+                        </StackPanel>
                     </Border>
 
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookBackground}" />

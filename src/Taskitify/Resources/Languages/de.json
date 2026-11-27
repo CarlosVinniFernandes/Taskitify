@@ -529,5 +529,12 @@
   "MinimalSettings": "Minimal-Mode-Einstellungen",
   "MinimalClose": "Schwebenden Songtext ausschalten",
   "MinimalResize": "Ziehen, um die Größe zu ändern",
-  "MinimalTopmostHint": "Auch über Spielen und Apps im Vollbild (randlos oder im Fenster). Exklusiver Vollbildmodus zeigt kein anderes Fenster."
+  "MinimalTopmostHint": "Auch über Spielen und Apps im Vollbild (randlos oder im Fenster). Exklusiver Vollbildmodus zeigt kein anderes Fenster.",
+  "LookSave": "Aktuellen Look speichern",
+  "LookSaveHint": "Speichert Hintergrund und Intensität, Songtext, Steuerung und sichtbare Elemente. Layout (vertikal oder breit) und Breite bleiben, wie sie sind.",
+  "LookName": "Name des Looks",
+  "LookUpdate": "Aktualisieren",
+  "LookUpdateHint": "Diesen Look durch die aktuellen Einstellungen ersetzen",
+  "LookDelete": "Löschen",
+  "LookPersonalName": "Mein Look {0}"
 }
