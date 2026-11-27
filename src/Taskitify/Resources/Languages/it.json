@@ -607,5 +607,8 @@
   "ControlsOnHover": "Controlli del player solo al passaggio del mouse",
   "ControlsOnHoverHint": "Più pulito: azioni del brano, avanzamento, controlli e angolo compaiono passando il mouse sul player.",
   "ButtonsOnHover": "Pulsanti solo al passaggio del mouse",
-  "ButtonsOnHoverHint": "I pulsanti sopra e l'angolo compaiono passando il mouse sui testi. Disattivato: sempre visibili, discreti."
+  "ButtonsOnHoverHint": "I pulsanti sopra e l'angolo compaiono passando il mouse sui testi. Disattivato: sempre visibili, discreti.",
+  "PlayerButtonsOnHoverHint": "Impostazioni, clic passanti, lucchetto, chiudi e l'angolo compaiono passando il mouse sul player; altrimenti i testi prendono il loro spazio.",
+  "SwitchToNotMinimal": "Passa a Not that minimal (player completo)",
+  "SwitchToMinimal": "Passa a Minimal Mode (solo testi)"
 }

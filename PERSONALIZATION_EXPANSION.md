@@ -14,6 +14,7 @@ Branch `t3/personalization-expansion`, from `t3/release-candidate` (aca354f). No
 | Minimal Mode extras | Global shortcut Ctrl + Alt + L (changeable, works in games), turn on by itself with chosen apps in front, what shows while paused, one-click quick positions |
 | Not that minimal | Own tab: the whole mini player floating and pinned, with every mini player look and Minimal Mode's possibilities (click-through with Ctrl + Alt + click both ways and its mark, never taking focus, topmost over games, lock, corner-grip resize with lyrics shrinking, quick positions); exclusive with the floating lyrics |
 | Buttons on hover | Floating lyrics (on by default): the window's buttons and grip appear under the pointer; their row closes and the verses glide into the room, back when hovered (type size unchanged) |
+| Floating player buttons | Its own toolbar (switch to lyrics, settings, click-through, lock, close) and grip, on hover by default; the toolbar's room comes from the lyrics so the window keeps its size. The lyrics' first button switches to the floating player and back. Floating sizes: width 300-900 (wide 520-1200), lyrics 70-900 |
 | Controls on hover | Floating player (off by default): song actions, progress, controls and grip appear under the pointer |
 | Tour | Minimal Mode step shows the real feature; last card has two playlist buttons side by side |
 
@@ -54,6 +55,7 @@ Branch `t3/personalization-expansion`, from `t3/release-candidate` (aca354f). No
 - Real app runs on a throwaway copy of the user's data (`TASKITIFY_DATA_DIR`, English for screenshots): Minimal Mode over the desktop with real songs (track changes, Lyric Flow ink, 1/3/5 verses, left/centre, album/soft/clear, outline), window ex-style checked (`TRANSPARENT|LAYERED|TOPMOST|NOACTIVATE|TOOLWINDOW`), placement on first run and after a lost position, taskbar player hidden, settings pages (Minimal, mini player templates with a personal look, background sliders, sync section), tour steps in en/pt/it.
 
 ## Known limitations
+- Windows logging off no longer turns Minimal Mode off (closing during a session end used to be taken as the user's close).
 - Auto apps match the process name of the app in front; leaving it (Alt+Tab) puts the lyrics away. Clicking the taskbar or Taskitify itself does not.
 - The global shortcut is unavailable when another app registered the same keys (Settings says so).
 - Ctrl + Alt is also AltGr on many layouts (pt-BR ABNT2 included): AltGr + click on the lyrics toggles too. Chosen over Shift + Alt, Windows' input-language switch.

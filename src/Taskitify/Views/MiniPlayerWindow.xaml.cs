@@ -105,8 +105,13 @@ public partial class MiniPlayerWindow : Window
                 _pinned?.SetClickThrough(true);
             }
         };
-        MouseEnter += (_, _) => UpdateHoverChrome();
-        MouseLeave += (_, _) => UpdateHoverChrome();
+        MouseEnter += (_, _) => { UpdateHoverChrome(); UpdatePinnedToolbar(); };
+        MouseLeave += (_, _) => { UpdateHoverChrome(); UpdatePinnedToolbar(); };
+        PinnedSwitch.Click += (_, _) => _pinned?.SwitchMode();
+        PinnedSettings.Click += (_, _) => (Application.Current as App)?.ShowSettings(SettingsPage.NotMinimal);
+        PinnedClickThrough.Click += (_, _) => _pinned?.SetClickThrough(true);
+        PinnedLock.Click += (_, _) => _pinned?.SetLocked(!_pinned.Locked);
+        PinnedClose.Click += (_, _) => _pinned?.TurnOff();
         PinnedGrip.MouseLeftButtonDown += OnGripDown;
         PinnedGrip.MouseMove += OnGripMove;
         PinnedGrip.MouseLeftButtonUp += OnGripUp;
@@ -346,6 +351,9 @@ public partial class MiniPlayerWindow : Window
         SetExStyle(transparent: false, noActivate: false);
         _vm.FitScale = 1;
         Topmost = true;
+        BeginAnimation(ToolbarShownProperty, null);
+        SetValue(ToolbarShownProperty, 0.0);
+        PinnedToolbar.Visibility = Visibility.Collapsed;
         foreach (UIElement part in new UIElement[] { ActionsPart, ProgressPart, ControlsPart })
             LyricMotionText.Tween(part, OpacityProperty, 1, 0, expressive: false);
         HidePopup(force: true);
@@ -385,6 +393,7 @@ public partial class MiniPlayerWindow : Window
         ApplyLayout();
         UpdateFit();
         UpdateHoverChrome();
+        UpdatePinnedToolbar();
     }
 
     /// <summary>Floating with controls on hover: only the cover, the song and the lyrics until the pointer comes.</summary>
@@ -393,9 +402,15 @@ public partial class MiniPlayerWindow : Window
         var hide = IsPinned && _pinned is { ControlsOnHover: true } && !IsMouseOver && !_gripping;
         var target = hide ? 0.0 : 1.0;
         var duration = _animationsEnabled() && SystemParameters.ClientAreaAnimation ? 160 : 0;
-        foreach (UIElement part in new UIElement[] { ActionsPart, ProgressPart, ControlsPart, PinnedGrip })
-            LyricMotionText.Tween(part, OpacityProperty, part == PinnedGrip && !hide ? 0.6 : target, duration, expressive: false);
+        foreach (UIElement part in new UIElement[] { ActionsPart, ProgressPart, ControlsPart })
+            LyricMotionText.Tween(part, OpacityProperty, target, duration, expressive: false);
+        // The grip goes with the window's own buttons.
+        var grip = IsPinned && _pinned is { PlayerButtonsOnHover: true } && !IsMouseOver && !_gripping ? 0.0 : IsMouseOver || _gripping ? 1.0 : 0.6;
+        LyricMotionText.Tween(PinnedGrip, OpacityProperty, grip, duration, expressive: false);
     }
+
+    /// <summary>Floating, the player resizes further than as a popup.</summary>
+    private static (double Min, double Max) PinnedWidthRange(bool cinema) => cinema ? (520, 1200) : (300, 900);
 
     private void SetExStyle(bool transparent, bool noActivate)
     {
@@ -412,7 +427,7 @@ public partial class MiniPlayerWindow : Window
     private void UpdateFit()
     {
         var usual = _vm.IsCinema ? (_vm.ShowCover ? 268 : 200) : 176;
-        _vm.FitScale = IsPinned && _pinned is { AutoFit: true } ? LyricsViewport.Height / usual : 1;
+        _vm.FitScale = IsPinned && _pinned is { AutoFit: true } ? _lyricsBase / usual : 1;
     }
 
     /// <summary>One click from Settings: the floating player moved to a spot of its screen.</summary>
@@ -430,14 +445,14 @@ public partial class MiniPlayerWindow : Window
     }
 
     private void SavePinned() =>
-        _pinned?.Saved(WindowInterop.GetBounds(_hwnd), (int)Math.Round(Width), (int)Math.Round(LyricsViewport.Height));
+        _pinned?.Saved(WindowInterop.GetBounds(_hwnd), (int)Math.Round(Width), (int)Math.Round(_lyricsBase));
 
     private void OnGripDown(object sender, MouseButtonEventArgs e)
     {
         if (!IsPinned || _pinned is { Locked: true } or { ClickThrough: true })
             return;
         NativeMethods.GetCursorPos(out _gripStart);
-        _gripFrom = (Width, LyricsViewport.Height);
+        _gripFrom = (Width, _lyricsBase);
         _gripping = PinnedGrip.CaptureMouse();
         e.Handled = true;
     }
@@ -448,9 +463,9 @@ public partial class MiniPlayerWindow : Window
             return;
         NativeMethods.GetCursorPos(out var now);
         var scale = WindowInterop.GetScale(_hwnd);
-        var (min, max) = _vm.IsCinema ? (584.0, 744.0) : (334.0, 664.0);
+        var (min, max) = PinnedWidthRange(_vm.IsCinema);
         Width = Math.Clamp(_gripFrom.Width + ((now.X - _gripStart.X) / scale), min, max);
-        SetLyricsHeight(Math.Clamp(_gripFrom.Lyrics + ((now.Y - _gripStart.Y) / scale), 90, 640));
+        ResizeLyrics(Math.Clamp(_gripFrom.Lyrics + ((now.Y - _gripStart.Y) / scale), 70, 900));
         UpdateFit();
     }
 
@@ -821,7 +836,7 @@ public partial class MiniPlayerWindow : Window
             LyricsPart.Margin = new Thickness(0, 12, 0, 6);
             SetLyricsHeight(IsPinned && _pinned is { LyricsHeight: > 0 } v ? v.LyricsHeight : 176);
         }
-        Width = IsPinned && _pinned is { Width: > 0 } w ? Math.Clamp(w.Width, cinema ? 584 : 334, cinema ? 744 : 664) : _vm.WindowWidth;
+        Width = IsPinned && _pinned is { Width: > 0 } w ? Math.Clamp(w.Width, PinnedWidthRange(cinema).Min, PinnedWidthRange(cinema).Max) : _vm.WindowWidth;
     }
 
     private static void Place(UIElement element, int row, int column, int span = 1)
@@ -832,10 +847,88 @@ public partial class MiniPlayerWindow : Window
         Grid.SetRowSpan(element, 1);
     }
 
+    // The lyrics' height as laid out (or set with the grip); while the floating toolbar shows, it
+    // takes ToolbarRoom of it (eased), so the window keeps its size and the verses get the room back.
+    private double _lyricsBase = 176;
+    private const double ToolbarRoom = 30;
+
+    private Thickness _lyricsMargin;
+
+    /// <summary>From the layout: the lyrics' height and margin as laid out.</summary>
     private void SetLyricsHeight(double height)
     {
+        _lyricsMargin = LyricsPart.Margin;
+        _lyricsBase = height;
+        ApplyToolbarRoom();
+    }
+
+    /// <summary>From the grip: only the height changes.</summary>
+    private void ResizeLyrics(double height)
+    {
+        _lyricsBase = height;
+        ApplyToolbarRoom();
+    }
+
+    private static readonly DependencyProperty ToolbarShownProperty = DependencyProperty.Register(
+        "ToolbarShown", typeof(double), typeof(MiniPlayerWindow), new PropertyMetadata(0.0, (d, _) => ((MiniPlayerWindow)d).ApplyToolbarRoom()));
+
+    private double ToolbarShown => (double)GetValue(ToolbarShownProperty);
+
+    private void ApplyToolbarRoom()
+    {
+        var shown = IsPinned ? ToolbarShown : 0;
+        var room = ToolbarRoom * shown;
+        var height = Math.Max(60, _lyricsBase - room);
         LyricsViewport.Height = height;
         LyricsFade.EndPoint = new Point(0, height);
+        // Wide: the toolbar sits over the lyrics column, which gives it the room; vertical: over the
+        // song's row, so everything moves down by what the lyrics give. Either way the size holds.
+        if (_vm.IsCinema)
+        {
+            ContentCard.Padding = new Thickness(16, 16, 16, 10);
+            LyricsPart.Margin = new Thickness(_lyricsMargin.Left, _lyricsMargin.Top + room, _lyricsMargin.Right, _lyricsMargin.Bottom);
+        }
+        else
+        {
+            ContentCard.Padding = new Thickness(16, 16 + room, 16, 10);
+            LyricsPart.Margin = _lyricsMargin;
+        }
+        PinnedToolbar.Opacity = shown;
+    }
+
+    /// <summary>The floating toolbar: shown, or (buttons on hover) only while the pointer is over the player.</summary>
+    private void UpdatePinnedToolbar()
+    {
+        var o = _pinned;
+        var available = IsPinned && o is { ClickThrough: false };
+        PinnedToolbar.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
+        var target = available && (IsMouseOver || _gripping || o is { PlayerButtonsOnHover: false }) ? 1.0 : 0.0;
+        if (IsPinned && o is { } p)
+        {
+            PinnedLock.Content = p.Locked ? "\uE72E" : "\uE785";
+            PinnedLock.ToolTip = LocalizationService.Get(p.Locked ? "MinimalUnlock" : "MinimalLock");
+        }
+        var ms = _animationsEnabled() && SystemParameters.ClientAreaAnimation && IsVisible ? (target > ToolbarShown ? 180 : 260) : 0;
+        if (ms == 0)
+        {
+            BeginAnimation(ToolbarShownProperty, null);
+            SetValue(ToolbarShownProperty, target);
+            return;
+        }
+        BeginAnimation(ToolbarShownProperty, new DoubleAnimation(ToolbarShown, target, TimeSpan.FromMilliseconds(ms))
+        {
+            EasingFunction = ToolbarEase,
+            FillBehavior = FillBehavior.HoldEnd,
+        }, HandoffBehavior.SnapshotAndReplace);
+    }
+
+    private static readonly IEasingFunction ToolbarEase = CreateToolbarEase();
+
+    private static IEasingFunction CreateToolbarEase()
+    {
+        var ease = new CubicEase { EasingMode = EasingMode.EaseInOut };
+        ease.Freeze();
+        return ease;
     }
 
     private void UpdateProgressValue()
@@ -992,5 +1085,5 @@ public partial class MiniPlayerWindow : Window
 }
 
 /// <summary>How the floating player behaves (Minimal Mode's settings) and where its changes go.</summary>
-public sealed record PinnedOptions(bool ClickThrough, bool Locked, bool Topmost, bool ShowMark, bool AutoFit, bool ControlsOnHover, int Width, int LyricsHeight,
-    Action<bool> SetClickThrough, Action<PixelRect, int, int> Saved);
+public sealed record PinnedOptions(bool ClickThrough, bool Locked, bool Topmost, bool ShowMark, bool AutoFit, bool ControlsOnHover, bool PlayerButtonsOnHover,
+    int Width, int LyricsHeight, Action<bool> SetClickThrough, Action<PixelRect, int, int> Saved, Action<bool> SetLocked, Action TurnOff, Action SwitchMode);

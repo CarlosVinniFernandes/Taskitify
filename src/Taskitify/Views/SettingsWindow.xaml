@@ -819,7 +819,7 @@
                                         <Grid>
                                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0">
                                         <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding MinimalLook.ShowMiniPlayerButton}"
-                                                      ToolTip="{DynamicResource Loc.ShowPlayer}" AutomationProperties.Name="{DynamicResource Loc.ShowPlayer}">&#xE8A7;</ToggleButton>
+                                                      ToolTip="{DynamicResource Loc.SwitchToNotMinimal}" AutomationProperties.Name="{DynamicResource Loc.SwitchToNotMinimal}">&#xE718;</ToggleButton>
                                         <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding MinimalLook.ShowSettingsButton}"
                                                       ToolTip="{DynamicResource Loc.MinimalSettings}" AutomationProperties.Name="{DynamicResource Loc.MinimalSettings}">&#xE713;</ToggleButton>
                                         <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding MinimalLook.ShowClickThroughButton}"
@@ -1217,6 +1217,15 @@
                     <Border Style="{StaticResource Group}">
                         <StackPanel>
                             <Border Style="{StaticResource FirstRow}">
+                                <DockPanel>
+                                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding MinimalLook.PlayerButtonsOnHover}" AutomationProperties.Name="{DynamicResource Loc.ButtonsOnHover}" />
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.ButtonsOnHover}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.PlayerButtonsOnHoverHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
                                 <DockPanel>
                                     <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding MinimalLook.ControlsOnHover}" AutomationProperties.Name="{DynamicResource Loc.ControlsOnHover}" />
                                     <StackPanel Style="{StaticResource RowText}">

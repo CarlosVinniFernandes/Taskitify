@@ -607,5 +607,8 @@
   "ControlsOnHover": "Controles do player só ao passar o mouse",
   "ControlsOnHoverHint": "Mais limpo: ações da música, progresso, controles e alça aparecem quando o mouse passa sobre o player.",
   "ButtonsOnHover": "Botões só ao passar o mouse",
-  "ButtonsOnHoverHint": "Os botões acima e a alça do canto aparecem quando o mouse passa sobre as letras. Desligado: sempre visíveis, discretos."
+  "ButtonsOnHoverHint": "Os botões acima e a alça do canto aparecem quando o mouse passa sobre as letras. Desligado: sempre visíveis, discretos.",
+  "PlayerButtonsOnHoverHint": "Configurações, não clique, cadeado, fechar e a alça aparecem quando o mouse passa sobre o player; sem o mouse, as letras ocupam o espaço deles.",
+  "SwitchToNotMinimal": "Trocar para o Not that minimal (player completo)",
+  "SwitchToMinimal": "Trocar para o Minimal Mode (só letras)"
 }

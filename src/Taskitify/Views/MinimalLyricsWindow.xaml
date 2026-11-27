@@ -47,8 +47,8 @@
                            HorizontalAlignment="{Binding SongAlignment}" Margin="0,0,0,0" ToolTip="{Binding SongLine}"
                            Visibility="{Binding ShowSong, Converter={StaticResource BoolToVisibility}}" />
                 <StackPanel x:Name="Toolbar" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Opacity="0.6">
-                    <Button Style="{StaticResource ToolButton}" Content="&#xE8A7;" Command="{Binding MiniPlayerCommand}" Visibility="{Binding ShowMiniPlayerButton, Converter={StaticResource BoolToVisibility}}"
-                            ToolTip="{DynamicResource Loc.ShowPlayer}" AutomationProperties.Name="{DynamicResource Loc.ShowPlayer}" />
+                    <Button Style="{StaticResource ToolButton}" Content="&#xE718;" Command="{Binding MiniPlayerCommand}" Visibility="{Binding ShowMiniPlayerButton, Converter={StaticResource BoolToVisibility}}"
+                            ToolTip="{DynamicResource Loc.SwitchToNotMinimal}" AutomationProperties.Name="{DynamicResource Loc.SwitchToNotMinimal}" />
                     <Button Style="{StaticResource ToolButton}" Content="&#xE713;" Command="{Binding SettingsCommand}" Visibility="{Binding ShowSettingsButton, Converter={StaticResource BoolToVisibility}}"
                             ToolTip="{DynamicResource Loc.MinimalSettings}" AutomationProperties.Name="{DynamicResource Loc.MinimalSettings}" />
                     <Button Style="{StaticResource ToolButton}" Command="{Binding ClickThroughCommand}" Visibility="{Binding ShowClickThroughButton, Converter={StaticResource BoolToVisibility}}"

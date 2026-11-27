@@ -90,6 +90,7 @@ public partial class App : Application
             (_, _) => Dispatcher.InvokeAsync(ShowSettings), null, Timeout.Infinite, executeOnlyOnce: false);
 
         DispatcherUnhandledException += OnDispatcherUnhandledException;
+        SessionEnding += (_, _) => IsShuttingDown = true;
         TaskScheduler.UnobservedTaskException += (_, args) =>
         {
             Log.Error("Unobserved task exception", args.Exception);
@@ -195,13 +196,8 @@ public partial class App : Application
             () => _settings.Current.Background == Models.OverlayBackground.AlbumGradient);
 
         _minimalVm = new MinimalLyricsViewModel(_monitor, _sync, _settings);
-        _minimalVm.MiniPlayerRequested += (_, _) =>
-        {
-            if (_minimal is { IsVisible: true } && _miniPlayer is { IsVisible: false })
-                OpenMiniPlayer(WindowInterop.GetBounds(WindowInterop.EnsureHandle(_minimal)));
-            else
-                _miniPlayer?.HidePopup();
-        };
+        // The floating lyrics' first button: the whole player instead (Not that minimal).
+        _minimalVm.MiniPlayerRequested += (_, _) => _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, true));
         _minimal = new MinimalLyricsWindow(_minimalVm, _settings, _monitor);
         _hotkey = new GlobalHotkey(OnMinimalHotkey);
         _overlay.MinimalActive = () => MinimalShown;
@@ -679,10 +675,14 @@ public partial class App : Application
             _minimal.HideLyrics();
             var m = _settings.Current.Minimal;
             _miniPlayer.ShowPinned(new Core.Layout.PixelRect(m.PlayerX, m.PlayerY, m.PlayerWidth, m.PlayerWidth > 0 ? 1 : 0),
-                new PinnedOptions(m.ClickThrough, m.Locked, m.Topmost, m.ShowClickThroughMark, m.AutoFit, m.ControlsOnHover, m.PlayerWindowWidth, m.PlayerLyricsHeight,
+                new PinnedOptions(m.ClickThrough, m.Locked, m.Topmost, m.ShowClickThroughMark, m.AutoFit, m.ControlsOnHover, m.PlayerButtonsOnHover,
+                    m.PlayerWindowWidth, m.PlayerLyricsHeight,
                     on => _settings.Update(s => s.Minimal.ClickThrough = on),
                     (r, width, lyrics) => _settings.Update(s => (s.Minimal.PlayerX, s.Minimal.PlayerY, s.Minimal.PlayerWidth, s.Minimal.PlayerWindowWidth, s.Minimal.PlayerLyricsHeight)
-                        = (r.X, r.Y, r.Width, width, lyrics))));
+                        = (r.X, r.Y, r.Width, width, lyrics)),
+                    locked => _settings.Update(s => s.Minimal.Locked = locked),
+                    () => _settings.Update(s => s.Minimal.Enabled = false),
+                    () => _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, false))));
             return;
         }
         _miniPlayer?.Unpin();

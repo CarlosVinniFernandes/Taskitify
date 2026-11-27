@@ -230,6 +230,32 @@
                 </Border>
             </Grid>
         </Border>
+        <!-- Floating: the window's own buttons, top right, in the room the lyrics give up for them. -->
+        <StackPanel x:Name="PinnedToolbar" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,7,12,0"
+                    Visibility="Collapsed" Opacity="0">
+            <StackPanel.Resources>
+                <Style x:Key="PinnedTool" TargetType="Button" BasedOn="{StaticResource IconButton}">
+                    <Setter Property="Width" Value="28" />
+                    <Setter Property="Height" Value="28" />
+                    <Setter Property="FontSize" Value="12" />
+                </Style>
+            </StackPanel.Resources>
+            <Button x:Name="PinnedSwitch" Style="{StaticResource PinnedTool}" Content="&#xE8D6;"
+                    ToolTip="{DynamicResource Loc.SwitchToMinimal}" AutomationProperties.Name="{DynamicResource Loc.SwitchToMinimal}" />
+            <Button x:Name="PinnedSettings" Style="{StaticResource PinnedTool}" Content="&#xE713;"
+                    ToolTip="{DynamicResource Loc.MinimalSettings}" AutomationProperties.Name="{DynamicResource Loc.MinimalSettings}" />
+            <Button x:Name="PinnedClickThrough" Style="{StaticResource PinnedTool}"
+                    ToolTip="{DynamicResource Loc.MinimalClickThroughTip}" AutomationProperties.Name="{DynamicResource Loc.MinimalClickThroughTip}">
+                <Grid Width="16" Height="16">
+                    <Path Data="M4,2 L4,12 L6.5,9.6 L8.6,13.8 L10.2,13 L8.2,8.9 L11.6,8.9 Z" Fill="{DynamicResource TextPrimaryBrush}" />
+                    <Path Data="M2.5,14 L13.5,2.5" Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                </Grid>
+            </Button>
+            <Button x:Name="PinnedLock" Style="{StaticResource PinnedTool}" Content="&#xE785;"
+                    ToolTip="{DynamicResource Loc.MinimalLock}" AutomationProperties.Name="{DynamicResource Loc.MinimalLock}" />
+            <Button x:Name="PinnedClose" Style="{StaticResource PinnedTool}" Content="&#xE711;"
+                    ToolTip="{DynamicResource Loc.MinimalClose}" AutomationProperties.Name="{DynamicResource Loc.MinimalClose}" />
+        </StackPanel>
         <Grid x:Name="PinnedMark" Width="20" Height="20" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10,0,0,8"
               Opacity="0.6" IsHitTestVisible="False" Visibility="Collapsed">
             <Path Data="M5,3 L5,15 L8,12 L10.5,17 L12.5,16 L10,11 L14,11 Z" Fill="{DynamicResource TextPrimaryBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />

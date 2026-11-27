@@ -607,5 +607,8 @@
   "ControlsOnHover": "Controles del reproductor solo al pasar el ratón",
   "ControlsOnHoverHint": "Más limpio: las acciones de la canción, el progreso, los controles y la esquina aparecen al pasar el ratón sobre el reproductor.",
   "ButtonsOnHover": "Botones solo al pasar el ratón",
-  "ButtonsOnHoverHint": "Los botones de arriba y la esquina aparecen al pasar el ratón sobre las letras. Apagado: siempre visibles, discretos."
+  "ButtonsOnHoverHint": "Los botones de arriba y la esquina aparecen al pasar el ratón sobre las letras. Apagado: siempre visibles, discretos.",
+  "PlayerButtonsOnHoverHint": "Configuración, no clic, candado, cerrar y la esquina aparecen al pasar el ratón sobre el reproductor; sin él, las letras ocupan su espacio.",
+  "SwitchToNotMinimal": "Cambiar a Not that minimal (reproductor completo)",
+  "SwitchToMinimal": "Cambiar a Minimal Mode (solo letras)"
 }

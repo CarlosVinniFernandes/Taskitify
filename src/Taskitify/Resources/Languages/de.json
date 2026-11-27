@@ -607,5 +607,8 @@
   "ControlsOnHover": "Wiedergabesteuerung nur beim Überfahren",
   "ControlsOnHoverHint": "Aufgeräumter: Song-Aktionen, Fortschritt, Steuerung und Eckgriff erscheinen beim Überfahren des Players.",
   "ButtonsOnHover": "Schaltflächen nur beim Überfahren",
-  "ButtonsOnHoverHint": "Die Schaltflächen oben und der Eckgriff erscheinen beim Überfahren des Songtexts. Aus: immer da, dezent."
+  "ButtonsOnHoverHint": "Die Schaltflächen oben und der Eckgriff erscheinen beim Überfahren des Songtexts. Aus: immer da, dezent.",
+  "PlayerButtonsOnHoverHint": "Einstellungen, Durchklicken, Schloss, Schließen und Eckgriff erscheinen beim Überfahren; sonst bekommt der Songtext ihren Platz.",
+  "SwitchToNotMinimal": "Zu Not that minimal wechseln (ganzer Player)",
+  "SwitchToMinimal": "Zu Minimal Mode wechseln (nur Text)"
 }

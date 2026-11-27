@@ -831,8 +831,14 @@ public sealed class MinimalModeSettings
     /// </summary>
     public bool ButtonsOnHover { get; set; } = true;
 
-    /// <summary>The floating player's song actions, progress, playback controls and grip appear only under the pointer.</summary>
+    /// <summary>The floating player's song actions, progress and playback controls appear only under the pointer.</summary>
     public bool ControlsOnHover { get; set; }
+
+    /// <summary>
+    /// The floating player's own buttons (settings, click-through, lock, close) and grip appear
+    /// only under the pointer; away, their row is given to the lyrics.
+    /// </summary>
+    public bool PlayerButtonsOnHover { get; set; } = true;
 
     public int X { get; set; }
 
