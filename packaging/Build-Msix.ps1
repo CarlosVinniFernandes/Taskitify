@@ -37,7 +37,7 @@ $payload = Join-Path $stage 'payload'
 $output = Join-Path $repoRoot 'dist'
 New-Item -ItemType Directory -Path $payload,$output -Force | Out-Null
 & dotnet publish (Join-Path $repoRoot 'src\Taskitify\Taskitify.csproj') -c Release -r win-x64 --self-contained true `
-    -p:PublishSingleFile=false -p:PublishTrimmed=false -p:DebugType=None -p:DebugSymbols=false -o $payload
+    -p:PublishSingleFile=false -p:DebugType=None -p:DebugSymbols=false -o $payload
 if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed.' }
 
 [xml]$manifest = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'AppxManifest.xml') -Raw

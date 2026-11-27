@@ -53,4 +53,133 @@
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />
   </ItemGroup>
 
+  <!--
+    Package size (self-contained publish only; Debug builds and `dotnet run` are untouched).
+
+    1. The CsWinRT projection of the whole Windows SDK (Microsoft.Windows.SDK.NET.dll, ~24 MB) is
+       trimmed to the WinRT types Taskitify uses (media session, startup task, streams). CsWinRT is
+       trim-annotated, so this is the supported path.
+    2. Nothing else is trimmed. ILLink only reports which framework assemblies nothing references,
+       and the ones listed in TaskitifyUnusedFrameworkAssembly are left out when it agrees. Every
+       assembly that ships is the original, ReadyToRun-compiled file, byte for byte: rewriting them
+       would drop their precompiled code and slow startup. WPF themes, UI Automation proxies and the
+       facades WPF and XAML resolve by name are never on the list.
+  -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <!-- WPF and WinForms are not trim-annotated: they are copied whole, never trimmed (see below). -->
+    <_SuppressWpfTrimError>true</_SuppressWpfTrimError>
+    <_SuppressWinFormsTrimError>true</_SuppressWinFormsTrimError>
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+    <!--
+      PublishTrimmed also turns runtime features off. Keep them as an untrimmed publish has them:
+      COM (WebView2, shell links, WPF), reflection-based JSON, custom resources, startup hooks.
+    -->
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+    <CustomResourceTypesSupport>true</CustomResourceTypesSupport>
+    <EnableCppCLIHostActivation>true</EnableCppCLIHostActivation>
+    <_EnableConsumingManagedCodeFromNativeHosting>true</_EnableConsumingManagedCodeFromNativeHosting>
+    <EnableGeneratedComInterfaceComImportInterop>true</EnableGeneratedComInterfaceComImportInterop>
+    <StartupHookSupport>true</StartupHookSupport>
+    <VerifyDependencyInjectionOpenGenericServiceTrimmability>false</VerifyDependencyInjectionOpenGenericServiceTrimmability>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Removed only if ILLink also finds no reference to them. Sizes are the uncompressed files. -->
+    <TaskitifyUnusedFrameworkAssembly Include="System.Data.Common" />                 <!-- 2.7 MB -->
+    <TaskitifyUnusedFrameworkAssembly Include="System.Private.DataContractSerialization" /> <!-- 2.0 MB -->
+    <TaskitifyUnusedFrameworkAssembly Include="System.Windows.Controls.Ribbon" />     <!-- 1.4 MB -->
+    <TaskitifyUnusedFrameworkAssembly Include="Microsoft.VisualBasic.Core" />         <!-- 1.2 MB -->
+    <TaskitifyUnusedFrameworkAssembly Include="Microsoft.VisualBasic.Forms" />
+    <TaskitifyUnusedFrameworkAssembly Include="Microsoft.CSharp" />                   <!-- 1.0 MB -->
+    <TaskitifyUnusedFrameworkAssembly Include="System.Linq.Parallel" />
+    <TaskitifyUnusedFrameworkAssembly Include="System.Transactions.Local" />
+    <TaskitifyUnusedFrameworkAssembly Include="System.Net.HttpListener" />
+    <TaskitifyUnusedFrameworkAssembly Include="System.Threading.Tasks.Dataflow" />
+    <TaskitifyUnusedFrameworkAssembly Include="System.Net.Mail" />
+    <TaskitifyUnusedFrameworkAssembly Include="System.Diagnostics.PerformanceCounter" />
+    <TaskitifyUnusedFrameworkAssembly Include="System.Formats.Tar" />
+    <TaskitifyUnusedFrameworkAssembly Include="System.Linq.Queryable" />
+    <TaskitifyUnusedFrameworkAssembly Include="Microsoft.Web.WebView2.WinForms" />
+  </ItemGroup>
+
+  <Target Name="ConfigureSdkProjectionOnlyTrim" AfterTargets="PrepareForILLink">
+    <ItemGroup>
+      <!-- copy: the original file, byte for byte (ReadyToRun code included). -->
+      <ManagedAssemblyToLink Condition="'%(Filename)' != 'Microsoft.Windows.SDK.NET'">
+        <TrimMode>copy</TrimMode>
+      </ManagedAssemblyToLink>
+    </ItemGroup>
+  </Target>
+
+  <!--
+    A second, throwaway ILLink run in copyused mode: an assembly is missing from its output only when
+    nothing references it. Its files are never published.
+  -->
+  <Target Name="FindUnreferencedFrameworkAssemblies" AfterTargets="ConfigureSdkProjectionOnlyTrim" Condition="'$(PublishTrimmed)' == 'true'">
+    <PropertyGroup>
+      <_TaskitifyOracleDir>$(IntermediateOutputPath)unreferenced-check\</_TaskitifyOracleDir>
+      <_TaskitifyDotNet Condition="'$(DOTNET_HOST_PATH)' != ''">$([System.IO.Path]::GetFileName('$(DOTNET_HOST_PATH)'))</_TaskitifyDotNet>
+      <_TaskitifyDotNetDir Condition="'$(DOTNET_HOST_PATH)' != ''">$([System.IO.Path]::GetDirectoryName('$(DOTNET_HOST_PATH)'))</_TaskitifyDotNetDir>
+      <_TaskitifyDotNet Condition="'$(DOTNET_HOST_PATH)' == ''">dotnet.exe</_TaskitifyDotNet>
+      <_TaskitifyDotNetDir Condition="'$(DOTNET_HOST_PATH)' == ''">$(NetCoreRoot)</_TaskitifyDotNetDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_TaskitifyOracleInput Include="@(ManagedAssemblyToLink)" TrimMode="copyused" />
+    </ItemGroup>
+    <RemoveDir Directories="$(_TaskitifyOracleDir)" />
+    <ILLink AssemblyPaths="@(_TaskitifyOracleInput)"
+            ReferenceAssemblyPaths="@(ReferencePath)"
+            RootAssemblyNames="@(TrimmerRootAssembly)"
+            TrimMode="copyused"
+            OutputDirectory="$(_TaskitifyOracleDir)"
+            ExtraArgs="--skip-unresolved true --notrimwarn"
+            ToolExe="$(_TaskitifyDotNet)"
+            ToolPath="$(_TaskitifyDotNetDir)" />
+    <ItemGroup>
+      <_TaskitifyUnreferencedName Include="@(ManagedAssemblyToLink->'%(Filename)')" Condition="!Exists('$(_TaskitifyOracleDir)%(Filename)%(Extension)')" />
+      <!-- Listed and unreferenced. A listed assembly that something does use stays. -->
+      <_TaskitifyListedButUsed Include="@(TaskitifyUnusedFrameworkAssembly)" Exclude="@(_TaskitifyUnreferencedName)" />
+      <_TaskitifyLeaveOutName Include="@(TaskitifyUnusedFrameworkAssembly)" Exclude="@(_TaskitifyListedButUsed)" />
+      <_TaskitifyLeaveOutName Include="@(_TaskitifyLeaveOutName->'%(Identity).resources')" />
+    </ItemGroup>
+    <Message Importance="high" Condition="'@(_TaskitifyListedButUsed)' != ''" Text="Taskitify publish: kept, now referenced: @(_TaskitifyListedButUsed, ', ')" />
+  </Target>
+
+  <!-- After the SDK has put ILLink's output into the publish set and the deps.json inputs. -->
+  <Target Name="LeaveOutUnusedFrameworkAssemblies" AfterTargets="ILLink" Condition="'$(PublishTrimmed)' == 'true'">
+    <JoinItems Left="@(ResolvedFileToPublish)" LeftKey="Filename" LeftMetadata="*" Right="@(_TaskitifyLeaveOutName)" ItemSpecToUse="Left">
+      <Output TaskParameter="JoinResult" ItemName="_TaskitifyLeaveOutFile" />
+    </JoinItems>
+    <JoinItems Left="@(RuntimePackAsset)" LeftKey="Filename" LeftMetadata="*" Right="@(_TaskitifyLeaveOutName)" ItemSpecToUse="Left">
+      <Output TaskParameter="JoinResult" ItemName="_TaskitifyLeaveOutAsset" />
+    </JoinItems>
+    <JoinItems Left="@(RuntimeCopyLocalItems)" LeftKey="Filename" LeftMetadata="*" Right="@(_TaskitifyLeaveOutName)" ItemSpecToUse="Left">
+      <Output TaskParameter="JoinResult" ItemName="_TaskitifyLeaveOutCopyLocal" />
+    </JoinItems>
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(_TaskitifyLeaveOutFile)" />
+      <RuntimePackAsset Remove="@(_TaskitifyLeaveOutAsset)" />
+      <RuntimeCopyLocalItems Remove="@(_TaskitifyLeaveOutCopyLocal)" />
+    </ItemGroup>
+    <Message Importance="high" Text="Taskitify publish: left out @(_TaskitifyLeaveOutFile->Count()) unused framework files" />
+  </Target>
+
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <!-- IntelliSense XML of the WebView2 package: never read at run time. -->
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
+  </PropertyGroup>
+
+  <!--
+    Loaded only by a debugger attaching to the app, never by the app itself (there are no PDBs to
+    read either). mscordaccore stays: Windows Error Reporting uses it for crash dumps.
+  -->
+  <Target Name="LeaveOutDebuggerOnlyRuntimeFiles" AfterTargets="ComputeResolvedFilesToPublishList" Condition="'$(SelfContained)' == 'true' and '$(Configuration)' == 'Release'">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Filename)%(Extension)' == 'mscordbi.dll' or '%(Filename)%(Extension)' == 'Microsoft.DiaSymReader.Native.amd64.dll'" />
+    </ItemGroup>
+  </Target>
+
 </Project>
