@@ -63,8 +63,16 @@ public sealed class LyricsSyncService : IDisposable
 
     public LyricsLine? CurrentLine => Timeline is { } t && CurrentIndex >= 0 ? t.Lines[CurrentIndex] : null;
 
-    /// <summary>Position used for lyrics: playback position plus the user's offset.</summary>
-    public TimeSpan LyricsPosition => _monitor.Position + TimeSpan.FromMilliseconds(_settings.Current.SyncOffsetMs);
+    /// <summary>
+    /// Position used for lyrics: playback position plus the user's adjustments (all songs, and this
+    /// one). The one place they are applied, so the bar, the mini player and Minimal Mode agree.
+    /// </summary>
+    public TimeSpan LyricsPosition => _monitor.Position + TimeSpan.FromMilliseconds(EffectiveOffsetMs);
+
+    /// <summary>The song playing's identity for its own adjustment (null: nothing playing).</summary>
+    public string? TrackKey => _monitor.Track is { } t ? AppSettings.TrackKey(t.Title, t.Artist) : null;
+
+    public int EffectiveOffsetMs => _settings.Current.EffectiveOffsetMs(TrackKey);
 
     public bool IsPlaying => _monitor.IsPlaying;
     public double PlaybackRate => _monitor.PlaybackRate;

@@ -189,6 +189,42 @@ public sealed class AppSettings
 
     public int SyncOffsetMs { get; set; }
 
+    /// <summary>
+    /// Adjustments for single songs whose lyrics run early or late, added to <see cref="SyncOffsetMs"/>;
+    /// keyed by <see cref="TrackKey"/>. Only songs with an adjustment are kept.
+    /// </summary>
+    public Dictionary<string, int> TrackOffsets { get; set; } = [];
+
+    public const int GlobalOffsetLimit = 5000;
+    public const int TrackOffsetLimit = 3000;
+
+    /// <summary>
+    /// A song's stable identity: its artist and title as Windows reports them, ignoring case and
+    /// spacing. Windows' media session gives no Spotify id, and the id Spotify's lyrics lookup
+    /// learns is missing for songs found in the cache, local files or LRCLIB, so the names are
+    /// what is always there. Remasters and live versions keep their own (their names differ).
+    /// </summary>
+    public static string TrackKey(string title, string artist)
+    {
+        static string Clean(string s) => string.Join(' ', s.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant();
+        return Clean(artist) + " — " + Clean(title);
+    }
+
+    public int TrackOffsetMs(string? key) => key is not null && TrackOffsets.TryGetValue(key, out var ms) ? ms : 0;
+
+    /// <summary>What the lyrics are moved by for this song: both adjustments together, within safe limits.</summary>
+    public int EffectiveOffsetMs(string? key) => Math.Clamp(SyncOffsetMs + TrackOffsetMs(key), -GlobalOffsetLimit, GlobalOffsetLimit);
+
+    /// <summary>Sets a song's adjustment; zero removes it.</summary>
+    public void SetTrackOffset(string key, int ms)
+    {
+        ms = Math.Clamp(ms, -TrackOffsetLimit, TrackOffsetLimit);
+        if (ms == 0)
+            TrackOffsets.Remove(key);
+        else
+            TrackOffsets[key] = ms;
+    }
+
     public NoLyricsBehavior NoLyricsBehavior { get; set; } = NoLyricsBehavior.ShowTitle;
 
     public PausedBehavior PausedBehavior { get; set; } = PausedBehavior.Minimize;

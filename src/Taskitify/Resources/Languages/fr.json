@@ -542,5 +542,12 @@
   "LookDim": "Assombrir",
   "LookDimNone": "Le fond du thème suit Windows et n'est pas assombri.",
   "LookBlur": "Flou",
-  "LookBlurNone": "Seule la pochette floutée a un flou à régler."
+  "LookBlurNone": "Seule la pochette floutée a un flou à régler.",
+  "TrackOffset": "Ce morceau",
+  "TrackOffsetHint": "Pour ce morceau seulement, en plus du réglage ci-dessus. Enregistré tout seul et retrouvé à chaque écoute.",
+  "OffsetApplied": "Réglage appliqué",
+  "OffsetAppliedHint": "Tous les morceaux plus celui-ci, dans la limite de ±5 s. Le même dans la barre, le mini lecteur et le Minimal Mode.",
+  "TrackOffsetsClear": "Effacer les réglages par morceau",
+  "TrackOffsetsClearQuestion": "Supprimer le réglage de chaque morceau ({0}) ? Le réglage général est conservé.",
+  "OffsetAll": "Tous les morceaux"
 }

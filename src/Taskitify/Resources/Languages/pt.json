@@ -542,5 +542,12 @@
   "LookDim": "Escurecer",
   "LookDimNone": "O fundo do tema segue o Windows e não é escurecido.",
   "LookBlur": "Desfoque",
-  "LookBlurNone": "Só a capa desfocada tem desfoque para ajustar."
+  "LookBlurNone": "Só a capa desfocada tem desfoque para ajustar.",
+  "TrackOffset": "Esta música",
+  "TrackOffsetHint": "Só para esta música, somado ao ajuste acima. Salvo sozinho e recuperado sempre que ela tocar.",
+  "OffsetApplied": "Ajuste aplicado",
+  "OffsetAppliedHint": "Todas as músicas mais esta, dentro de ±5 s. O mesmo na barra, no mini player e no Minimal Mode.",
+  "TrackOffsetsClear": "Limpar ajustes por música",
+  "TrackOffsetsClearQuestion": "Remover o ajuste de todas as músicas ({0})? O ajuste geral continua.",
+  "OffsetAll": "Todas as músicas"
 }

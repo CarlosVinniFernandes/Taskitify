@@ -72,6 +72,12 @@ public partial class SettingsWindow : Window
     private void OnOffsetPlus(object sender, RoutedEventArgs e) => _vm.NudgeOffset(250);
 
     private void OnOffsetReset(object sender, RoutedEventArgs e) => _vm.SyncOffsetMs = 0;
+
+    private void OnTrackOffsetMinus(object sender, RoutedEventArgs e) => _vm.NudgeTrackOffset(-100);
+
+    private void OnTrackOffsetPlus(object sender, RoutedEventArgs e) => _vm.NudgeTrackOffset(100);
+
+    private void OnTrackOffsetReset(object sender, RoutedEventArgs e) => _vm.TrackOffsetMs = 0;
 }
 
 /// <summary>The settings pages, in their order.</summary>

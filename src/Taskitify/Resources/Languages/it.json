@@ -542,5 +542,12 @@
   "LookDim": "Scurisci",
   "LookDimNone": "Lo sfondo del tema segue Windows e non viene scurito.",
   "LookBlur": "Sfocatura",
-  "LookBlurNone": "Solo la copertina sfocata ha una sfocatura da regolare."
+  "LookBlurNone": "Solo la copertina sfocata ha una sfocatura da regolare.",
+  "TrackOffset": "Questo brano",
+  "TrackOffsetHint": "Solo per questo brano, in aggiunta alla regolazione sopra. Salvato da solo e ritrovato ogni volta che suona.",
+  "OffsetApplied": "Regolazione applicata",
+  "OffsetAppliedHint": "Tutti i brani più questo, entro ±5 s. Lo stesso nella barra, nel mini player e in Minimal Mode.",
+  "TrackOffsetsClear": "Cancella regolazioni per brano",
+  "TrackOffsetsClearQuestion": "Rimuovere la regolazione di ogni brano ({0})? La regolazione generale resta.",
+  "OffsetAll": "Tutti i brani"
 }

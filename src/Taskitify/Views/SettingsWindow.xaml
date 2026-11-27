@@ -860,14 +860,15 @@
 
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.Sync}" />
                     <Border Style="{StaticResource Group}">
+                        <StackPanel>
                         <Border Style="{StaticResource FirstRow}">
                             <StackPanel>
                                 <DockPanel>
                                     <TextBlock DockPanel.Dock="Right" Style="{StaticResource ValueText}" Text="{Binding SyncOffsetMs, StringFormat={}{0:+0;-0;0} ms}" />
-                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.Offset}" />
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.OffsetAll}" />
                                 </DockPanel>
                                 <Slider Minimum="-3000" Maximum="3000" TickFrequency="50" Margin="0,8,0,0"
-                                        Value="{Binding SyncOffsetMs}" AutomationProperties.Name="{DynamicResource Loc.Offset}" />
+                                        Value="{Binding SyncOffsetMs}" AutomationProperties.Name="{DynamicResource Loc.OffsetAll}" />
                                 <DockPanel Margin="0,8,0,0">
                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                         <Button Style="{StaticResource FlatButton}" Content="−250 ms" Click="OnOffsetMinus" />
@@ -878,6 +879,46 @@
                                 </DockPanel>
                             </StackPanel>
                         </Border>
+                        <!-- This song only: added to the adjustment above, found again whenever the song plays. -->
+                        <Border Style="{StaticResource Row}" IsEnabled="{Binding HasTrack}">
+                            <StackPanel>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Style="{StaticResource ValueText}" Text="{Binding TrackOffsetMs, StringFormat={}{0:+0;-0;0} ms}" />
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.TrackOffset}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{Binding TrackName}" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </DockPanel>
+                                <Slider Minimum="-3000" Maximum="3000" TickFrequency="50" IsSnapToTickEnabled="True" Margin="0,8,0,0"
+                                        Value="{Binding TrackOffsetMs}" AutomationProperties.Name="{DynamicResource Loc.TrackOffset}" />
+                                <DockPanel Margin="0,8,0,0">
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Style="{StaticResource FlatButton}" Content="−100 ms" Click="OnTrackOffsetMinus" />
+                                        <Button Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.Reset}" Margin="6,0" Click="OnTrackOffsetReset" />
+                                        <Button Style="{StaticResource FlatButton}" Content="+100 ms" Click="OnTrackOffsetPlus" />
+                                    </StackPanel>
+                                    <TextBlock Style="{StaticResource SettingHint}" VerticalAlignment="Center" Margin="0,0,16,0" Text="{DynamicResource Loc.TrackOffsetHint}" />
+                                </DockPanel>
+                            </StackPanel>
+                        </Border>
+                        <!-- What is applied now, and the way back for every song at once. -->
+                        <Border Style="{StaticResource Row}">
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Style="{StaticResource FlatButton}" VerticalAlignment="Center"
+                                        Command="{Binding ClearTrackOffsetsCommand}">
+                                    <TextBlock>
+                                        <Run Text="{DynamicResource Loc.TrackOffsetsClear}" /><Run Text="{Binding TrackOffsetCount, StringFormat={} ({0}), Mode=OneWay}" />
+                                    </TextBlock>
+                                </Button>
+                                <StackPanel Style="{StaticResource RowText}">
+                                    <TextBlock Style="{StaticResource SettingLabel}">
+                                        <Run Text="{DynamicResource Loc.OffsetApplied}" /><Run Text=": " /><Run FontWeight="SemiBold" Text="{Binding EffectiveOffsetMs, StringFormat={}{0:+0;-0;0} ms, Mode=OneWay}" />
+                                    </TextBlock>
+                                    <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.OffsetAppliedHint}" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        </StackPanel>
                     </Border>
                 </StackPanel>
             </ScrollViewer>

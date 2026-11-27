@@ -542,5 +542,12 @@
   "LookDim": "Darken",
   "LookDimNone": "The theme background follows Windows and is not darkened.",
   "LookBlur": "Blur",
-  "LookBlurNone": "Only the blurred cover has a blur to adjust."
+  "LookBlurNone": "Only the blurred cover has a blur to adjust.",
+  "TrackOffset": "This song",
+  "TrackOffsetHint": "Only for this song, on top of the adjustment above. Saved by itself and found again whenever it plays.",
+  "OffsetApplied": "Applied now",
+  "OffsetAppliedHint": "All songs plus this one, within ±5 s. The same in the bar, the mini player and Minimal Mode.",
+  "TrackOffsetsClear": "Clear song adjustments",
+  "TrackOffsetsClearQuestion": "Remove the adjustment of every song ({0})? The adjustment for all songs stays.",
+  "OffsetAll": "All songs"
 }

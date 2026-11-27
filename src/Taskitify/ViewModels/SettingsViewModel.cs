@@ -68,6 +68,14 @@ public sealed class SettingsViewModel : ObservableObject
                 Log.Error("Could not clear cache", ex);
             }
         });
+        ClearTrackOffsetsCommand = new RelayCommand(() =>
+        {
+            var answer = System.Windows.MessageBox.Show(
+                string.Format(LocalizationService.Get("TrackOffsetsClearQuestion"), S.TrackOffsets.Count),
+                "Taskitify", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question, System.Windows.MessageBoxResult.No);
+            if (answer == System.Windows.MessageBoxResult.Yes)
+                Update(s => s.TrackOffsets.Clear());
+        }, () => S.TrackOffsets.Count > 0);
         OpenDataFolderCommand = new RelayCommand(() =>
         {
             Directory.CreateDirectory(AppPaths.LocalDataDirectory);
@@ -214,7 +222,44 @@ public sealed class SettingsViewModel : ObservableObject
 
     public double FontSize { get => S.FontSize; set => Update(s => s.FontSize = Math.Clamp(Math.Round(value), 9, 18)); }
 
-    public int SyncOffsetMs { get => S.SyncOffsetMs; set => Update(s => s.SyncOffsetMs = Math.Clamp(value, -5000, 5000)); }
+    public int SyncOffsetMs { get => S.SyncOffsetMs; set => Update(s => s.SyncOffsetMs = Math.Clamp(value, -AppSettings.GlobalOffsetLimit, AppSettings.GlobalOffsetLimit)); }
+
+    // ---- This song's own adjustment, on top of the one for all songs ----
+
+    public bool HasTrack => _sync.TrackKey is not null;
+
+    /// <summary>"Title — Artist" of the song the adjustment is for.</summary>
+    public string TrackName => _sync.TrackKey is null ? LocalizationService.Get("NothingPlaying")
+        : _currentTrack is { } t ? $"{t.Title} — {t.Artist}" : "";
+
+    private Models.TrackInfo? _currentTrack;
+
+    /// <summary>Saved for the song at once (only when not zero); found again whenever it plays.</summary>
+    public int TrackOffsetMs
+    {
+        get => S.TrackOffsetMs(_sync.TrackKey);
+        set { if (_sync.TrackKey is { } key) Update(s => s.SetTrackOffset(key, value)); }
+    }
+
+    public int EffectiveOffsetMs => _sync.EffectiveOffsetMs;
+
+    public int TrackOffsetCount => S.TrackOffsets.Count;
+
+    public bool HasTrackOffsets => TrackOffsetCount > 0;
+
+    public ICommand ClearTrackOffsetsCommand { get; }
+
+    public void NudgeTrackOffset(int deltaMs) => TrackOffsetMs += deltaMs;
+
+    /// <summary>The song changed while the settings are open: its own adjustment shows.</summary>
+    public void SetCurrentTrack(Models.TrackInfo? track)
+    {
+        _currentTrack = track;
+        OnPropertyChanged(nameof(HasTrack));
+        OnPropertyChanged(nameof(TrackName));
+        OnPropertyChanged(nameof(TrackOffsetMs));
+        OnPropertyChanged(nameof(EffectiveOffsetMs));
+    }
 
     public NoLyricsBehavior NoLyricsBehavior { get => S.NoLyricsBehavior; set => Update(s => s.NoLyricsBehavior = value); }
 

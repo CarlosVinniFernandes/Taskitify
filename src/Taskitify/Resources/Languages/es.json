@@ -542,5 +542,12 @@
   "LookDim": "Oscurecer",
   "LookDimNone": "El fondo del tema sigue a Windows y no se oscurece.",
   "LookBlur": "Desenfoque",
-  "LookBlurNone": "Solo la portada difuminada tiene desenfoque para ajustar."
+  "LookBlurNone": "Solo la portada difuminada tiene desenfoque para ajustar.",
+  "TrackOffset": "Esta canción",
+  "TrackOffsetHint": "Solo para esta canción, sumado al ajuste de arriba. Se guarda solo y se recupera cada vez que suena.",
+  "OffsetApplied": "Ajuste aplicado",
+  "OffsetAppliedHint": "Todas las canciones más esta, dentro de ±5 s. Igual en la barra, el mini reproductor y Minimal Mode.",
+  "TrackOffsetsClear": "Borrar ajustes por canción",
+  "TrackOffsetsClearQuestion": "¿Quitar el ajuste de todas las canciones ({0})? El ajuste general se mantiene.",
+  "OffsetAll": "Todas las canciones"
 }

@@ -289,6 +289,10 @@ public partial class App : Application
         };
         _settingsVm.MinimalLook.ResetPlacementRequested += (_, _) => _minimal?.ResetPlacement();
         _settingsWindow = new SettingsWindow(_settingsVm, _spotifyLyrics!);
+        _settingsVm.SetCurrentTrack(_monitor.Track);
+        EventHandler followTrack = (_, _) => _settingsVm?.SetCurrentTrack(_monitor.Track);
+        _monitor.TrackChanged += followTrack;
+        _settingsWindow.Closed += (_, _) => _monitor.TrackChanged -= followTrack;
         if (page is { } first)
             _settingsWindow.ShowPage(first);
         _settingsWindow.Closed += (_, _) =>

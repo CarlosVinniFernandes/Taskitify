@@ -542,5 +542,12 @@
   "LookDim": "Abdunkeln",
   "LookDimNone": "Der Design-Hintergrund folgt Windows und wird nicht abgedunkelt.",
   "LookBlur": "Unschärfe",
-  "LookBlurNone": "Nur das unscharfe Cover hat eine einstellbare Unschärfe."
+  "LookBlurNone": "Nur das unscharfe Cover hat eine einstellbare Unschärfe.",
+  "TrackOffset": "Dieser Song",
+  "TrackOffsetHint": "Nur für diesen Song, zusätzlich zur Einstellung oben. Wird automatisch gespeichert und bei jeder Wiedergabe wieder verwendet.",
+  "OffsetApplied": "Angewendet",
+  "OffsetAppliedHint": "Alle Songs plus dieser, innerhalb von ±5 s. Gleich in Leiste, Mini-Player und Minimal Mode.",
+  "TrackOffsetsClear": "Song-Anpassungen löschen",
+  "TrackOffsetsClearQuestion": "Die Anpassung aller Songs ({0}) entfernen? Die allgemeine Einstellung bleibt.",
+  "OffsetAll": "Alle Songs"
 }
