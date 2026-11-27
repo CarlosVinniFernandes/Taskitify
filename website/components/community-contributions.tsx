@@ -9,25 +9,29 @@ import type { GuestbookPage, WallPage } from "@/lib/community-wall";
 import { SongForm } from "./song-form";
 import styles from "./community-wall.module.css";
 
-function usePage<T>(url: string, revision: number) {
-  const [result, setResult] = useState<T | "error" | null>(null);
+type PageResult<T> = T | "error" | null;
+const firstWallPage = "/api/community/wall?page=1";
+
+function usePage<T>(url: string | null, revision: number) {
+  const [data, setData] = useState<{ url: string; revision: number; result: T | "error" } | null>(null);
   useEffect(() => {
+    if (!url) return;
+    const target = url;
     const controller = new AbortController();
-    setResult(null);
     async function load() {
       try {
-        const response = await fetch(url, { signal: controller.signal, cache: "no-store" });
+        const response = await fetch(target, { signal: controller.signal, cache: "no-store" });
         if (!response.ok) throw new Error();
-        const data: T = await response.json();
-        if (!controller.signal.aborted) setResult(data);
+        const result: T = await response.json();
+        if (!controller.signal.aborted) setData({ url: target, revision, result });
       } catch {
-        if (!controller.signal.aborted) setResult("error");
+        if (!controller.signal.aborted) setData({ url: target, revision, result: "error" });
       }
     }
     void load();
     return () => controller.abort();
   }, [url, revision]);
-  return result;
+  return data?.url === url && data.revision === revision ? data.result : null;
 }
 
 function GuestSignatures({ locale, thanked, onWrite }: {
@@ -61,12 +65,15 @@ function GuestSignatures({ locale, thanked, onWrite }: {
   </div>;
 }
 
-function MusicBoard({ locale, onWrite }: { locale: Locale; onWrite: () => void }) {
+function MusicBoard({ locale, first, reloadFirst, onWrite }: {
+  locale: Locale; first: PageResult<WallPage>; reloadFirst: () => void; onWrite: () => void;
+}) {
   const t = copy[locale].community.wall;
   const book = guestbookCopy[locale];
   const [page, setPage] = useState(1);
   const [retry, setRetry] = useState(0);
-  const result = usePage<WallPage>(`/api/community/wall?page=${page}`, retry);
+  const older = usePage<WallPage>(page === 1 ? null : `/api/community/wall?page=${page}`, retry);
+  const result = page === 1 ? first : older;
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" });
   const entries = result && result !== "error" ? result.entries : [];
   const hasMore = result !== null && result !== "error" && result.hasMore;
@@ -100,9 +107,8 @@ function MusicBoard({ locale, onWrite }: { locale: Locale; onWrite: () => void }
       </ul> : <p className={styles.boardMessage} role="status">{result === "error" ? t.error
         : result === null ? t.loading : hasMore || page > 1 ? t.emptyPage : t.empty}</p>}
       {result === "error" && <button className={styles.boardButton} type="button"
-        onClick={() => setRetry(retry + 1)}>{t.retry}</button>}
+        onClick={page === 1 ? reloadFirst : () => setRetry(retry + 1)}>{t.retry}</button>}
       <div className={styles.boardFooter}>
-        <p className={styles.sticky}>{book.sticky} <Heart size={13} aria-hidden="true" /></p>
         <a href="#suggest" className={styles.pinCta} onClick={onWrite}>+ {book.boardCta}</a>
       </div>
     </div>
@@ -121,52 +127,82 @@ export function CommunityContributions({ locale, initial, wallEnabled, privacyHr
   const book = guestbookCopy[locale];
   const t = copy[locale].community;
   const [revision, setRevision] = useState(0);
-  const [open, setOpen] = useState<"form" | "names" | "signed">("form");
+  const [refresh, setRefresh] = useState(0);
+  const first = usePage<WallPage>(wallEnabled ? firstWallPage : null, revision + refresh);
+  const [open, setOpen] = useState<"recent" | "form" | "names" | "signed">(
+    !wallEnabled || Object.values(initial).some(Boolean) ? "form" : "recent"
+  );
   const formHeading = useRef<HTMLHeadingElement>(null);
   const returning = useRef(false);
   useEffect(() => {
     if (open === "form" && returning.current) {
       returning.current = false;
-      formHeading.current?.focus({ preventScroll: true });
+      formHeading.current?.focus();
     }
   }, [open]);
+  useEffect(() => {
+    function openLinkedForm() {
+      if (window.location.hash === "#suggest") setOpen("form");
+    }
+    openLinkedForm();
+    window.addEventListener("hashchange", openLinkedForm);
+    return () => window.removeEventListener("hashchange", openLinkedForm);
+  }, []);
+  const reloadFirst = () => setRefresh((current) => current + 1);
+  const latest = first && first !== "error" ? first.entries.slice(0, 5) : [];
+
   function openForm() {
     returning.current = true;
     setOpen("form");
   }
   return <>
     <section className={`wrap ${styles.guestbook}`} id="suggest" aria-labelledby="suggest-title">
-      <header className={styles.heading}>
-        <p className={styles.kicker}>{book.label}</p>
-        <h2 id="suggest-title">{book.title}</h2>
-        <p>{book.intro}</p>
-      </header>
-      <div className={styles.book}>
-        <div className={`${styles.paper} ${styles.leftPage}`}>
-          <p className={styles.noteCaption}>{book.note}</p>
-          <h3>{book.greeting}</h3>
-          <p>{book.letter}</p>
-          <p>{book.invitation}</p>
-          <p className={styles.signature}>{book.signature}</p>
-          <a className={styles.paperLink} href={privacyHref}>{t.privacy}</a>
-        </div>
-        <div className={`${styles.paper} ${styles.rightPage}`}>
-          {open === "form" ? <>
-            <h3 ref={formHeading} tabIndex={-1}>{book.contribution}</h3>
-            <SongForm locale={locale} initial={revision ? emptyFields : initial} wallEnabled={wallEnabled}
-              onSaved={() => {
-                if (!wallEnabled) return;
-                setRevision(revision + 1);
-                setOpen("signed");
-              }} />
-            {wallEnabled && <button className={styles.paperLink} type="button" onClick={() => setOpen("names")}>
-              <BookOpen size={15} aria-hidden="true" /> {book.open}
-            </button>}
-          </> : <GuestSignatures locale={locale} thanked={open === "signed"} onWrite={openForm} />}
+      <div className={styles.desk}>
+        <div className={styles.book}>
+          <div className={`${styles.paper} ${styles.leftPage}`}>
+            <header className={styles.letterHeader}>
+              <p className={styles.noteCaption}>{book.label}</p>
+              <h2 id="suggest-title">{book.title}</h2>
+            </header>
+            <p>{book.letter}</p>
+            <p>{book.invitation}</p>
+            <p className={styles.signature}>{book.signature} <span>Carlos</span></p>
+            <div className={styles.letterActions}>
+              {open !== "form" && <button className={styles.writeButton} type="button" onClick={openForm}>{book.write}</button>}
+              <a className={styles.paperLink} href={privacyHref}>{t.privacy}</a>
+            </div>
+          </div>
+          <div className={`${styles.paper} ${styles.rightPage}`}>
+            {open === "recent" ? <div className={styles.recent} aria-busy={first === null}>
+              <h3>{book.recent}</h3>
+              {latest.length > 0 ? <ul className={styles.notes}>
+                {latest.map((entry, index) => <li key={index}>
+                  <strong dir="auto">{entry.song}</strong>
+                  <span dir="auto">{entry.artist}{entry.name && <> · {book.by} <bdi>{entry.name}</bdi></>}</span>
+                </li>)}
+              </ul> : <p className={styles.bookMessage} role="status">{first === null ? t.wall.loading
+                : first === "error" ? t.wall.error : book.noSongs}</p>}
+              {first === "error" && <button className={styles.paperLink} type="button" onClick={reloadFirst}>{t.wall.retry}</button>}
+              <button className={styles.paperLink} type="button" onClick={() => setOpen("names")}>
+                <BookOpen size={15} aria-hidden="true" /> {book.open}
+              </button>
+            </div> : open === "form" ? <>
+              <h3 ref={formHeading} tabIndex={-1}>{book.contribution}</h3>
+              <SongForm locale={locale} initial={revision ? emptyFields : initial} wallEnabled={wallEnabled}
+                onSaved={() => {
+                  if (!wallEnabled) return;
+                  setRevision(revision + 1);
+                  setOpen("signed");
+                }} />
+              {wallEnabled && <button className={styles.paperLink} type="button" onClick={() => setOpen("names")}>
+                <BookOpen size={15} aria-hidden="true" /> {book.open}
+              </button>}
+            </> : <GuestSignatures locale={locale} thanked={open === "signed"} onWrite={openForm} />}
+          </div>
         </div>
         <i className={styles.pencil} aria-hidden="true" />
       </div>
     </section>
-    {wallEnabled && <MusicBoard key={revision} locale={locale} onWrite={openForm} />}
+    {wallEnabled && <MusicBoard key={revision} locale={locale} first={first} reloadFirst={reloadFirst} onWrite={openForm} />}
   </>;
 }
