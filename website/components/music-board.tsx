@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { copy, type Locale } from "@/lib/copy";
 import { guestbookCopy } from "@/lib/guestbook-copy";
+import { pathFor } from "@/lib/site";
 import type { WallPage } from "@/lib/community-wall";
 import styles from "./community-wall.module.css";
 
@@ -35,8 +36,13 @@ export function MusicBoard({ locale, result, page = 1, full, onRetry, onWrite, r
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" });
   const entries = result && result !== "error" ? result.entries : [];
   const hasMore = result !== null && result !== "error" && result.hasMore;
+  const placeForSong = page === 1 && entries.length > 0 && entries.length <= 3 && !hasMore;
+  const writeHref = full ? `${pathFor(locale, "community")}#suggest` : "#suggest";
+  const invite = <a href={writeHref} className={styles.pinCta} onClick={onWrite}>
+    <span aria-hidden="true">+</span> {book.boardCta}
+  </a>;
 
-  return <section className={`wrap ${styles.wall}${full ? " " + styles.wallFull : ""}`} id="wall" data-sparse={result && result !== "error" && entries.length <= 3 ? entries.length : undefined} aria-labelledby="wall-title" aria-busy={result === null}>
+  return <section className={`wrap ${styles.wall}${full ? " " + styles.wallFull : ""}`} id="wall" data-open-spaces={placeForSong ? entries.length : undefined} aria-labelledby="wall-title" aria-busy={result === null}>
     <header className={styles.heading}>
       {full ? <h1 id="wall-title">{t.title}</h1> : <>
         <p className={styles.kicker}>{t.title}</p>
@@ -64,14 +70,13 @@ export function MusicBoard({ locale, result, page = 1, full, onRetry, onWrite, r
               target="_blank" rel="noreferrer">{t.spotify}</a>
           </li>;
         })}
+        {placeForSong && <li className={styles.openSpace}>{invite}</li>}
       </ul> : <p className={styles.boardMessage} role="status">{result === "error" ? t.error
         : result === null ? t.loading : hasMore || page > 1 ? t.emptyPage : t.empty}</p>}
       {result === "error" && (onRetry
         ? <button className={styles.boardButton} type="button" onClick={onRetry}>{t.retry}</button>
         : <a className={styles.boardButton} href={retryHref}>{t.retry}</a>)}
-      {onWrite && <div className={styles.boardFooter}>
-        <a href="#suggest" className={styles.pinCta} onClick={onWrite}>+ {book.boardCta}</a>
-      </div>}
+      {onWrite && !placeForSong && <div className={styles.boardFooter}>{invite}</div>}
     </div>
     {children}
   </section>;

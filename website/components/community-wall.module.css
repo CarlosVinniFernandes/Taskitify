@@ -17,7 +17,7 @@
   scroll-margin-top: 20px;
 }
 .guestbook { padding-block: clamp(48px, 7vw, 92px) 16px; }
-.wall { padding-block: clamp(48px, 7vw, 90px); }
+.wall { width: min(100% - var(--gutter) * 2, 1240px); padding-block: clamp(34px, 5vw, 70px); }
 .heading { margin-bottom: 22px; }
 .heading h2 {
   margin: 4px 0;
@@ -236,7 +236,7 @@
 }
 .boardMessage { margin: 0; color: #162126; font-size: .97rem; }
 .boardFooter { display: flex; justify-content: flex-end; margin-top: 18px; }
-.pinCta { display: inline-flex; align-items: center; min-height: 44px; color: #162126; text-decoration: underline; text-underline-offset: .22em; }
+.pinCta { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: #162126; text-decoration: underline; text-underline-offset: .22em; }
 .boardButton { display: inline-flex; align-items: center; min-height: 44px; padding: 5px; border: 0; background: transparent; color: #162126; cursor: pointer; text-decoration: underline; }
 
 @media (max-width: 660px) {
@@ -293,21 +293,45 @@
   .wallFull .tracks { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
 
-/* Let the surface grow with the collection and keep the first notes prominent. */
-.wall[data-sparse="0"], .wall[data-sparse="1"] { --sparse-width: 470px; }
-.wall[data-sparse="2"] { --sparse-width: 660px; }
-.wall[data-sparse="3"] { --sparse-width: 920px; }
-.wall[data-sparse] { width: min(100% - var(--gutter) * 2, var(--sparse-width)); }
-.wall[data-sparse] .tracks {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
-  gap: clamp(16px, 3vw, 36px);
+/* For a small collection, give the real notes and the invitation a full row. */
+.wall[data-open-spaces="1"] { --open-columns: 2; }
+.wall[data-open-spaces="2"] { --open-columns: 3; }
+.wall[data-open-spaces="3"] { --open-columns: 4; }
+.wall[data-open-spaces] .tracks {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  align-items: stretch;
+  gap: clamp(16px, 3vw, 46px);
 }
-.wall[data-sparse] .recommendation {
-  width: min(100%, calc(var(--note-width) + 62px));
-  min-height: 172px;
+.wall[data-open-spaces] .recommendation {
+  width: 100%;
+  min-height: 190px;
+  padding: clamp(20px, 3vw, 40px) clamp(17px, 3vw, 42px) 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
 }
-.wall[data-sparse] .track :is(h2, h3) { font-size: 1.1rem; }
-.wall[data-sparse] .track p { font-size: .94rem; }
-.wall[data-sparse] .track .attribution { font-size: 1.52rem; }
-.wall[data-sparse] .track .meta, .wall[data-sparse] .spotify { font-size: .84rem; }
-.wall[data-sparse] .boardFooter { justify-content: center; }
+.wall[data-open-spaces] .track :is(h2, h3) { font-size: clamp(1.05rem, 1.55vw, 1.4rem); }
+.wall[data-open-spaces] .track p { font-size: 1rem; }
+.wall[data-open-spaces] .track .attribution { font-size: 1.55rem; }
+.wall[data-open-spaces] .track .meta, .wall[data-open-spaces] .spotify { font-size: .88rem; }
+.openSpace { display: grid; width: 100%; }
+.openSpace .pinCta {
+  justify-content: center;
+  padding: 16px;
+  border: 1px dashed #544b3c;
+  border-radius: 2px;
+  background: #f7efdb26;
+  text-align: center;
+  font-weight: 600;
+}
+.openSpace .pinCta:hover { background: #f7efdb48; }
+.openSpace .pinCta:focus-visible { outline: 2px solid #283d46; outline-offset: 4px; }
+@media (min-width: 900px) {
+  .wall[data-open-spaces] .tracks { grid-template-columns: repeat(var(--open-columns), minmax(0, 1fr)); }
+  .wallFull[data-open-spaces] .board { display: grid; align-content: center; min-height: clamp(320px, 40svh, 430px); }
+  .wallFull[data-open-spaces] .recommendation { min-height: 225px; }
+}
+@media (max-width: 610px) {
+  .openSpace { grid-column: 1 / -1; }
+}
