@@ -236,13 +236,13 @@ internal static class FocusHelper
 }
 
 /// <summary>
-/// Shift + Alt + left click on a window that lets clicks through (Minimal Mode): the click is
+/// Ctrl + Alt + left click on a window that lets clicks through (Minimal Mode): the click is
 /// caught, never reaches what is underneath, and gives the window its clicks back. A low-level
 /// mouse hook, installed only while clicks pass through; it answers at once and polls nothing.
 /// </summary>
 internal sealed class ModifierClickWatcher : IDisposable
 {
-    private const int VK_SHIFT = 0x10;
+    private const int VK_CONTROL = 0x11;
     private const int VK_MENU = 0x12;
     private const int WM_LBUTTONUP = 0x0202;
     private readonly LowLevelMouseProc _proc; // kept alive for the native side
@@ -282,7 +282,7 @@ internal sealed class ModifierClickWatcher : IDisposable
         if (nCode >= 0)
         {
             var message = (int)wParam;
-            if (message == WM_LBUTTONDOWN && GetAsyncKeyState(VK_SHIFT) < 0 && GetAsyncKeyState(VK_MENU) < 0)
+            if (message == WM_LBUTTONDOWN && GetAsyncKeyState(VK_CONTROL) < 0 && GetAsyncKeyState(VK_MENU) < 0)
             {
                 var data = System.Runtime.InteropServices.Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
                 if (_inside(data.X, data.Y))

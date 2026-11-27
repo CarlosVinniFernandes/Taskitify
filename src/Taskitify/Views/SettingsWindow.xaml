@@ -687,7 +687,7 @@
                     </Border>
 
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.MinimalShortcut}" />
-                    <!-- The shortcut that matters most here, drawn: Shift + Alt + left click on the lyrics. -->
+                    <!-- The shortcut that matters most here, drawn: Ctrl + Alt + left click on the lyrics. -->
                     <Border Style="{StaticResource Stage}" Margin="0" Padding="24,20">
                         <Border.Resources>
                             <Style x:Key="Keycap" TargetType="Border">
@@ -716,7 +716,7 @@
                         </Border.Resources>
                         <DockPanel>
                             <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,24,0">
-                                <Border Style="{StaticResource Keycap}"><TextBlock Style="{StaticResource KeyText}" Text="Shift" /></Border>
+                                <Border Style="{StaticResource Keycap}"><TextBlock Style="{StaticResource KeyText}" Text="{DynamicResource Loc.KeyCtrl}" /></Border>
                                 <TextBlock Style="{StaticResource Plus}" Text="+" />
                                 <Border Style="{StaticResource Keycap}"><TextBlock Style="{StaticResource KeyText}" Text="Alt" /></Border>
                                 <TextBlock Style="{StaticResource Plus}" Text="+" />

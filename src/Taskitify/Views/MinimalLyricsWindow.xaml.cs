@@ -152,7 +152,7 @@ public partial class MinimalLyricsWindow : Window
             try { DragMove(); }
             catch (InvalidOperationException) { }
         };
-        // Shift + Alt + click while clicks pass through: they come back, and so do the buttons and the grip.
+        // Ctrl + Alt + click while clicks pass through: they come back, and so do the buttons and the grip.
         _unlockClick = new ModifierClickWatcher(
             (x, y) => IsVisible && Contains(WindowInterop.GetBounds(_hwnd), x, y),
             () => Dispatcher.BeginInvoke(() => _settings.Update(s => s.Minimal.ClickThrough = false)));
@@ -486,9 +486,9 @@ public partial class MinimalLyricsWindow : Window
 
     private void OnResizeStart(object sender, MouseButtonEventArgs e)
     {
-        // Shift + Alt + click: clicks pass through from now on (the same shortcut brings them back).
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)
-            || NativeMethods.GetAsyncKeyState(0x10) < 0 && NativeMethods.GetAsyncKeyState(0x12) < 0)
+        // Ctrl + Alt + click: clicks pass through from now on (the same shortcut brings them back).
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)
+            || NativeMethods.GetAsyncKeyState(0x11) < 0 && NativeMethods.GetAsyncKeyState(0x12) < 0)
         {
             e.Handled = true;
             _settings.Update(x => x.Minimal.ClickThrough = true);

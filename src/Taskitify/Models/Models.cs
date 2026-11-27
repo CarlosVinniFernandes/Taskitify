@@ -766,7 +766,7 @@ public sealed class MinimalModeSettings
     public bool ShowControls { get; set; }
 
     // The window's own buttons (shown while it catches clicks), each optional; and the small
-    // crossed-out pointer shown while clicks pass through. Shift + Alt + click, the tray and the
+    // crossed-out pointer shown while clicks pass through. Ctrl + Alt + click, the tray and the
     // settings always work, whatever is hidden.
     public bool ShowMiniPlayerButton { get; set; } = true;
     public bool ShowSettingsButton { get; set; } = true;

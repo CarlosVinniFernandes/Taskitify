@@ -47,7 +47,7 @@ public sealed class MinimalLyricsViewModel : ObservableObject, IDisposable
     public ICommand PreviousCommand { get; }
     public ICommand ToggleLockCommand { get; }
 
-    /// <summary>The toolbar's "let clicks through" button (Shift + Alt + click toggles it too).</summary>
+    /// <summary>The toolbar's "let clicks through" button (Ctrl + Alt + click toggles it too).</summary>
     public ICommand ClickThroughCommand { get; }
     public ICommand CloseCommand { get; }
     public ICommand SettingsCommand { get; }

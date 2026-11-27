@@ -115,7 +115,7 @@
             </StackPanel>
         </Grid>
 
-        <!-- Clicks pass through: a small, quiet mark says so (Shift + Alt + click gives the clicks back). -->
+        <!-- Clicks pass through: a small, quiet mark says so (Ctrl + Alt + click gives the clicks back). -->
         <Grid x:Name="ClickThroughMark" Width="20" Height="20" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,6,8,0"
               Opacity="0.55" IsHitTestVisible="False">
             <Path Data="M5,3 L5,15 L8,12 L10.5,17 L12.5,16 L10,11 L14,11 Z" Fill="{DynamicResource TextPrimaryBrush}"
