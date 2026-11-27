@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using System.Net.Http;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -160,6 +161,58 @@ public static class LyricShareLink
     {
         var code = Encode(ToJson(payload));
         return code.Length > MaxCodeLength ? null : $"{BaseUrl}#{code}";
+    }
+
+    // ---- Short links (POST /api/share) ----------------------------------------------------------
+
+    private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(8) };
+
+    /// <summary>
+    /// The API that stores a code and returns a short link: the official one, or for development the
+    /// address in TASKITIFY_SHARE_API (e.g. the website running locally).
+    /// </summary>
+    public static Uri ShortApi =>
+        Uri.TryCreate(Environment.GetEnvironmentVariable("TASKITIFY_SHARE_API"), UriKind.Absolute, out var custom) ? custom : new Uri(Infrastructure.OfficialLinks.LyricsShareApi);
+
+    /// <summary>
+    /// One POST with the code the app already made; the short URL, or null on any failure (offline,
+    /// timeout, rate limit, server error, an unexpected answer). Never retried: creating is not idempotent.
+    /// </summary>
+    public static async Task<string?> ShortenAsync(string code, Uri? api = null, CancellationToken ct = default)
+    {
+        api ??= ShortApi;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, api)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(new { code }), Encoding.UTF8, "application/json"),
+            };
+            request.Headers.UserAgent.ParseAdd($"Taskitify/{typeof(LyricShareLink).Assembly.GetName().Version?.ToString(3) ?? "1.0"}");
+            using var response = await Http.SendAsync(request, ct).ConfigureAwait(false);
+            if (response.StatusCode != System.Net.HttpStatusCode.Created)
+            {
+                Infrastructure.Log.Info($"Short link not created: HTTP {(int)response.StatusCode}");
+                return null;
+            }
+            using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false));
+            var url = json.RootElement.TryGetProperty("url", out var value) ? value.GetString() : null;
+            return IsShortLink(url, api) ? url : null;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
+        {
+            Infrastructure.Log.Info($"Short link not created: {ex.GetType().Name}");
+            return null;
+        }
+    }
+
+    /// <summary>The API's own origin, then /s/ and a 12-character id of letters and digits.</summary>
+    public static bool IsShortLink(string? url, Uri api)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != api.Scheme || !string.Equals(uri.Authority, api.Authority, StringComparison.OrdinalIgnoreCase)
+            || !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
+            return false;
+        var path = uri.AbsolutePath;
+        return path.Length == 15 && path.StartsWith("/s/", StringComparison.Ordinal) && path[3..].All(char.IsAsciiLetterOrDigit);
     }
 
     public static bool IsSpotifyId(string? id) => id is { Length: 22 } && id.All(char.IsAsciiLetterOrDigit);

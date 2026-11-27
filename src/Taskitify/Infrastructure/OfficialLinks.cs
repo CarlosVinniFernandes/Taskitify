@@ -9,6 +9,9 @@ public static class OfficialLinks
     public const string Playlist = "https://open.spotify.com/playlist/0CMy9wXwlq6FRRdrIvvcWD";
     public const string SuggestSong = "https://taskitify.vercel.app/community#suggest";
     public const string LyricsShare = "https://taskitify.vercel.app/s";
+
+    /// <summary>Creates short links for shared lyrics (contract: shared/lyrics-short-link-v1.md).</summary>
+    public const string LyricsShareApi = "https://taskitify.vercel.app/api/share";
     public const string Repository = "https://github.com/CarlosVinniFernandes/Taskitify";
 
     /// <summary>Opens an address in the default browser; failures are logged, never thrown.</summary>

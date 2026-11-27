@@ -433,9 +433,9 @@
   "CardShareFrom": "From (optional)",
   "CardShareTo": "To (optional)",
   "CardShareMessage": "Personal message (optional)",
-  "CardSharePrivacy": "Anyone with the link can see the card, the lyrics and your message: the link itself carries them, readable by anyone (it is not encrypted). Images and album art are not included.",
+  "CardSharePrivacy": "Anyone with the link can see the card, the lyrics and your message. A short link stores the card on the Taskitify server; if one can't be made, the full link carries everything itself (it is not encrypted). Images and album art are never included.",
   "CardShareCopy": "Copy link",
-  "CardShareCopied": "Link copied.",
+  "CardShareCopied": "Short link copied.",
   "CardShareTooLong": "Too much to fit in a link: choose fewer lines or a shorter message.",
   "CardShareSurprise": "Reveal as a surprise",
   "TourCommunityEyebrow": "Community Soundtrack",
@@ -478,5 +478,7 @@
   "TourHomeHope": "I hope Taskitify makes your music even more special.",
   "TourHomeStarShort": "A star on GitHub would make my day.",
   "TourHomeDiscover": "Discover something new.",
-  "TourHomeDiscoverBody": "Songs picked by people from all over the world."
+  "TourHomeDiscoverBody": "Songs picked by people from all over the world.",
+  "CardShareShortening": "Creating a short link…",
+  "CardShareCopiedLong": "Link copied. A short link isn't available right now, so this is the full link."
 }

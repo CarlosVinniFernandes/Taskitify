@@ -245,8 +245,14 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
 
     public ICommand CopyLinkCommand { get; }
 
-    private void CopyLink()
+    private bool _shortening;
+    // The last short link made, and the code it stores: reused while the composition is unchanged.
+    private string? _shortCode, _shortUrl;
+
+    private async void CopyLink()
     {
+        if (_shortening)
+            return;
         var payload = LyricShareLink.Create(Content(_options.Style), _options, _source.SpotifyTrackId, ShareFrom, ShareTo, ShareMessage, surprise: ShareSurprise);
         var link = LyricShareLink.Link(payload);
         if (link is null)
@@ -254,11 +260,29 @@ public sealed partial class LyricCardViewModel : ObservableObject, IDisposable
             Status = LocalizationService.Get("CardShareTooLong");
             return;
         }
-        ShareLink = link;
+        var code = link[(link.IndexOf('#') + 1)..];
+        var shortened = code == _shortCode ? _shortUrl : null;
+        if (shortened is null)
+        {
+            _shortening = true;
+            Status = LocalizationService.Get("CardShareShortening");
+            try
+            {
+                shortened = await LyricShareLink.ShortenAsync(code);
+            }
+            finally
+            {
+                _shortening = false;
+            }
+            if (shortened is not null)
+                (_shortCode, _shortUrl) = (code, shortened);
+        }
+        var copy = shortened ?? link;
+        ShareLink = copy;
         try
         {
-            Clipboard.SetText(link);
-            Status = LocalizationService.Get("CardShareCopied");
+            Clipboard.SetText(copy);
+            Status = LocalizationService.Get(shortened is null ? "CardShareCopiedLong" : "CardShareCopied");
         }
         catch (Exception ex) when (ex is System.Runtime.InteropServices.COMException or System.Runtime.InteropServices.ExternalException)
         {

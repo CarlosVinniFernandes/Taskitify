@@ -433,9 +433,9 @@
   "CardShareFrom": "De (facultatif)",
   "CardShareTo": "Pour (facultatif)",
   "CardShareMessage": "Message personnel (facultatif)",
-  "CardSharePrivacy": "Toute personne ayant le lien peut voir la carte, les paroles et votre message : le lien lui-même les contient, lisibles par tous (il n'est pas chiffré). Les images et pochettes ne sont pas incluses.",
+  "CardSharePrivacy": "Toute personne ayant le lien peut voir la carte, les paroles et votre message. Le lien court enregistre la carte sur le serveur de Taskitify ; s'il ne peut pas être créé, le lien complet contient tout (il n'est pas chiffré). Les images et pochettes ne sont jamais incluses.",
   "CardShareCopy": "Copier le lien",
-  "CardShareCopied": "Lien copié.",
+  "CardShareCopied": "Lien court copié.",
   "CardShareTooLong": "Trop de contenu pour un lien : choisissez moins de lignes ou un message plus court.",
   "CardShareSurprise": "Révéler comme une surprise",
   "TourCommunityEyebrow": "La bande-son de la communauté",
@@ -478,5 +478,7 @@
   "TourHomeHope": "J'espère que Taskitify rendra votre musique encore plus spéciale.",
   "TourHomeStarShort": "Une étoile sur GitHub illuminerait ma journée.",
   "TourHomeDiscover": "Découvrez quelque chose de nouveau.",
-  "TourHomeDiscoverBody": "Des chansons choisies par des gens du monde entier."
+  "TourHomeDiscoverBody": "Des chansons choisies par des gens du monde entier.",
+  "CardShareShortening": "Création d'un lien court…",
+  "CardShareCopiedLong": "Lien copié. Impossible de créer un lien court pour l'instant ; voici le lien complet."
 }
