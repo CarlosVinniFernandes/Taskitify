@@ -260,11 +260,14 @@ public partial class MiniPlayerWindow : Window
 
         // Remember who had focus so closing with Esc gives it back.
         if (!wasVisible)
+        {
             _previousForeground = NativeMethods.GetForegroundWindow();
-
-        if (!wasVisible)
+            // A clock from the last opening can override the base opacity while the window
+            // is shown at its previous position. Clear both clocks before making it visible.
+            BeginAnimation(OpacityProperty, null);
             Opacity = 0;
-        ShowActivated = !IsPreview;
+            ChromeOffset.BeginAnimation(TranslateTransform.YProperty, null);
+        }
         Show();
         UpdateLayout();
         _hwnd = WindowInterop.EnsureHandle(this);
@@ -297,22 +300,19 @@ public partial class MiniPlayerWindow : Window
             Opacity = 1;
             return;
         }
-        FocusHelper.ForceForeground(_hwnd);
-        Activate();
+        if (!IsActive && !Activate())
+            FocusHelper.ForceForeground(_hwnd);
         if (wasVisible)
             return;
 
+        Opacity = 1;
         if (_animationsEnabled() && SystemParameters.ClientAreaAnimation)
         {
             var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-            BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(160)));
-            ChromeOffset.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty,
-                new DoubleAnimation(12, 0, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease });
-        }
-        else
-        {
-            BeginAnimation(OpacityProperty, null);
-            Opacity = 1;
+            BeginAnimation(OpacityProperty,
+                new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(160)) { FillBehavior = FillBehavior.Stop });
+            ChromeOffset.BeginAnimation(TranslateTransform.YProperty,
+                new DoubleAnimation(12, 0, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
         }
     }
 
