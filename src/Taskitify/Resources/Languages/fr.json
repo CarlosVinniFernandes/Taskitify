@@ -532,7 +532,7 @@
   "KeepOpen": "Garder le mini lecteur ouvert",
   "KeepOpenOff": "Laisser le mini lecteur se fermer à nouveau",
   "FloatPlayer": "Faire flotter le lecteur au-dessus de Windows",
-  "PlayerResize": "Faites glisser pour redimensionner tout le lecteur. Maj + glisser : plus de largeur et de vers",
+  "PlayerResize": "Faites glisser pour redimensionner",
   "MinimalResize": "Faites glisser pour redimensionner",
   "MinimalTopmostHint": "Aussi au-dessus des jeux et apps en plein écran (sans bordure ou fenêtré). Le plein écran exclusif n'affiche aucune autre fenêtre.",
   "LookSave": "Enregistrer l'apparence actuelle",

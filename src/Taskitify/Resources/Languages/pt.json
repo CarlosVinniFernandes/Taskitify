@@ -532,7 +532,7 @@
   "KeepOpen": "Manter o mini player aberto",
   "KeepOpenOff": "Deixar o mini player fechar de novo",
   "FloatPlayer": "Deixar o player flutuando sobre o Windows",
-  "PlayerResize": "Arraste para redimensionar o player inteiro. Shift + arrastar: mais largura e versos",
+  "PlayerResize": "Arraste para redimensionar",
   "MinimalResize": "Arraste para redimensionar",
   "MinimalTopmostHint": "Também sobre jogos e apps em tela cheia (sem bordas ou em janela). A tela cheia exclusiva não mostra nenhuma outra janela.",
   "LookSave": "Salvar visual atual",

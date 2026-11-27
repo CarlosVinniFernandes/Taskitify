@@ -366,8 +366,7 @@ public partial class MiniPlayerWindow : Window
             HidePopup(force: true);
         IsPinned = true;
         IsPreview = false;
-        if (!_gripping)
-            _zoom = Math.Clamp(options.Zoom > 0 ? options.Zoom : 1, MinZoom, MaxZoom);
+        _zoom = 1; // an earlier version scaled the whole player; it now adapts instead
         if (IsVisible)
         {
             ApplyPinned();
@@ -473,7 +472,41 @@ public partial class MiniPlayerWindow : Window
     }
 
     /// <summary>Floating, the player resizes further than as a popup.</summary>
-    private static (double Min, double Max) PinnedWidthRange(bool cinema) => cinema ? (520, 1200) : (300, 900);
+    private static (double Min, double Max) PinnedWidthRange(bool cinema) => cinema ? (400, 1400) : (280, 900);
+
+    /// <summary>
+    /// Floating, sized with the grip: the cover follows the room (the lyrics' height in the wide
+    /// layout, the width in the vertical one) and the transport buttons spread or close up with
+    /// the width. The popup keeps its usual layout.
+    /// </summary>
+    private void AdaptToSize()
+    {
+        var content = _baseWidth - ShadowRoom - 32; // card padding
+        if (!IsPinned)
+        {
+            PlayPauseButton.Margin = new Thickness(8, 0, 8, 0);
+            return;
+        }
+        if (_vm.IsCinema)
+        {
+            if (_vm.ShowCover)
+            {
+                // The song's column is the cover plus its 28 DIPs (196 for the usual 168): it widens
+                // and narrows with it, and the lyrics keep at least two thirds of the width.
+                var cover = Math.Clamp(_lyricsBase * 168 / 268, 72, 320);
+                cover = Math.Round(Math.Min(cover, Math.Max(72, (content * 0.34) - 28)));
+                CoverPart.Width = CoverPart.Height = cover;
+                if (LayoutRoot.ColumnDefinitions.Count == 2)
+                    LayoutRoot.ColumnDefinitions[0].Width = new GridLength(cover + 28);
+            }
+        }
+        else
+        {
+            CoverPart.Width = CoverPart.Height = Math.Round(Math.Clamp(content * 64 / 320, 48, 120));
+        }
+        var gap = Math.Clamp((content - 300) / 14, 2, 28);
+        PlayPauseButton.Margin = new Thickness(gap, 0, gap, 0);
+    }
 
     private void SetExStyle(bool transparent, bool noActivate)
     {
@@ -532,25 +565,10 @@ public partial class MiniPlayerWindow : Window
         var scale = WindowInterop.GetScale(_hwnd);
         var dx = (now.X - _gripStart.X) / scale;
         var dy = (now.Y - _gripStart.Y) / scale;
-        if (_gripShape)
-        {
-            var (min, max) = PinnedWidthRange(_vm.IsCinema);
-            _gripPending = (Math.Clamp(_gripFrom.Width + (dx / _zoom), min, max),
-                Math.Clamp(_gripFrom.Lyrics + (dy / _zoom), 70, 900), _zoom);
-            return;
-        }
-        // The whole player follows the corner, keeping its proportions: whichever way the
-        // pointer went further sets the size. Never past the screen it is on.
-        var factor = Math.Max((_gripFrom.WindowWidth + dx) / _gripFrom.WindowWidth, (_gripFrom.WindowHeight + dy) / _gripFrom.WindowHeight);
-        var zoom = _gripFrom.Zoom * factor;
-        var bounds = WindowInterop.GetBounds(_hwnd);
-        if (WindowInterop.MonitorForRect(bounds) is { } monitor && bounds.Width > 0 && bounds.Height > 0)
-        {
-            var room = Math.Min((double)(monitor.WorkArea.Right - bounds.Left) / bounds.Width * _zoom,
-                (double)(monitor.WorkArea.Bottom - bounds.Top) / bounds.Height * _zoom);
-            zoom = Math.Min(zoom, Math.Max(room, MinZoom));
-        }
-        _gripPending = (_gripFrom.Width, _gripFrom.Lyrics, Math.Clamp(zoom, MinZoom, MaxZoom));
+        // A real resize: the corner follows the pointer and the layout adapts (shorter progress
+        // bar, closer buttons, a smaller cover); text and buttons keep their size.
+        var (min, max) = PinnedWidthRange(_vm.IsCinema);
+        _gripPending = (Math.Clamp(_gripFrom.Width + dx, min, max), Math.Clamp(_gripFrom.Lyrics + dy, 70, 900), 1);
     }
 
     /// <summary>Once per frame while the grip moves: one layout per frame, however fast the mouse.</summary>
@@ -568,6 +586,7 @@ public partial class MiniPlayerWindow : Window
             ResizeLyrics(next.Lyrics);
             UpdateFit();
         }
+        AdaptToSize();
     }
 
     private void OnGripUp(object sender, MouseButtonEventArgs e)
@@ -945,6 +964,7 @@ public partial class MiniPlayerWindow : Window
         if (!_gripping)
             SetZoom(_zoom);
         SetBaseWidth(IsPinned && _pinned is { Width: > 0 } w ? Math.Clamp(w.Width, PinnedWidthRange(cinema).Min, PinnedWidthRange(cinema).Max) : _vm.WindowWidth);
+        AdaptToSize();
     }
 
     private static void Place(UIElement element, int row, int column, int span = 1)

@@ -532,7 +532,7 @@
   "KeepOpen": "Tieni aperto il mini player",
   "KeepOpenOff": "Lascia che il mini player si chiuda di nuovo",
   "FloatPlayer": "Far fluttuare il player sopra Windows",
-  "PlayerResize": "Trascina per ridimensionare tutto il player. Maiusc + trascina: più larghezza e versi",
+  "PlayerResize": "Trascina per ridimensionare",
   "MinimalResize": "Trascina per ridimensionare",
   "MinimalTopmostHint": "Anche sopra giochi e app a schermo intero (senza bordi o in finestra). Lo schermo intero esclusivo non mostra altre finestre.",
   "LookSave": "Salva l'aspetto attuale",

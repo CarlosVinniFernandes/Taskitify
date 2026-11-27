@@ -532,7 +532,7 @@
   "KeepOpen": "Mini-Player geöffnet lassen",
   "KeepOpenOff": "Mini-Player wieder schließen lassen",
   "FloatPlayer": "Player über Windows schweben lassen",
-  "PlayerResize": "Ziehen, um den ganzen Player zu skalieren. Umschalt + Ziehen: mehr Breite und Zeilen",
+  "PlayerResize": "Ziehen, um die Größe zu ändern",
   "MinimalResize": "Ziehen, um die Größe zu ändern",
   "MinimalTopmostHint": "Auch über Spielen und Apps im Vollbild (randlos oder im Fenster). Exklusiver Vollbildmodus zeigt kein anderes Fenster.",
   "LookSave": "Aktuellen Look speichern",

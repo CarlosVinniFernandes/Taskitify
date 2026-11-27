@@ -532,7 +532,7 @@
   "KeepOpen": "Keep the mini player open",
   "KeepOpenOff": "Let the mini player close again",
   "FloatPlayer": "Float the player over Windows",
-  "PlayerResize": "Drag to resize the whole player. Shift + drag: more width and verses",
+  "PlayerResize": "Drag to resize",
   "MinimalResize": "Drag to resize",
   "MinimalTopmostHint": "Also over games and apps in full screen (borderless or windowed). Exclusive full screen shows no other window.",
   "LookSave": "Save current look",
