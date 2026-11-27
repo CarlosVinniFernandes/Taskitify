@@ -66,6 +66,7 @@ export function MusicBoard({ locale, result, page = 1, full, onRetry, onWrite, r
               {entry.name && <p className={styles.attribution}><bdi>{entry.name}</bdi></p>}
               <p className={styles.meta}>
                 <time dateTime={entry.date}>{date.format(new Date(entry.date))}</time>
+                {entry.country && <bdi>{entry.country}</bdi>}
                 {entry.status === "added" && <span className={styles.added}>{t.added}</span>}
               </p>
             </div>

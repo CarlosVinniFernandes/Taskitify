@@ -21,6 +21,7 @@ export type WallEntry = {
   song: string;
   artist: string;
   name?: string;
+  country?: string;
   date: string;
   status: "suggested" | "added";
 };
@@ -33,7 +34,7 @@ export type WallPageSize = typeof communityWallPageSizes[keyof typeof communityW
 
 export type WallPage = { entries: WallEntry[]; hasMore: boolean; totalPages: number };
 
-export function publicSuggestion(value: unknown): (WallEntry & { country?: string }) | null {
+export function publicSuggestion(value: unknown): WallEntry | null {
   if (!value || typeof value !== "object") return null;
   const { id, song, artist, name, submittedAt, status, publishName, country } = value as Partial<Suggestion>;
   if (status !== "suggested" && status !== "added") return null;

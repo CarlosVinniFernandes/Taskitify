@@ -26,7 +26,7 @@ const readEntry = unstable_cache(async (_store: string, path: string) => {
   const result = await get(path, { access: "private", useCache: false, token, abortSignal: AbortSignal.timeout(6000) });
   if (result?.statusCode !== 200 || result.blob.size > 4096) return null;
   return publicSuggestion(await new Response(result.stream).json().catch(() => null));
-}, ["community-wall-record-v3"], { tags: [wallEntryTag], revalidate: cacheSeconds });
+}, ["community-wall-record-v4"], { tags: [wallEntryTag], revalidate: cacheSeconds });
 
 function storeCacheKey() {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
@@ -42,11 +42,7 @@ export async function getWallPage(page: number, size: WallPageSize = pageSize): 
   const totalPages = Math.ceil(index.length / size);
   if (start >= index.length) return { entries: [], hasMore: false, totalPages };
   const rows = await Promise.all(index.slice(start, start + size).map((path) => readEntry(store, path)));
-  const entries: WallEntry[] = rows.flatMap((row) => {
-    if (!row) return [];
-    const { artSeed, song, artist, name, date, status } = row;
-    return [{ artSeed, song, artist, name, date, status }];
-  });
+  const entries = rows.filter((row): row is WallEntry => row !== null);
   return { entries, hasMore: page < totalPages, totalPages };
 }
 
