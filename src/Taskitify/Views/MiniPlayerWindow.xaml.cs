@@ -569,6 +569,45 @@ public partial class MiniPlayerWindow : Window
             SetExStyle(o.ClickThrough, noActivate: true);
     }
 
+    /// <summary>
+    /// Full screen: the hover tools look like the window buttons beside them (flat, the same
+    /// height, a hairline between the two groups), one bar instead of a pill next to a title bar.
+    /// Elsewhere: the floating pill.
+    /// </summary>
+    private void ApplyToolbarLook()
+    {
+        var tool = (Style)(_presenting ? CaptionButtons.Resources["Caption"] : PinnedToolbar.Resources["PinnedTool"]);
+        foreach (var button in ((Panel)PinnedToolbar.Child).Children.OfType<Button>())
+        {
+            if (button.Style != tool)
+                button.Style = tool;
+            if (_presenting)
+                button.Width = 40;
+            else
+                button.ClearValue(WidthProperty);
+        }
+        if (_presenting)
+        {
+            PinnedToolbar.Margin = new Thickness(0, 0, 46 * 3, 0);
+            PinnedToolbar.Padding = new Thickness(0);
+            PinnedToolbar.CornerRadius = new CornerRadius(0);
+            PinnedToolbar.Background = Brushes.Transparent;
+            PinnedToolbar.BorderThickness = new Thickness(0, 0, 1, 0);
+            PinnedToolbar.BorderBrush = new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF));
+            PinnedToolbar.Effect = null;
+        }
+        else if (PinnedToolbar.Effect is null)
+        {
+            PinnedToolbar.Margin = new Thickness(0, 5, 6, 0);
+            PinnedToolbar.Padding = new Thickness(2);
+            PinnedToolbar.CornerRadius = new CornerRadius(9);
+            PinnedToolbar.SetResourceReference(Border.BackgroundProperty, "PopupBackgroundBrush");
+            PinnedToolbar.BorderThickness = new Thickness(1);
+            PinnedToolbar.SetResourceReference(Border.BorderBrushProperty, "PopupBorderBrush");
+            PinnedToolbar.Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 10, ShadowDepth = 1, Direction = 270, Opacity = 0.3, Color = Colors.Black };
+        }
+    }
+
     private void OnPresentEsc(object? sender, EventArgs e)
     {
         if (WindowState == WindowState.Minimized)
@@ -1279,7 +1318,7 @@ public partial class MiniPlayerWindow : Window
         PinnedMaximize.Content = _beforeFill is null ? "\uE740" : "\uE73F";
         if (_presenting)
             PinnedMaximize.Visibility = PinnedClose.Visibility = PinnedLock.Visibility = PinnedClickThrough.Visibility = Visibility.Collapsed;
-        PinnedToolbar.Margin = _presenting ? new Thickness(0, 4, (46 * 3) + 8, 0) : new Thickness(0, 5, 6, 0);
+        ApplyToolbarLook();
         PinnedMaximize.ToolTip = LocalizationService.Get(_beforeFill is null ? "FillScreen" : "RestoreSize");
         System.Windows.Automation.AutomationProperties.SetName(PinnedMaximize, (string)PinnedMaximize.ToolTip);
         System.Windows.Automation.AutomationProperties.SetName(PopupKeepOpen, (string)PopupKeepOpen.ToolTip);
