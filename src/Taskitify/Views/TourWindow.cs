@@ -49,7 +49,7 @@ public sealed class TourWindow : Window
     private readonly Grid _content = new();
     private readonly Border _backA = new(), _backB = new();
     private readonly StackPanel _dots = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-    private readonly Button _back, _next, _skip;
+    private readonly Button _back, _next, _skip, _playlist;
     private bool _useA = true;
     private int _index = -1;
 
@@ -82,6 +82,9 @@ public sealed class TourWindow : Window
         _back = Ghost(T("Back"), () => Go(_index - 1));
         _next = Primary(T("Continue"), () => Go(_index + 1));
         _skip = Link(T("Skip"), Close);
+        _playlist = Primary("\uE7F6  " + T("CommunityListen"), () => OfficialLinks.Open(OfficialLinks.Playlist));
+        ((TextBlock)_playlist.Content).Inlines.Add(new System.Windows.Documents.Run("   \uE8A7") { FontFamily = Icons, FontSize = 12 });
+        _playlist.Margin = new Thickness(12, 0, 0, 0);
         _skip.ToolTip = T("SkipHint");
 
         _steps.Add(new("Welcome", BuildWelcome, Atmosphere("#0D2230", "#173F4F", "#8C8A66"), CustomActions: true, Bar: true, Mini: true));
@@ -139,6 +142,7 @@ public sealed class TourWindow : Window
         _back.Margin = new Thickness(0, 0, 12, 0);
         actions.Children.Add(_back);
         actions.Children.Add(_next);
+        actions.Children.Add(_playlist);
         bottom.Children.Add(actions);
         root.Children.Add(bottom);
 
@@ -219,6 +223,13 @@ public sealed class TourWindow : Window
         }
         _back.Visibility = index > 0 ? Visibility.Visible : Visibility.Hidden;
         _next.Visibility = step.CustomActions ? Visibility.Collapsed : Visibility.Visible;
+        var community = step.Key == "Community";
+        _playlist.Visibility = community ? Visibility.Visible : Visibility.Collapsed;
+        _next.Background = community ? Surface : CreamBrush;
+        _next.Foreground = community ? CreamBrush : Frozen(Color.FromRgb(0x10, 0x20, 0x2A));
+        _next.BorderBrush = community ? SurfaceLine : Brushes.Transparent;
+        _next.BorderThickness = new Thickness(community ? 1 : 0);
+        _next.Effect = community ? null : PrimaryShadow;
         _skip.Visibility = index < _steps.Count - 1 ? Visibility.Visible : Visibility.Hidden;
         if (!step.CustomActions)
             _next.Focus();
@@ -524,9 +535,11 @@ public sealed class TourWindow : Window
         var desktop = new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Background = PhotoBrush("fuji.jpg", .45, Stretch.UniformToFill), Margin = new Thickness(0, 14, 0, 0) };
         Grid.SetRow(desktop, 1);
         root.Children.Add(desktop);
-        bar = TaskbarMock(step, 1008 / 1.32, compact: false, onPlayerClick);
+        // Only the taskbar's right side (the player, the tray, the clock), large enough to read.
+        bar = TaskbarMock(step, 1008 / 1.7, compact: false, onPlayerClick, bare: true);
         bar.VerticalAlignment = VerticalAlignment.Bottom;
-        bar.LayoutTransform = new ScaleTransform(1.32, 1.32);
+        bar.HorizontalAlignment = HorizontalAlignment.Right;
+        bar.LayoutTransform = new ScaleTransform(1.7, 1.7);
         Grid.SetRow(bar, 1);
         root.Children.Add(bar);
         return root;
@@ -544,7 +557,7 @@ public sealed class TourWindow : Window
         var popup = Live(step, () => _stage.MiniVisual(), 360);
         popup.HorizontalAlignment = HorizontalAlignment.Right;
         popup.VerticalAlignment = VerticalAlignment.Bottom;
-        popup.Margin = new Thickness(0, 0, 150, 84);
+        popup.Margin = new Thickness(0, 0, 200, 104);
         popup.Opacity = 0;
         popup.IsHitTestVisible = false;
         Grid.SetRow(popup, 1);
@@ -770,7 +783,7 @@ public sealed class TourWindow : Window
     }
 
     /// <summary>A Windows 11-style taskbar with the real Taskitify player docked before the tray.</summary>
-    private Border TaskbarMock(Step step, double width, bool compact, Action? onPlayerClick = null)
+    private Border TaskbarMock(Step step, double width, bool compact, Action? onPlayerClick = null, bool bare = false)
     {
         var bar = new Grid { Height = 52 };
         var left = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
@@ -781,7 +794,8 @@ public sealed class TourWindow : Window
         left.Children.Add(startGlyph);
         foreach (var (glyph, color) in new[] { ("", "#F1F2ED"), ("", "#E8C468"), ("", "#5FC4D8"), ("", "#8FB2E8") }.Take(compact ? 2 : 4))
             left.Children.Add(new TextBlock { Text = glyph, FontFamily = Icons, FontSize = 18, Width = 40, TextAlignment = TextAlignment.Center, Foreground = Frozen((Color)ColorConverter.ConvertFromString(color)) });
-        bar.Children.Add(left);
+        if (!bare)
+            bar.Children.Add(left);
         var right = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 14, 0) };
         var player = LiveImage(step, () => _stage.Bar(1.75), 48);
         player.Cursor = onPlayerClick is null ? null : Cursors.Hand;
@@ -1059,9 +1073,7 @@ public sealed class TourWindow : Window
         var left = Stack(Eyebrow(T("CommunityEyebrow")), Headline(T("CommunityTitle"), 40), Body(T("CommunityBody"), 16, top: 14),
             Body(T("CommunityNote"), 13.5, top: 12));
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 26, 0, 0) };
-        buttons.Children.Add(Primary("\uE8D6  " + T("CommunityListen"), () => OfficialLinks.Open(OfficialLinks.Playlist)));
         var suggest = Ghost("\uE710  " + T("CommunitySuggest"), () => OfficialLinks.Open(OfficialLinks.SuggestSong));
-        suggest.Margin = new Thickness(12, 0, 0, 0);
         buttons.Children.Add(suggest);
         left.Children.Add(buttons);
         grid.Children.Add(left);
@@ -1090,54 +1102,70 @@ public sealed class TourWindow : Window
 
     private FrameworkElement BuildHome()
     {
-        var step = Current("Home");
         var root = new Grid();
-        // The five demonstration covers, drifting softly behind the words.
+        // Four covers in the corners, still and quiet, away from the words and buttons.
         var covers = new Canvas { IsHitTestVisible = false };
-        var spots = new[] { (-10.0, 20.0, -8.0), (900, 0, 7), (918, 300, -5), (10, 330, 6), (870, 440, 4) };
-        for (var i = 0; i < TourSong.All.Length; i++)
+        var spots = new[] { (0, 10.0, 20.0, -8.0), (1, 900.0, 0.0, 7.0), (3, 0.0, 380.0, 6.0), (2, 900.0, 380.0, -5.0) };
+        foreach (var (song, x, y, angle) in spots)
         {
-            var (x, y, angle) = spots[i];
             var cover = new Border
             {
-                Width = 104, Height = 104, CornerRadius = new CornerRadius(12), Opacity = .5,
-                Background = new ImageBrush(TourSong.All[i].Cover(256)),
-                RenderTransform = new RotateTransform(angle, 64, 64),
+                Width = 96, Height = 96, CornerRadius = new CornerRadius(12), Opacity = .6,
+                Background = new ImageBrush(TourSong.All[song].Cover(192)), RenderTransform = new RotateTransform(angle, 48, 48),
             };
             Canvas.SetLeft(cover, x);
             Canvas.SetTop(cover, y);
             covers.Children.Add(cover);
-            cover.RenderTransform = new RotateTransform(angle, 52, 52);
         }
         root.Children.Add(covers);
 
-        var center = Stack(Eyebrow(T("HomeEyebrow")), Headline(T("HomeTitle"), 54), Body(T("HomeLine"), 20, top: 8, brush: CreamBrush), Body(T("HomeThanks"), 15, top: 18));
-        var rule = new Border { Width = 56, Height = 1, Background = Frozen(Color.FromArgb(0x70, 0xE2, 0xC4, 0x6F)), Margin = new Thickness(0, 26, 0, 0) };
-        center.Children.Add(rule);
-        var favor = new Border
+        var gold = Frozen(Color.FromRgb(0xE2, 0xC4, 0x6F));
+        var center = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, MaxWidth = 700 };
+        var eyebrow = Eyebrow(T("HomeEyebrow2"));
+        eyebrow.HorizontalAlignment = HorizontalAlignment.Center;
+        center.Children.Add(eyebrow);
+        var title = Headline(T("HomeTitle"), 56);
+        title.TextAlignment = TextAlignment.Center;
+        center.Children.Add(title);
+        center.Children.Add(Body(T("HomeThanks2"), 16, top: 10, brush: CreamBrush, center: true));
+        center.Children.Add(Body(T("HomeHope"), 16, top: 2, brush: CreamBrush, center: true));
+        center.Children.Add(new TextBlock { Text = T("HomeSignature"), FontSize = 14, FontStyle = FontStyles.Italic, Foreground = Muted, Margin = new Thickness(0, 8, 0, 0), TextAlignment = TextAlignment.Center });
+        center.Children.Add(new Border { Width = 56, Height = 1, Background = SurfaceLine, Margin = new Thickness(0, 22, 0, 22), HorizontalAlignment = HorizontalAlignment.Center });
+
+        StackPanel Offer(string glyph, Brush accent, string heading, string text, Button action)
         {
-            Margin = new Thickness(0, 18, 0, 0), MaxWidth = 520,
-            Child = Stack(
-                new TextBlock { Text = "\uE735", FontFamily = Icons, FontSize = 18, Foreground = Frozen(Color.FromRgb(0xE2, 0xC4, 0x6F)), HorizontalAlignment = HorizontalAlignment.Center },
-                new TextBlock { Text = T("HomeFavor"), FontFamily = Display, FontWeight = FontWeights.Bold, FontSize = 21, TextAlignment = TextAlignment.Center, Margin = new Thickness(0, 8, 0, 0) },
-                Body(T("HomeStar"), 15, top: 6, center: true),
-                Body(T("HomeEnjoy"), 15, top: 10, center: true, brush: CreamBrush),
-                new TextBlock { Text = T("HomeSignature"), FontSize = 14, FontStyle = FontStyles.Italic, Foreground = Muted, Margin = new Thickness(0, 10, 0, 0), TextAlignment = TextAlignment.Center }),
-        };
-        center.Children.Add(favor);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 28, 0, 0) };
+            var offer = new StackPanel { Width = 280, HorizontalAlignment = HorizontalAlignment.Center };
+            offer.Children.Add(new TextBlock { Text = glyph, FontFamily = Icons, FontSize = 24, Foreground = accent, HorizontalAlignment = HorizontalAlignment.Center });
+            offer.Children.Add(new TextBlock { Text = heading, FontFamily = Display, FontWeight = FontWeights.Bold, FontSize = 19, Margin = new Thickness(0, 10, 0, 0), TextAlignment = TextAlignment.Center });
+            offer.Children.Add(Body(text, 13.5, top: 4, center: true));
+            action.Margin = new Thickness(0, 14, 0, 0);
+            action.HorizontalAlignment = HorizontalAlignment.Stretch;
+            action.BorderBrush = accent;
+            action.Background = Frozen(Color.FromArgb(0x18, ((SolidColorBrush)accent).Color.R, ((SolidColorBrush)accent).Color.G, ((SolidColorBrush)accent).Color.B));
+            offer.Children.Add(action);
+            return offer;
+        }
+        var offers = new Grid();
+        offers.ColumnDefinitions.Add(new ColumnDefinition());
+        offers.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1) });
+        offers.ColumnDefinitions.Add(new ColumnDefinition());
+        var star = Offer("\uE735", gold, T("HomeFavor"), T("HomeStarShort"), Ghost("\uE735  " + T("HomeGitHub"), () => Open(ContactInfo.Repository)));
+        var playlist = Offer("\uE7F6", Turquoise, T("HomeDiscover"), T("HomeDiscoverBody"), Ghost("\uE8D6  " + T("CommunityListen"), () => OfficialLinks.Open(OfficialLinks.Playlist)));
+        star.Margin = new Thickness(0, 0, 32, 0);
+        playlist.Margin = new Thickness(32, 0, 0, 0);
+        offers.Children.Add(star);
+        var line = new Border { Background = SurfaceLine, Margin = new Thickness(0, 6, 0, 6) };
+        Grid.SetColumn(line, 1);
+        offers.Children.Add(line);
+        Grid.SetColumn(playlist, 2);
+        offers.Children.Add(playlist);
+        center.Children.Add(offers);
+
         var start = Primary(T("HomeStart"), Close);
-        buttons.Children.Add(start);
-        var star = Ghost("  " + T("HomeGitHub"), () => Open(ContactInfo.Repository));
-        star.Margin = new Thickness(12, 0, 0, 0);
-        buttons.Children.Add(star);
-        center.Children.Add(buttons);
-        center.HorizontalAlignment = HorizontalAlignment.Center;
-        center.VerticalAlignment = VerticalAlignment.Center;
-        center.MaxWidth = 640;
-        rule.HorizontalAlignment = HorizontalAlignment.Center;
-        foreach (var child in center.Children.OfType<TextBlock>())
-            child.TextAlignment = TextAlignment.Center;
+        start.Margin = new Thickness(0, 26, 0, 0);
+        start.MinWidth = 200;
+        start.HorizontalAlignment = HorizontalAlignment.Center;
+        center.Children.Add(start);
         root.Children.Add(center);
         return root;
     }

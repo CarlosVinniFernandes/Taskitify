@@ -472,5 +472,11 @@
   "TourSetupMiniTypeTitle": "Choose the lettering",
   "TourSetupMiniTypeBody": "The typeface of the lyrics.",
   "TourSetupMiniHighTitle": "Light up every line",
-  "TourSetupMiniHighBody": "How the line being sung stands out."
+  "TourSetupMiniHighBody": "How the line being sung stands out.",
+  "TourHomeEyebrow2": "Your music. Your story.",
+  "TourHomeThanks2": "Thank you for being part of this.",
+  "TourHomeHope": "I hope Taskitify makes your music even more special.",
+  "TourHomeStarShort": "A star on GitHub would make my day.",
+  "TourHomeDiscover": "Discover something new.",
+  "TourHomeDiscoverBody": "Songs picked by people from all over the world."
 }

@@ -472,5 +472,11 @@
   "TourSetupMiniTypeTitle": "Elige la tipografía",
   "TourSetupMiniTypeBody": "La fuente de la letra.",
   "TourSetupMiniHighTitle": "Ilumina cada verso",
-  "TourSetupMiniHighBody": "Cómo resalta el verso que suena."
+  "TourSetupMiniHighBody": "Cómo resalta el verso que suena.",
+  "TourHomeEyebrow2": "Tu música. Tu historia.",
+  "TourHomeThanks2": "Gracias por ser parte de esto.",
+  "TourHomeHope": "Espero que Taskitify haga tu música aún más especial.",
+  "TourHomeStarShort": "Una estrella en GitHub alegraría mi día.",
+  "TourHomeDiscover": "Descubre algo nuevo.",
+  "TourHomeDiscoverBody": "Canciones elegidas por personas de todo el mundo."
 }

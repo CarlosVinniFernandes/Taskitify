@@ -472,5 +472,11 @@
   "TourSetupMiniTypeTitle": "Wähle die Schrift",
   "TourSetupMiniTypeBody": "Die Schrift des Songtexts.",
   "TourSetupMiniHighTitle": "Lass jede Zeile leuchten",
-  "TourSetupMiniHighBody": "Wie die gesungene Zeile hervorsticht."
+  "TourSetupMiniHighBody": "Wie die gesungene Zeile hervorsticht.",
+  "TourHomeEyebrow2": "Deine Musik. Deine Geschichte.",
+  "TourHomeThanks2": "Danke, dass du dabei bist.",
+  "TourHomeHope": "Ich hoffe, Taskitify macht deine Musik noch besonderer.",
+  "TourHomeStarShort": "Ein Stern auf GitHub würde meinen Tag besser machen.",
+  "TourHomeDiscover": "Entdecke etwas Neues.",
+  "TourHomeDiscoverBody": "Songs, ausgewählt von Menschen aus aller Welt."
 }
