@@ -66,6 +66,16 @@ export const copy = {
       rate: "Please wait a minute before sending another suggestion.",
       error: "Your suggestion couldn’t be saved right now. Please try again later.",
       privacy: "How suggestions are handled",
+      wall: {
+        title: "Community Wall", intro: "Songs worth passing on, shared by the Taskitify community.",
+        publishName: "Show my name or nickname on the wall",
+        formNote: "Your song, artist and submission date will appear on the public wall. We only show your name or nickname if you check the box.",
+        empty: "The wall is quiet for now. Share a song you’d love someone else to hear.",
+        emptyPage: "There are no visible contributions on this page.",
+        loading: "Loading contributions…", error: "The wall couldn’t load right now.", retry: "Try again",
+        suggested: "Suggested", added: "Added to playlist", spotify: "Find on Spotify",
+        pagination: "Community wall pages", previous: "Newer", next: "Older",
+      },
     },
     philosophy: {
       title: "Made for music. Not for profit.",
@@ -87,7 +97,7 @@ export const copy = {
       sections: [
         { title: "Taskitify on your computer", text: "Taskitify has no account system, built-in telemetry or behavioral tracking. The Windows app reads playback from Windows media sessions. It can use LRCLIB to look up lyrics, which involves sending the track, artist and album when available. If you choose the optional Spotify connection, Spotify handles your sign-in and requests to its service. Lyrics from Spotify may be credited to its lyrics provider, Musixmatch." },
         { title: "This website", text: "The site is hosted by Vercel. Vercel processes requests to serve and protect the site. Taskitify adds no analytics, ads or tracking cookies. Spotify, Microsoft Store and GitHub open on their own sites and follow their own privacy policies." },
-        { title: "Voluntary song suggestions", text: "If you submit a song, we keep the title, artist, optional name or nickname, submission time, a unique ID and moderation status in private Vercel Blob storage. The maintainer uses these records to review submissions and add tracks manually. Suggestions and nicknames stay private. The form uses your IP address to limit repeat submissions, with a short-window keyed identifier used for the storage path. Your IP address is omitted from the suggestion record." },
+        { title: "Voluntary song suggestions", text: "We keep song suggestions in private Vercel Blob storage. When the community wall is active, the form explains that the song, artist, contribution date and status will appear publicly. Your name or nickname is public only if you opt in. Submissions from before the wall stay private. Carlos can hide or remove contributions and adds tracks to the playlist manually. Your IP is used to limit repeat submissions through a short-window keyed identifier. The raw address is not stored with the suggestion or returned by the wall." },
         { title: "Questions or removal requests", text: "You can ask Carlos about your submission or request its removal. Include the track and artist so it can be found." },
       ],
     },
@@ -156,6 +166,16 @@ export const copy = {
       rate: "Aguarde um minuto antes de enviar outra sugestão.",
       error: "Sua sugestão não pôde ser salva agora. Tente novamente mais tarde.",
       privacy: "Como as sugestões são tratadas",
+      wall: {
+        title: "Mural da Comunidade", intro: "Músicas que valem compartilhar, escolhidas pela comunidade do Taskitify.",
+        publishName: "Mostrar meu nome ou apelido no mural",
+        formNote: "A música, o artista e a data de envio vão aparecer no mural público. Seu nome ou apelido só aparece se você marcar a opção acima.",
+        empty: "O mural está quieto por enquanto. Compartilhe uma música que você gostaria que alguém ouvisse.",
+        emptyPage: "Não há contribuições visíveis nesta página.",
+        loading: "Carregando contribuições…", error: "Não foi possível carregar o mural agora.", retry: "Tentar novamente",
+        suggested: "Sugerida", added: "Adicionada à playlist", spotify: "Buscar no Spotify",
+        pagination: "Páginas do mural", previous: "Mais recentes", next: "Mais antigas",
+      },
     },
     philosophy: {
       title: "Feito pela música, sem fins lucrativos.",
@@ -177,7 +197,7 @@ export const copy = {
       sections: [
         { title: "Taskitify no seu computador", text: "O Taskitify não tem conta própria, telemetria embutida nem rastreamento comportamental. No Windows, o aplicativo lê a reprodução pelas sessões de mídia do sistema. Para buscar letras pelo LRCLIB, ele envia o título, o artista e o álbum quando disponível. Se você escolher a conexão opcional com o Spotify, o próprio Spotify gerencia o login e as requisições ao serviço." },
         { title: "Este site", text: "O site é hospedado na Vercel, que processa as requisições para servir e proteger o site. O Taskitify não acrescenta analytics, anúncios ou cookies de rastreamento. Spotify, Microsoft Store e GitHub abrem em seus próprios sites e seguem suas políticas de privacidade." },
-        { title: "Sugestões voluntárias de músicas", text: "Ao enviar uma música, guardamos o título, o artista, o nome ou apelido opcional, a data, um identificador único e o status de moderação no Vercel Blob privado. O mantenedor revisa os registros e adiciona as faixas manualmente. As sugestões e os apelidos ficam em privado. O formulário usa o IP para limitar envios repetidos, com um identificador protegido e de curta duração no caminho do arquivo. O IP fica fora do registro da sugestão." },
+        { title: "Sugestões voluntárias de músicas", text: "Guardamos as sugestões no Vercel Blob privado. Quando o mural está ativo, o formulário avisa que música, artista, data de contribuição e status vão aparecer publicamente. Seu nome ou apelido só aparece com sua autorização. Os envios anteriores ao mural permanecem privados. Carlos pode ocultar ou remover contribuições e adiciona faixas à playlist manualmente. O IP serve para limitar envios repetidos por meio de um identificador protegido e temporário. O endereço bruto fica fora do registro da sugestão e da resposta do mural." },
         { title: "Dúvidas e pedidos de remoção", text: "Você pode falar com Carlos sobre a sua sugestão ou pedir sua remoção. Informe a faixa e o artista para que ela seja encontrada." },
       ],
     },

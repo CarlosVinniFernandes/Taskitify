@@ -3,8 +3,9 @@ import { Music2 } from "lucide-react";
 import { copy, type Locale } from "@/lib/copy";
 import { pathFor } from "@/lib/site";
 import { prefill } from "@/lib/suggestion-fields";
+import { communityWallEnabled } from "@/lib/community-wall";
 import { PlaylistLink, RecordArt, SiteShell } from "./site";
-import { SongForm } from "./song-form";
+import { CommunityContributions } from "./community-contributions";
 
 export type SearchParameters = Promise<Record<string, string | string[] | undefined>>;
 
@@ -27,14 +28,13 @@ export async function Community({ locale, searchParams }: { locale: Locale; sear
           </div>
         </div>
       </section>
-      <section className="wrap section suggestion-section" id="suggest" aria-labelledby="suggest-title">
+      <CommunityContributions locale={locale} initial={initial} wallEnabled={communityWallEnabled()}>
         <div>
           <h2 id="suggest-title">{t.suggest}</h2>
           <p>{t.formIntro}</p>
           <Link className="text-link" href={pathFor(locale, "privacy")}>{t.privacy}</Link>
         </div>
-        <SongForm locale={locale} initial={initial} />
-      </section>
+      </CommunityContributions>
     </SiteShell>
   );
 }

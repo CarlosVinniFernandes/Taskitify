@@ -17,8 +17,12 @@ The [Hobby plan](https://vercel.com/docs/plans/hobby) is for personal, noncommer
 
 ## Moderate suggestions
 
-Open **Storage → your private store → Browse** in Vercel. Look under `suggestions/YYYY-MM/` for independent JSON objects with UUID, song, artist, optional name, submission date, and pending status. Review the files there and add selected tracks manually in Spotify. There's no public list or read route.
+Open **Storage → your private store → Browse** in Vercel. Community Wall submissions are in `suggestions/wall/`. Older submissions and submissions made while the wall is disabled remain private under `suggestions/YYYY-MM/`. The monthly folders may also contain rate-limit slots with no submission data. Add selected tracks to Spotify manually.
 
-The API accepts one suggestion per address per minute using an atomic Blob write. The path uses a rotating keyed hash. The JSON stores no IP address. For future app integration, `/community?song=Song&artist=Artist&name=Nickname#suggest` pre-fills the editable form. Sending still requires an explicit submit.
+New wall submissions are visible immediately as `suggested`. The public endpoint `GET /api/community/wall?page=1` projects only the song, artist, date, status and names that were explicitly authorized. It pages through 12 records at a time, omitting hidden and removed entries. Older pages may contain fewer visible rows.
+
+To hide a contribution or mark it as added, copy its exact Blob pathname and run `node --env-file=.env.local scripts/moderate-wall.ts <pathname> hidden` (or `added`, or `suggested` to restore it). Deletion is also available in the Blob dashboard. The private Blob records stay private. Listing metadata and public projections are cached for one hour to limit Blob operations. For immediate moderation, clear the two derived cache tags from the linked Vercel project with `vercel cache dangerously-delete --tag community-wall-entry,community-wall-index`. Publish with `COMMUNITY_WALL_ENABLED=0` to pause the wall and accept private suggestions only.
+
+The API reserves one suggestion per address per minute using an atomic Blob write. The path uses a rotating keyed hash and no raw IP is stored in the suggestion. For future app integration, `/community?song=Song&artist=Artist&name=Nickname#suggest` pre-fills the editable form. Sending still requires an explicit submit, and the nickname checkbox always starts unchecked.
 
 Product images come from the [Store campaign and onboarding assets](../marketing/microsoft-store/SOURCES.md). Font license notices are in `public/fonts/`.
