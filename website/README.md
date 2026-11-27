@@ -26,3 +26,5 @@ Product images come from the [Store campaign and onboarding assets](../marketing
 ## Send a Song experiment
 
 Run `npm run dev` and open `http://localhost:3000/s#CODE` with a code from `shared/lyrics-share-v1.md` on the desktop branch `t3/lyrics-share`. If testing a full desktop link locally, keep its fragment and replace the host. For a non-production build, set `LYRICS_SHARE_EXPERIMENT=1` before building. Keep previews restricted to testers while lyric-sharing rights are being verified. The viewer is disabled when `VERCEL_ENV=production` and is excluded from navigation and search indexing.
+
+Visit `/s/demo` in development to try Letter, CassetteTape and Retro in direct and surprise modes with original demonstration lyrics.

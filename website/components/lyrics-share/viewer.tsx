@@ -4,13 +4,13 @@ import { ArrowUpRight, Music2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { decodeShare, shareFailure, spotifySongUrl, type SharedSong } from "@/lib/lyrics-share";
 import { shareCopy, shareLocale, type ShareLocale } from "@/lib/lyrics-share-copy";
-import { Composition } from "./composition";
+import { artKind, Composition } from "./composition";
 import styles from "./viewer.module.css";
 
 type Screen =
   | { status: "loading" }
   | { status: "error"; locale: ShareLocale; error: ReturnType<typeof shareFailure> }
-  | { status: "closed" | "open"; locale: ShareLocale; payload: SharedSong };
+  | { status: "closed" | "opening" | "open"; locale: ShareLocale; payload: SharedSong };
 
 export function ShareViewer() {
   const [screen, setScreen] = useState<Screen>({ status: "loading" });
@@ -18,10 +18,19 @@ export function ShareViewer() {
   const focusOnOpen = useRef(false);
 
   useEffect(() => {
+    if (screen.status !== "opening") return;
+    const timer = window.setTimeout(() => {
+      setScreen((current) => current === screen ? { ...screen, status: "open" } : current);
+    }, 490);
+    return () => window.clearTimeout(timer);
+  }, [screen]);
+
+  useEffect(() => {
     let revision = 0;
     async function readLink() {
       const current = ++revision;
       const browser = navigator.languages?.length ? navigator.languages : [navigator.language];
+      focusOnOpen.current = false;
       setScreen({ status: "loading" });
       try {
         const payload = await decodeShare(window.location.hash.slice(1));
@@ -61,34 +70,31 @@ export function ShareViewer() {
     </section>
   </main>;
 
-  if (screen.status === "closed") return <main className={styles.scene} lang={locale}>
-    <section className={styles.invitation}>
+  if (screen.status === "closed" || screen.status === "opening") return <main className={styles.scene} lang={locale}>
+    <section className={styles.invitation} data-opening={screen.status === "opening" || undefined}>
       <div className={styles.envelope} aria-hidden="true">
+        <i className={styles.envelopeBack} />
         <i className={styles.envelopePaper} />
         <i className={styles.envelopeFront} />
-        <span className={styles.seal}><Music2 size={23} strokeWidth={1.5} /></span>
+        <i className={styles.envelopeFlap} />
+        <span className={styles.seal}>♪</span>
       </div>
       <h1>{t.sent}</h1>
       <p>{t.feelings}</p>
-      <button className={styles.open} onClick={() => {
+      <button className={styles.open} aria-disabled={screen.status === "opening"} onClick={() => {
+        if (screen.status === "opening") return;
         focusOnOpen.current = true;
-        setScreen({ ...screen, status: "open" });
-      }}>{t.open}<span aria-hidden="true">↗</span></button>
+        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        setScreen({ ...screen, status: reduced ? "open" : "opening" });
+      }}>{t.open}<span aria-hidden="true">→</span></button>
     </section>
   </main>;
 
   const { payload } = screen;
-  const dedication = payload.d;
-  const hasDedication = dedication && (dedication.to || dedication.msg || dedication.from);
-  return <main className={styles.scene} lang={locale}>
-    <article ref={card} tabIndex={-1} className={styles.revealed}>
-      <h1 className={styles.visuallyHidden}><bdi>{payload.s.t}</bdi> · <bdi>{payload.s.a}</bdi></h1>
-      {hasDedication && <section className={styles.note} aria-label={t.dedication}>
-        {dedication.to && <p className={styles.address}>{t.to} <bdi lang={payload.lang}>{dedication.to}</bdi></p>}
-        {dedication.msg && <p className={styles.message} lang={payload.lang} dir="auto">{dedication.msg}</p>}
-        {dedication.from && <p className={styles.signature}>{t.from} <bdi lang={payload.lang}>{dedication.from}</bdi></p>}
-      </section>}
-      <Composition payload={payload} />
+  return <main className={styles.scene} data-desk={artKind(payload.t)} lang={locale}>
+    <article ref={card} tabIndex={-1} className={styles.revealed} data-unwrapped={payload.r === "surprise" || undefined}>
+      <h1 className={styles.visuallyHidden} lang={payload.lang}><bdi>{payload.s.t}</bdi> · <bdi>{payload.s.a}</bdi></h1>
+      <Composition payload={payload} locale={locale} />
       <a className={styles.listen} href={spotifySongUrl(payload.s)} target="_blank" rel="noreferrer">
         <Music2 size={18} aria-hidden="true" /> {payload.s.sp ? t.listen : t.search} <ArrowUpRight size={15} aria-hidden="true" />
       </a>

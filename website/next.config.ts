@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const config: NextConfig = {
   poweredByHeader: false,
+  devIndicators: false,
   images: { unoptimized: true },
   async headers() {
     return [{
