@@ -1101,6 +1101,13 @@ public static partial class LyricCardRenderer
         {
             var face = fixedFace ?? Face(styleDefault);
             var size = LyricSize(large) * face.SizeFactor;
+            // Presence: a few words get large type, a long passage progressively smaller type.
+            var chars = C.Lines.Sum(line => line.Text.Length);
+            size *= chars switch { <= 24 => 1.22, <= 45 => 1.1, <= 80 => 1.0, <= 140 => .9, <= 220 => .8, _ => .72 };
+            // Each line whole when a modest reduction allows it: a line broken mid-phrase reads worse than one a little smaller.
+            var widest = C.Lines.Count == 0 ? 0 : C.Lines.Max(line => MeasureWidth(line.Text, face.Family, size, face.Weight) * (face.Style == FontStyles.Italic ? 1.04 : 1.02));
+            if (widest > width && widest * .66 <= width)
+                size *= width / widest;
             var panel = new StackPanel { Width = width };
             foreach (var line in C.Lines)
             {
@@ -1112,6 +1119,9 @@ public static partial class LyricCardRenderer
                     dropInitial = false;
                 }
                 var block = LineBlock(text, face, size, color, align, width);
+                // When a line must wrap, its lines are evened out (no word left alone).
+                block.HorizontalAlignment = align switch { TextAlignment.Center => HorizontalAlignment.Center, TextAlignment.Right => HorizontalAlignment.Right, _ => HorizontalAlignment.Left };
+                Balance(block, width);
                 if (panel.Children.Count > 0)
                     block.Margin = new Thickness(0, size * 0.14, 0, 0);
                 panel.Children.Add(block);

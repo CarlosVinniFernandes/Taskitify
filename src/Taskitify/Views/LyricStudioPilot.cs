@@ -31,21 +31,56 @@ public static partial class LyricCardRenderer
     private static FrameworkElement PocketConsole(Studio d)
     {
         const double w = 900, h = 1480;
-        var shell = d.Color("device", C("#D2CFC6"));
+        var edition = d.Text("model");
+        var clear = edition == "Clear";
+        var (preset, bezelTop, bezelBottom, plum, navy) = edition switch
+        {
+            "Clear" => (C("#C4CAD2"), C("#4A4C58"), C("#30323C"), C("#34363E"), C("#2C2E40")),
+            "Yellow" => (C("#F2C21B"), C("#33343B"), C("#1C1D22"), C("#1F2026"), C("#1F2026")),
+            "Black" => (C("#2A2B30"), C("#4A4B54"), C("#2D2E35"), C("#55565F"), C("#C9CBD6")),
+            _ => (C("#D2CFC6"), C("#666879"), C("#4B4D5C"), C("#9C2A58"), C("#2C2E86")),
+        };
+        var shell = d.Color("device", preset);
+        var engrave = Luminance(shell) < .3 ? Lighten(shell, .4) : Darken(shell, .55);
         var screen = d.Color("screen", C("#A7B26A"));
         var ink = Luminance(screen) > .45 ? C("#24361C") : C("#E9F1D8");
-        var navy = C("#2C2E86");
-        var plum = C("#9C2A58");
         var canvas = new Canvas { Width = w, Height = h };
+        Color Body(Color c) => clear ? Alpha(c, 140) : c;
 
         // Shell: square corners but the famous rounded lower right.
         var body = RoundRect(0, 0, w, h, 34, 34, 176, 34);
+        if (clear)
+        {
+            // Through the clear shell: the green board, its traces, the chips, the ribbon to the screen.
+            canvas.Children.Add(At(new Border { Width = w - 90, Height = 610, CornerRadius = new CornerRadius(12, 12, 150, 12),
+                Background = new LinearGradientBrush(C("#2F6B4C"), C("#1D4532"), 90) }, 45, 820));
+            canvas.Children.Add(At(new Path
+            {
+                Data = Geometry.Parse("M40,40 H300 V120 H520 M60,90 H260 V200 H700 M80,300 H340 V420 H760 M120,520 H420 V600 M600,140 V360 H780 M180,380 V620 M500,460 H720 V640"),
+                Stroke = Brush(Alpha(C("#D9B45A"), 150)), StrokeThickness = 3,
+            }, 45, 820));
+            foreach (var (x, y, cw, ch, text) in new[] { (300.0, 860.0, 250.0, 110.0, "TSK-CPU 27"), (560.0, 1100.0, 130.0, 80.0, "RAM"), (150.0, 1220.0, 110.0, 70.0, "AMP") })
+            {
+                var chip = new Border { Width = cw, Height = ch, CornerRadius = new CornerRadius(3), Background = new LinearGradientBrush(C("#2A2A2E"), C("#121214"), 90),
+                    Child = Label(text, Gill, 18, FontWeights.SemiBold, C("#9A9AA2"), TextAlignment.Center) };
+                ((FrameworkElement)chip.Child).VerticalAlignment = VerticalAlignment.Center;
+                canvas.Children.Add(At(chip, x, y));
+                for (var k = 8.0; k < cw - 8; k += 16)
+                {
+                    canvas.Children.Add(At(new Rectangle { Width = 6, Height = 10, Fill = Brush(C("#C9CCD2")) }, x + k, y - 9));
+                    canvas.Children.Add(At(new Rectangle { Width = 6, Height = 10, Fill = Brush(C("#C9CCD2")) }, x + k, y + ch - 1));
+                }
+            }
+            foreach (var (x, y) in new[] { (720.0, 860.0), (760.0, 900.0), (110.0, 1080.0), (480.0, 1320.0) })
+                canvas.Children.Add(At(new Ellipse { Width = 34, Height = 34, Fill = new RadialGradientBrush(C("#5B7FC0"), C("#22325A")), Stroke = Brush(C("#C9CCD2")), StrokeThickness = 2 }, x, y));
+            
+        }
         canvas.Children.Add(new Path
         {
             Data = body,
             Fill = new LinearGradientBrush(new GradientStopCollection
             {
-                new(Lighten(shell, .16), 0), new(shell, .35), new(Darken(shell, .9), 1),
+                new(Body(Lighten(shell, .16)), 0), new(Body(shell), .35), new(Body(Darken(shell, .9)), 1),
             }, new Point(0, 0), new Point(.35, 1)),
             Stroke = Brush(Darken(shell, .72)), StrokeThickness = 3,
         });
@@ -56,13 +91,13 @@ public static partial class LyricCardRenderer
         canvas.Children.Add(At(new Rectangle { Width = w - 68, Height = 2, Fill = Brush(Alpha(Colors.White, 120)) }, 34, 73));
         foreach (var x in new[] { 150.0, 750.0 })
             canvas.Children.Add(At(new Rectangle { Width = 3, Height = 70, Fill = Brush(Darken(shell, .78)) }, x, 0));
-        canvas.Children.Add(At(Label("◄ OFF · ON ►", Gill, 19, FontWeights.SemiBold, Darken(shell, .55), TextAlignment.Left), 172, 24));
+        canvas.Children.Add(At(Label("◄ OFF · ON ►", Gill, 19, FontWeights.SemiBold, engrave, TextAlignment.Left), 172, 24));
 
         // Bezel: dark slate glass, its lower right rounded like the shell.
         var bezel = new Path
         {
             Data = RoundRect(58, 108, 784, 640, 22, 22, 96, 22),
-            Fill = new LinearGradientBrush(C("#666879"), C("#4B4D5C"), 90),
+            Fill = new LinearGradientBrush(bezelTop, bezelBottom, 90),
             Stroke = Brush(C("#3B3D49")), StrokeThickness = 2,
         };
         canvas.Children.Add(bezel);
@@ -85,10 +120,10 @@ public static partial class LyricCardRenderer
         canvas.Children.Add(At(Label("BATTERY", Gill, 15, FontWeights.SemiBold, C("#B9BBC6"), TextAlignment.Left), 80, 378));
 
         // Screen: a recessed dot-matrix panel.
-        canvas.Children.Add(At(new Border { Width = 532, Height = 486, Background = Brush(C("#34353F")), CornerRadius = new CornerRadius(4) }, 184, 186));
+        canvas.Children.Add(At(new Border { Width = 572, Height = 486, Background = Brush(C("#34353F")), CornerRadius = new CornerRadius(4) }, 164, 186));
         var lcd = new Grid
         {
-            Width = 508, Height = 462,
+            Width = 548, Height = 462,
             Background = new LinearGradientBrush(Darken(screen, .9), Lighten(screen, .08), new Point(0, 0), new Point(1, 1)),
         };
         lcd.Children.Add(new Border { Background = DotMatrix(ink) });
@@ -99,7 +134,7 @@ public static partial class LyricCardRenderer
         });
         var face = d.UserFace;
         // A thin dot-matrix face, each lyric line kept whole when it can be (else wrapped evenly).
-        var lyric = LyricLines(d.LyricText, face?.Family ?? Vt323, face?.Weight ?? FontWeights.Normal, ink, 464, 300, Presence(d, 66), 38,
+        var lyric = LyricLines(d.LyricText, face?.Family ?? Vt323, face?.Weight ?? FontWeights.Normal, ink, 504, 320, Presence(d, 68), 38,
             d.Align(TextAlignment.Left), Leading(d, 1.02), gap: d.LyricText.Length > 140 ? 4 : 10, wholeShrink: .55);
         var copy = new DockPanel { Margin = new Thickness(22, 22, 22, 20) };
         var note = Label("\u266A " + d.Text("note").ToUpperInvariant(), Vt323, 28, FontWeights.Normal, Alpha(ink, 190), TextAlignment.Left);
@@ -112,7 +147,7 @@ public static partial class LyricCardRenderer
         lyric.VerticalAlignment = VerticalAlignment.Center;
         copy.Children.Add(lyric);
         lcd.Children.Add(copy);
-        canvas.Children.Add(At(lcd, 196, 198));
+        canvas.Children.Add(At(lcd, 176, 198));
 
         // Brand line under the screen.
         var brand = new StackPanel { Orientation = Orientation.Horizontal };
@@ -203,7 +238,7 @@ public static partial class LyricCardRenderer
                 RenderTransformOrigin = new Point(.5, .5), RenderTransform = new RotateTransform(-28),
             }, 640 + (i * 36), 1238));
         }
-        canvas.Children.Add(At(Label("● PHONES", Gill, 15, FontWeights.SemiBold, Darken(shell, .58), TextAlignment.Left), 380, 1440));
+        canvas.Children.Add(At(Label("● PHONES", Gill, 15, FontWeights.SemiBold, engrave, TextAlignment.Left), 380, 1440));
 
         canvas.Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 70, ShadowDepth = 26, Direction = 280, Opacity = .45 };
         var backdrop = Desk(Lighten(Darken(d.Accent, .7), .18), Darken(d.Accent, .32));
@@ -248,7 +283,7 @@ public static partial class LyricCardRenderer
             new(Alpha(C("#3B2E1E"), 70), 0), new(Alpha(C("#3B2E1E"), 0), .09), new(Alpha(C("#3B2E1E"), 0), .93), new(Alpha(C("#8A6A3E"), 34), 1),
         }, 0) });
         var left = (d.Wide ? 170 : 96) * u;
-        var right = (d.Wide ? 200 : 136) * u;
+        var right = (d.Wide ? 190 : 120) * u;
         var width = W - left - right;
         var tall = !d.Wide && H > 1500;
 
@@ -313,7 +348,7 @@ public static partial class LyricCardRenderer
         var face = d.UserFace;
         // The definition is the point of the page: the largest reading text, each line whole when it can be.
         var meaning = LyricLines(d.LyricText, face?.Family ?? Georgia, face?.Weight ?? FontWeights.Normal, ink,
-            width - 60 * u, (tall ? 640 : 340) * u, Presence(d, tall ? 84 : 66) * u, 30 * u, d.Align(TextAlignment.Left), Leading(d, 1.24), gap: (d.LyricText.Length > 140 ? 3 : 8) * u, wholeShrink: .72);
+            width - 60 * u, (tall ? 640 : 340) * u, Presence(d, tall ? 84 : 66) * u, 30 * u, d.Align(TextAlignment.Left), Leading(d, 1.24), gap: (d.LyricText.Length > 140 ? 3 : 8) * u, wholeShrink: .6);
         Grid.SetColumn(meaning, 1);
         definition.Children.Add(meaning);
         entry.Children.Add(definition);
@@ -405,14 +440,39 @@ public static partial class LyricCardRenderer
     /// </summary>
     private static FrameworkElement PersonalLetter(Studio d)
     {
-        const double w = 860, h = 1120, rule = 84, top = 230, inner = 150;
-        var paper = C("#FBF6EA");
-        var ink = C("#1E3772");
+        const double w = 860, rule = 84, top = 230;
+        var model = d.Text("model");
+        var romantic = model == "Romantic";
+        var minimal = model == "Minimal";
+        var inner = minimal ? 120.0 : 150.0;
+        var paper = romantic ? C("#FCF0EC") : minimal ? C("#FBFBF8") : C("#F8F0DE");
+        var ink = romantic ? C("#7A1F3D") : minimal ? C("#1B1B1F") : C("#1E3772");
+        var face = d.UserFace;
+        var ps = d.Text("ps");
+        // The lines are what the letter is for: the largest hand on the page, pressed a little harder;
+        // the sheet is as long as the writing needs.
+        var body = Handwriting(d.LyricText, face?.Family ?? HandFont, Math.Min(Presence(d, 84), 104), ink, w - inner - 66, 13, d.Align(TextAlignment.Left), rule,
+            maxHeight: rule * 8, weight: face?.Weight ?? FontWeights.SemiBold, preferWhole: d.LyricText.Length <= 110);
+        body.Measure(new Size(w - inner - 66, double.PositiveInfinity));
+        var lines = Math.Max(1, (int)Math.Round(body.DesiredSize.Height / rule));
+        var h = Math.Max(1120, top + ((lines + 5 + (string.IsNullOrWhiteSpace(ps) ? 0 : 2)) * rule) + 40);
         var canvas = new Canvas { Width = w + 140, Height = h + 170 };
 
         // Air-mail envelope underneath, its striped border showing.
-        var envelope = new Grid { Width = w - 30, Height = 560, Background = new LinearGradientBrush(C("#F1EADB"), C("#E3D8C2"), 90) };
-        envelope.Children.Add(new Border { BorderThickness = new Thickness(18), BorderBrush = AirMail() });
+        var envelope = new Grid { Width = w - 30, Height = 560, Background = romantic ? new LinearGradientBrush(C("#F6DCD8"), C("#E8C2BE"), 90) : new LinearGradientBrush(C("#F1EADB"), C("#E3D8C2"), 90) };
+        if (!romantic)
+            envelope.Children.Add(new Border { BorderThickness = new Thickness(18), BorderBrush = AirMail() });
+        else
+        {
+            // A wax seal pressed with a heart.
+            var seal = new Grid { Width = 120, Height = 120, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(80, 380, 0, 0) };
+            seal.Children.Add(new Path { Data = Geometry.Parse("M60,2 C80,0 94,10 104,20 C118,30 120,48 118,62 C120,80 110,98 96,106 C84,118 66,120 52,118 C34,120 18,108 10,94 C0,80 0,60 4,46 C6,28 20,12 36,6 C44,2 52,4 60,2 Z"),
+                Fill = new RadialGradientBrush(C("#C2323E"), C("#7A0F1C")) { GradientOrigin = new Point(.4, .35) }, Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 8, ShadowDepth = 3, Opacity = .4 } });
+            seal.Children.Add(new Ellipse { Width = 82, Height = 82, Stroke = Brush(Alpha(C("#5E0A14"), 160)), StrokeThickness = 3 });
+            seal.Children.Add(Label("\u2665", Symbols, 44, FontWeights.Normal, C("#6A0C18"), TextAlignment.Center));
+            ((FrameworkElement)seal.Children[^1]).VerticalAlignment = VerticalAlignment.Center;
+            envelope.Children.Add(seal);
+        }
         envelope.Children.Add(new Path { Data = Geometry.Parse("M18,18 L415,300 L812,18"), Stroke = Brush(Alpha(C("#8C7350"), 110)), StrokeThickness = 2.5 });
         var stamp = new Border
         {
@@ -441,21 +501,35 @@ public static partial class LyricCardRenderer
         envelope.RenderTransformOrigin = new Point(.5, .5);
         envelope.RenderTransform = new RotateTransform(4.5);
         envelope.Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 40, ShadowDepth = 14, Direction = 280, Opacity = .35 };
-        canvas.Children.Add(At(envelope, 104, h - 370));
+        if (!minimal)
+            canvas.Children.Add(At(envelope, 104, h - 370));
 
         // The sheet: ruled, a red margin, aged edges, two folds, a faint ring from a cup.
         var sheet = new Grid { Width = w, Height = h, Background = Fibers(paper, Alpha(C("#C9B996"), 30)) };
         var rules = new DrawingGroup();
         rules.Children.Add(new GeometryDrawing(Brushes.Transparent, null, new RectangleGeometry(new Rect(0, 0, 10, rule))));
-        rules.Children.Add(new GeometryDrawing(Brush(Alpha(C("#7E9DC4"), 120)), null, new RectangleGeometry(new Rect(0, rule - 1.6, 10, 1.6))));
+        rules.Children.Add(new GeometryDrawing(Brush(Alpha(romantic ? C("#E3A1AE") : C("#7E9DC4"), minimal ? (byte)0 : (byte)120)), null, new RectangleGeometry(new Rect(0, rule - 1.6, 10, 1.6))));
         sheet.Children.Add(new Border
         {
             Margin = new Thickness(0, top - rule, 0, 40),
             Background = new DrawingBrush(rules) { TileMode = TileMode.Tile, Viewport = new Rect(0, 0, 10, rule), ViewportUnits = BrushMappingMode.Absolute },
         });
-        sheet.Children.Add(new Border { Width = 2.4, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(inner - 32, 0, 0, 0), Background = Brush(Alpha(C("#D9706B"), 150)) });
-        sheet.Children.Add(new Border { BorderThickness = new Thickness(14), BorderBrush = new SolidColorBrush(Alpha(C("#C8A86E"), 26)), Opacity = .9 });
-        foreach (var fold in new[] { h / 3, h * 2 / 3 })
+        if (!minimal)
+            sheet.Children.Add(new Border { Width = 2.4, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(inner - 32, 0, 0, 0), Background = Brush(Alpha(romantic ? C("#E07A92") : C("#D9706B"), 150)) });
+        if (!minimal)
+            sheet.Children.Add(new Border { BorderThickness = new Thickness(romantic ? 10 : 18), BorderBrush = new SolidColorBrush(Alpha(C("#C8A86E"), romantic ? (byte)18 : (byte)40)), Opacity = .9 });
+        if (!minimal && !romantic)
+        {
+            // Foxing: the small brown spots old paper collects.
+            var fox = new Random(1957);
+            for (var k = 0; k < 26; k++)
+            {
+                var size = 4 + (fox.NextDouble() * 16);
+                sheet.Children.Add(new Ellipse { Width = size, Height = size * (.7 + (fox.NextDouble() * .5)), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
+                    Margin = new Thickness(fox.NextDouble() * (w - 30), fox.NextDouble() * (h - 30), 0, 0), Fill = new RadialGradientBrush(Alpha(C("#9C6A34"), (byte)(30 + fox.Next(40))), Alpha(C("#9C6A34"), 0)) });
+            }
+        }
+        foreach (var fold in minimal ? new[] { h / 2 } : new[] { h / 3, h * 2 / 3 })
             sheet.Children.Add(new Border
             {
                 Height = 26, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, fold - 13, 0, 0),
@@ -464,12 +538,15 @@ public static partial class LyricCardRenderer
                     new(Alpha(Colors.Black, 0), 0), new(Alpha(Colors.Black, 24), .48), new(Alpha(Colors.White, 110), .55), new(Alpha(Colors.White, 0), 1),
                 }, 90),
             });
-        sheet.Children.Add(new Ellipse
-        {
-            Width = 250, Height = 236, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom,
-            Margin = new Thickness(0, 0, -60, 120), StrokeThickness = 9,
-            Stroke = new LinearGradientBrush(Alpha(C("#8B5A2B"), 34), Alpha(C("#8B5A2B"), 6), 35),
-        });
+        if (!minimal && !romantic)
+            sheet.Children.Add(new Ellipse
+            {
+                Width = 250, Height = 236, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom,
+                Margin = new Thickness(0, 0, -60, 120), StrokeThickness = 9,
+                Stroke = new LinearGradientBrush(Alpha(C("#8B5A2B"), 34), Alpha(C("#8B5A2B"), 6), 35),
+            });
+        if (romantic)
+            sheet.Children.Add(PressedFlower(new Thickness(0, 0, -50, -60)));
 
         // Writing, by hand.
         // Shifted so the writing's baselines rest on the rules.
@@ -478,13 +555,7 @@ public static partial class LyricCardRenderer
         writing.Children.Add(At(date, w - 330 - 70, top - (rule * 2) + 8));
         var hello = Handwriting(d.Text("hello"), HandFont, 50, Alpha(ink, 225), w - inner - 80, 12, TextAlignment.Left, rule);
         writing.Children.Add(At(hello, inner - 6, top - rule + 6));
-        var face = d.UserFace;
-        // The lines are what the letter is for: the largest hand on the page, pressed a little harder.
-        var body = Handwriting(d.LyricText, face?.Family ?? HandFont, Math.Min(Presence(d, 80), 96), ink, w - inner - 66, 13, d.Align(TextAlignment.Left), rule,
-            maxHeight: rule * (d.LyricText.Length > 110 ? 9 : 6), weight: face?.Weight ?? FontWeights.SemiBold, preferWhole: d.LyricText.Length <= 110);
         writing.Children.Add(At(body, inner, top + 6));
-        body.Measure(new Size(w - inner - 70, double.PositiveInfinity));
-        var lines = Math.Max(1, (int)Math.Round(body.DesiredSize.Height / rule));
         var bye = Handwriting(d.Text("bye"), HandFont, 42, Alpha(ink, 220), 400, 14, TextAlignment.Left, rule);
         writing.Children.Add(At(bye, w - 470, top + ((lines + 1) * rule) + 6));
         var name = Handwriting(d.Text("sign"), HandFont, 56, Alpha(ink, 235), 400, 15, TextAlignment.Left, rule);
@@ -496,7 +567,8 @@ public static partial class LyricCardRenderer
         var note = Handwriting("\u266A " + d.Title, HandFont, 32, Alpha(ink, 200), 330, 16, TextAlignment.Left, 38, maxHeight: 40);
         note.RenderTransformOrigin = new Point(0, 0);
         note.RenderTransform = new RotateTransform(-7);
-        var ps = d.Text("ps");
+        if (romantic)
+            writing.Children.Add(At(Label("\u2661", Symbols, 40, FontWeights.Normal, Alpha(ink, 200), TextAlignment.Left), w - 150, y - 30));
         if (!string.IsNullOrWhiteSpace(ps))
         {
             var post = Handwriting("P.S. " + ps, HandFont, 44, Alpha(ink, 225), w - inner - 90, 17, TextAlignment.Left, rule, maxHeight: rule * 2);
@@ -518,9 +590,24 @@ public static partial class LyricCardRenderer
         sheetBox.Effect = new DropShadowEffect { Color = Colors.Black, BlurRadius = 46, ShadowDepth = 16, Direction = 280, Opacity = .33 };
         canvas.Children.Add(At(sheetBox, 50, 46));
         // Tape holding the corner.
-        canvas.Children.Add(At(Tape(Lighten(d.Accent, .55), 210, 64, -32), w - 120, 16));
+        if (!minimal)
+            canvas.Children.Add(At(Tape(romantic ? C("#F2B8C6") : Lighten(d.Accent, .55), 210, 64, -32), w - 120, 16));
+        var desk = romantic ? Desk(C("#8E6A6E"), C("#3A2628")) : minimal ? Desk(C("#C4C0B8"), C("#6A665F")) : Desk(C("#7D6858"), C("#382C25"));
+        return ObjectStage(d, canvas, canvas.Width, canvas.Height, desk, C("#F3E9DC"), C("#382C25"));
+    }
 
-        return ObjectStage(d, canvas, canvas.Width, canvas.Height, Desk(C("#7D6858"), C("#382C25")), C("#F3E9DC"), C("#382C25"));
+    /// <summary>A flower pressed between the pages and kept with the letter: faded petals, a dry stem.</summary>
+    private static FrameworkElement PressedFlower(Thickness margin)
+    {
+        var c = new Canvas { Width = 220, Height = 300, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom, Margin = margin,
+            RenderTransformOrigin = new Point(.5, .5), RenderTransform = new RotateTransform(-18), Opacity = .85 };
+        c.Children.Add(new Path { Data = Geometry.Parse("M110,120 C104,170 118,220 100,296"), Stroke = Brush(C("#7C8A55")), StrokeThickness = 4, StrokeEndLineCap = PenLineCap.Round });
+        c.Children.Add(new Path { Data = Geometry.Parse("M108,200 C80,180 60,190 50,210 C74,214 92,210 108,200 Z M112,240 C140,226 160,232 170,250 C146,254 128,250 112,240 Z"), Fill = Brush(Alpha(C("#7C8A55"), 200)) });
+        for (var k = 0; k < 6; k++)
+            c.Children.Add(new Ellipse { Width = 46, Height = 70, Fill = new RadialGradientBrush(Alpha(C("#E58FA4"), 210), Alpha(C("#B5506A"), 190)), RenderTransformOrigin = new Point(.5, 1),
+                RenderTransform = new TransformGroup { Children = { new TranslateTransform(87, 50), new RotateTransform(k * 60, 110, 120) } } });
+        c.Children.Add(At(new Ellipse { Width = 30, Height = 30, Fill = new RadialGradientBrush(C("#F2C66A"), C("#B98A2E")) }, 95, 105));
+        return c;
     }
 
     /// <summary>The red and blue diagonal stripes of an air-mail envelope's border.</summary>
@@ -727,6 +814,18 @@ public static partial class LyricCardRenderer
             }
             stack.Measure(new Size(width, double.PositiveInfinity));
             return stack;
+        }
+        // Room to spare: grow a little while every line stays whole and the block still leaves air.
+        if (lines.All(line => MeasureWidth(line, font, start, weight) * (italic ? 1.04 : 1) <= width))
+        {
+            var best = start;
+            for (var size = start * 1.04; size <= start * 1.22; size *= 1.04)
+            {
+                if (!lines.All(line => MeasureWidth(line, font, size, weight) * (italic ? 1.04 : 1) <= width) || Build(size, wrap: false).DesiredSize.Height > maxHeight * .8)
+                    break;
+                best = size;
+            }
+            start = best;
         }
         // Whole lines first, but only a little smaller: a big, evenly broken line beats a small whole one.
         for (var size = start; size >= Math.Max(min, start * wholeShrink); size *= .96)
