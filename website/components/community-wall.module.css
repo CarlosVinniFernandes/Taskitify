@@ -1,53 +1,50 @@
 @font-face {
-  font-family: "Guestbook Garamond";
-  src: url("/fonts/guestbook-text.woff2") format("woff2");
-  font-weight: 400 600;
+  font-family: "Guestbook Hand";
+  src: url("/fonts/guestbook-hand.woff2") format("woff2");
+  font-weight: 600 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Guestbook Note";
+  src: url("/fonts/guestbook-note.woff2") format("woff2");
+  font-display: swap;
+}
+@font-face {
+  font-family: "Guestbook Margin";
+  src: url("/fonts/guestbook-margin.woff2") format("woff2");
   font-display: swap;
 }
 @font-face {
   font-family: "Guestbook Signature";
   src: url("/fonts/guestbook-signature.woff2") format("woff2");
-  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Guestbook Ink";
+  src: url("/fonts/guestbook-ink.woff2") format("woff2");
   font-display: swap;
 }
 
-.communityTop, .guestbook, .wall {
-  --book-serif: "Guestbook Garamond", Georgia, serif;
-  width: min(100% - var(--gutter) * 2, 970px);
-}
-.communityTop {
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-  flex-wrap: wrap;
-  gap: 12px 24px;
-  padding-block: clamp(28px, 5vw, 47px) 16px;
-}
-.communityTop h1 { color: #e3d8be; font: 500 1.9rem/1 var(--book-serif); }
-.communityTop p { margin-top: 6px; color: #b7bdb2; font-size: .88rem; }
-.communityTop :global(.button-spotify) {
-  padding-inline: 10px;
-  min-height: 42px;
-  background: transparent;
-  color: #b8c8ad;
-  border-color: #71816870;
-}
-.communityTop :global(.button-spotify):hover { background: #46594535; }
 .guestbook, .wall {
   --paper-texture: url("/media/guestbook-paper.png");
+  --hand: "Guestbook Hand", "Segoe Print", cursive;
+  --note: "Guestbook Note", "Segoe Print", cursive;
+  --margin: "Guestbook Margin", "Segoe Print", cursive;
+  --ink: "Guestbook Ink", "Segoe Print", cursive;
+  width: min(100% - var(--gutter) * 2, 970px);
   scroll-margin-top: 20px;
 }
-.guestbook { padding-block: 14px 14px; }
+.guestbook { padding-block: clamp(24px, 5vw, 57px) 14px; }
 .wall { padding-block: clamp(42px, 6vw, 75px); }
 .heading { margin: 0 auto 24px; text-align: left; }
 .heading h2 {
   margin: .08em 0 .05em;
   color: #e4d7bc;
-  font: 500 clamp(2.15rem, 4.3vw, 3.15rem)/1.02 var(--book-serif);
-  letter-spacing: -.025em;
+  font: 600 clamp(2rem, 4vw, 2.8rem)/1.03 var(--hand);
+  letter-spacing: 0;
 }
 .heading p { color: #b7bdb2; font-size: .92rem; }
-.heading .kicker { color: #a9b3a6; font-size: .75rem; font-weight: 600; }
+.heading .kicker { color: #a9b3a6; font: 400 1.25rem/1 var(--margin); }
 
 .desk {
   position: relative;
@@ -86,7 +83,7 @@
 .leftPage {
   border-radius: 2px 19px 2px 4px / 4px 4px 2px 3px;
   background: var(--paper-texture), linear-gradient(90deg, #f3e8d3 0 90%, #dfcdb0 99%);
-  font: 400 clamp(1.15rem, 2.35vw, 1.36rem)/1.25 var(--book-serif);
+  font: 400 clamp(1.06rem, 2vw, 1.24rem)/1.48 var(--note);
 }
 .rightPage {
   border-radius: 20px 4px 5px 3px / 4px 4px 3px 3px;
@@ -96,23 +93,25 @@
 .letterHeader h2 {
   margin: 2px 0 0;
   color: #362e25;
-  font: 500 clamp(2.25rem, 4.1vw, 3.36rem)/.96 var(--book-serif);
-  letter-spacing: -.026em;
+  font: 600 clamp(2rem, 3.1vw, 2.48rem)/.98 var(--hand);
+  letter-spacing: 0;
   text-wrap: balance;
 }
 .paper h3 {
-  font: 500 clamp(1.55rem, 3vw, 2.17rem)/1.03 var(--book-serif);
-  letter-spacing: -.015em;
+  font: 600 clamp(1.72rem, 2.8vw, 2.18rem)/1.01 var(--hand);
+  letter-spacing: 0;
   color: #3e382b;
 }
-.leftPage > p + p { margin-top: 12px; }
-.noteCaption { color: #635846; font: 600 .73rem/1.35 "Figtree", sans-serif; }
+.leftPage > p + p { margin-top: 13px; }
+.leftPage > p:first-of-type { transform: rotate(-.55deg); }
+.leftPage > p:nth-of-type(2) { transform: rotate(.45deg); }
+.noteCaption { color: #665441; font: 400 1.28rem/1.1 var(--margin); }
 .leftPage .signature { margin-top: 16px; color: #4b3e30; font-size: 1rem; }
 .signature span {
   display: inline-block;
   margin-left: 4px;
   color: #6f423a;
-  font: 600 1.8rem/.8 "Guestbook Signature", cursive;
+  font: 400 1.97rem/.8 "Guestbook Signature", cursive;
   transform: rotate(-4deg);
 }
 .letterActions { display: grid; align-items: start; justify-items: start; gap: 5px; margin-top: 19px; }
@@ -124,23 +123,25 @@
   background: #704238;
   color: #fbefdb;
   cursor: pointer;
-  font: 600 .92rem/1.25 "Figtree", sans-serif;
+  font: 700 1.23rem/1.02 var(--hand);
 }
 .writeButton:hover { background: #5b352d; }
 .rightPage :global(.song-form) { margin-top: 14px; padding: 0; border: 0; background: transparent; }
 .rightPage :global(.song-form fieldset) { gap: 9px; }
 .rightPage :global(.form-pair) { grid-template-columns: 1fr; gap: 9px; }
-.rightPage :global(.song-form label) { color: #4d4234; font-size: .85rem; }
-.rightPage :global(.song-form .optional) { color: #665746; }
+.rightPage :global(.song-form label) { color: #4d4234; font: 600 1.24rem/1.14 var(--hand); }
+.rightPage :global(.song-form .publish-name) { font: 400 .96rem/1.16 var(--ink); }
+.rightPage :global(.song-form .optional) { color: #665746; font-size: .87em; }
 .rightPage :global(.song-form input:not([type="checkbox"])) {
   margin-top: 3px;
-  min-height: 40px;
-  padding: 7px 10px;
-  border: 1px solid #9f8a71;
-  border-radius: 2px;
+  min-height: 37px;
+  padding: 3px 5px 2px;
+  border: 0;
+  border-bottom: 1px solid #9f896b;
+  border-radius: 0;
   color: #383026;
-  background: #fff7e941;
-  font: 400 1rem/1.2 "Figtree", sans-serif;
+  background: #fff7e927;
+  font: 400 1.07rem/1.2 var(--ink);
 }
 .rightPage :global(.song-form input)::placeholder { color: #796856; }
 .rightPage :global(.song-form .publish-name input) { min-height: 0; padding: 0; accent-color: #6d4036; }
@@ -151,10 +152,10 @@
   border-radius: 2px;
   color: #fbefdb;
   background: #704238;
-  font: 600 .91rem/1.1 "Figtree", sans-serif;
+  font: 700 1.2rem/1 var(--hand);
 }
 .rightPage :global(.song-form .button:hover) { background: #5b352d; }
-.rightPage :global(.song-form .form-note) { font-size: .77rem; color: #594c3c; }
+.rightPage :global(.song-form .form-note) { font: 400 .84rem/1.24 var(--ink); color: #594c3c; }
 .rightPage :global(.song-form .feedback:not(:empty)) { color: #80372d; }
 .rightPage :global(.song-form .feedback-success:not(:empty)) { color: #435646; }
 .paper :is(a, button, input):focus-visible { outline-color: #724238; }
@@ -167,7 +168,7 @@
   border: 0;
   color: #51463a;
   background: transparent;
-  font: 600 .81rem/1.2 "Figtree", sans-serif;
+  font: 600 1.07rem/1.12 var(--hand);
   text-decoration: underline;
   text-underline-offset: .23em;
   cursor: pointer;
@@ -202,10 +203,10 @@
 .notes strong {
   display: block;
   color: #3c3228;
-  font: 600 1.27rem/1.06 var(--book-serif);
+  font: 700 1.32rem/1.02 var(--hand);
 }
-.notes span { display: block; color: #5d5042; font-size: .81rem; }
-.names li { color: #4c3b2b; font: 500 1.23rem/1.18 var(--book-serif); }
+.notes span { display: block; color: #5d5042; font: 400 .98rem/1.18 var(--ink); }
+.names li { color: #4c3b2b; font: 600 1.28rem/1.16 var(--hand); }
 .thanks, .bookMessage { margin-top: 11px; color: #5c4c3b; font-size: .86rem; }
 .thanks { display: flex; align-items: center; gap: 7px; color: #6b423a; }
 .bookNav, .wallNav { display: flex; justify-content: space-between; gap: 9px 16px; }
@@ -282,12 +283,12 @@
 .track h3 {
   margin-top: 8px;
   color: #353d35;
-  font: 600 clamp(1.25rem, 2.6vw, 1.61rem)/1.03 var(--book-serif);
+  font: 700 clamp(1.38rem, 2.65vw, 1.7rem)/1.03 var(--hand);
   letter-spacing: -.022em;
 }
 .track p { font-size: .86rem; }
-.track .attribution { font: 400 1.01rem/1.11 var(--book-serif); margin-top: 2px; }
-.track .meta { display: flex; flex-wrap: wrap; gap: 2px 5px; color: #625744; font-size: .71rem; margin-top: 6px; }
+.track .attribution { font: 400 1.16rem/1 var(--margin); margin-top: 2px; }
+.track .meta { display: flex; flex-wrap: wrap; gap: 2px 5px; color: #5a4a36; font: 400 1.12rem/1 var(--margin); margin-top: 6px; }
 .added { color: #365a4b; font-weight: 700; }
 .spotify {
   color: #315b4b;
@@ -308,12 +309,12 @@
   background: #ead9b1;
   box-shadow: 2px 4px 7px #5d482d7f;
   text-align: center;
-  font: 500 1.14rem/1.35 var(--book-serif);
+  font: 400 1.08rem/1.38 var(--ink);
 }
 .boardFooter { margin-top: 24px; display: flex; justify-content: flex-end; align-items: center; gap: 14px; flex-wrap: wrap; }
 .pinCta {
   padding: 9px 14px;
-  font: 500 1.06rem/1.2 var(--book-serif);
+  font: 700 1.25rem/1.1 var(--hand);
   color: #f5e4bd;
   background: #654d36;
   border: 1px dashed #d2be91;
