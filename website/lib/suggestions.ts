@@ -1,5 +1,6 @@
 import { createHmac, randomUUID } from "node:crypto";
 import { isIP } from "node:net";
+import { publicSuggestion, type WallEntry } from "./community-wall.ts";
 import { countryLimit, limits, type Fields } from "./suggestion-fields.ts";
 
 const payloadLimit = 4096;
@@ -24,10 +25,10 @@ type Options = {
   now?: () => Date;
 };
 
-function reply(status: number, code: string, retryAfter?: number) {
+function reply(status: number, code: string, retryAfter?: number, entry?: WallEntry | null) {
   const headers = new Headers({ "Cache-Control": "no-store" });
   if (retryAfter) headers.set("Retry-After", String(retryAfter));
-  return Response.json(status === 201 ? { ok: true } : { ok: false, code }, { status, headers });
+  return Response.json(status === 201 ? { ok: true, ...(entry ? { entry } : {}) } : { ok: false, code }, { status, headers });
 }
 
 function sameOrigin(request: Request) {
@@ -129,7 +130,7 @@ export async function handleSuggestion(request: Request, options: Options): Prom
   };
 
   try {
-    if (await options.create(path, suggestion)) return reply(201, "saved");
+    if (await options.create(path, suggestion)) return reply(201, "saved", undefined, publicSuggestion(suggestion));
     return reply(429, "rate", Math.ceil(((window + 1) * windowMs - now.getTime()) / 1000));
   } catch {
     return reply(503, "unavailable");

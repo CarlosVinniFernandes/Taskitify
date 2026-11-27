@@ -8,7 +8,7 @@ import { guestbookCopy } from "@/lib/guestbook-copy";
 import type { Fields } from "@/lib/suggestion-fields";
 import { communityWallPageSizes, type GuestbookPage, type WallPage } from "@/lib/community-wall";
 import { SongForm } from "./song-form";
-import { MusicBoard } from "./music-board";
+import { MusicBoard, rememberContribution } from "./music-board";
 import { WallPagination } from "./wall-pagination";
 import { pathFor } from "@/lib/site";
 import styles from "./community-wall.module.css";
@@ -53,7 +53,10 @@ function GuestSignatures({ locale, thanked, onWrite }: {
 
   return <div className={styles.signatures} aria-busy={result === null}>
     <h3 ref={heading} tabIndex={-1}>{t.names}</h3>
-    {thanked && <p className={styles.thanks} role="status"><Heart size={15} aria-hidden="true" /> {t.thanks}</p>}
+    {thanked && <>
+      <p className={styles.thanks} role="status"><Heart size={15} aria-hidden="true" /> {t.thanks}</p>
+      <a className={styles.paperLink} href="#wall">{t.viewYourSong}</a>
+    </>}
     {signatures.length > 0 ? <ul className={styles.names} aria-label={t.names}>
       {signatures.map((signature, index) => <li key={index}>
         <bdi className={styles.visitorName}>{signature.name}</bdi>
@@ -141,8 +144,9 @@ export function CommunityContributions({ locale, initial, wallEnabled, privacyHr
           {open === "form" ? <>
             <h3 ref={formHeading} tabIndex={-1}>{book.contribution}</h3>
             <SongForm locale={locale} initial={revision ? emptyFields : initial} wallEnabled={wallEnabled}
-              onSaved={() => {
+              onSaved={(entry) => {
                 if (!wallEnabled) return;
+                if (entry) rememberContribution(entry);
                 setPage(1);
                 setRevision(revision + 1);
                 setOpen("signed");

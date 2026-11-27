@@ -239,7 +239,6 @@
   text-underline-offset: .18em;
 }
 .boardMessage { margin: 0 0 14px; color: #162126; font-size: .97rem; }
-.boardFooter { display: flex; justify-content: flex-end; margin-top: 18px; }
 .pinCta { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: #162126; text-decoration: underline; text-underline-offset: .22em; }
 .boardButton { display: inline-flex; align-items: center; min-height: 44px; padding: 5px; border: 0; background: transparent; color: #162126; cursor: pointer; text-decoration: underline; }
 
@@ -303,6 +302,8 @@
 .openSpace, .vacantSlot { width: 100%; min-height: 151px; border: 1px dashed #4f44365e; border-radius: 2px; }
 .vacantSlot { background: #5445300d; }
 .openSpace { display: grid; border-color: #544b3c; background: #f7efdb26; }
+.tracks[data-packed] .openSpace { grid-column: 1 / -1; min-height: 65px; }
+.track .personalLabel { margin: 0 0 8px; color: #365d53; font-size: .75rem; font-weight: 650; }
 .openSpace .pinCta { justify-content: center; padding: 10px; text-align: center; font-weight: 600; }
 .openSpace .pinCta:hover { background: #f7efdb48; }
 .openSpace .pinCta:focus-visible { outline: 2px solid #283d46; outline-offset: 4px; }
@@ -310,7 +311,8 @@
   .vacantSlot:nth-child(n+13) { display: none; }
 }
 @media (max-width: 660px) {
-  .openSpace, .vacantSlot { min-height: 76px; }
+  .openSpace { grid-column: 1 / -1; min-height: 86px; }
+  .vacantSlot { min-height: 76px; }
   .vacantSlot:nth-child(n+5) { display: none; }
   .fullPagination ul { gap: 1px; }
   .fullPagination li :is(a, button, .currentPage) { min-width: 34px; padding-inline: 4px; }

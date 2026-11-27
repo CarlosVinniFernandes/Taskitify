@@ -41,6 +41,7 @@ test("stores an optional country with the public signature", async () => {
   assert.equal(response.status, 201);
   assert.equal(saved?.country, "Brazil");
   assert.equal(publicSuggestion(saved)?.country, "Brazil");
+  assert.deepEqual(await response.json(), { ok: true, entry: publicSuggestion(saved) });
   assert.equal(publicSuggestion({ ...saved!, publishName: false })?.country, undefined);
   assert.equal((await submit({ publishSuggestion: true, country: "" })).saved?.country, undefined);
   for (const country of [42, "x".repeat(61), "a\nb"]) {

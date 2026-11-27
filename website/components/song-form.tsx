@@ -6,10 +6,12 @@ import { copy, type Locale } from "@/lib/copy";
 import { guestbookCopy } from "@/lib/guestbook-copy";
 import { countryLimit, limits, type Fields } from "@/lib/suggestion-fields";
 
+import type { WallEntry } from "@/lib/community-wall";
+
 type Feedback = "idle" | "sending" | "success" | "invalid" | "rate" | "error";
 
 export function SongForm({ locale, initial, wallEnabled, onSaved }: {
-  locale: Locale; initial: Fields; wallEnabled: boolean; onSaved: () => void;
+  locale: Locale; initial: Fields; wallEnabled: boolean; onSaved: (entry: WallEntry | null) => void;
 }) {
   const t = copy[locale].community;
   const book = guestbookCopy[locale];
@@ -42,7 +44,7 @@ export function SongForm({ locale, initial, wallEnabled, onSaved }: {
           if (field instanceof HTMLInputElement) field.value = "";
         }
         setState("success");
-        onSaved();
+        onSaved("entry" in result ? result.entry as WallEntry : null);
       } else {
         setState(response.status === 429 ? "rate" : [400, 403, 413, 415].includes(response.status) ? "invalid" : "error");
       }
