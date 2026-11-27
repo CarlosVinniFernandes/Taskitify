@@ -35,8 +35,8 @@ public sealed class TourWindow : Window
     private const double DesignWidth = 1120, DesignHeight = 720;
     private static readonly Color Cream = Color.FromRgb(0xF1, 0xF2, 0xED);
     private static readonly Brush CreamBrush = Frozen(Cream);
-    private static readonly Brush Muted = Frozen(Color.FromArgb(0xC4, 0xF1, 0xF2, 0xED));
-    private static readonly Brush Faint = Frozen(Color.FromArgb(0x80, 0xF1, 0xF2, 0xED));
+    private static readonly Brush Muted = Frozen(Color.FromArgb(0xE2, 0xF1, 0xF2, 0xED));
+    private static readonly Brush Faint = Frozen(Color.FromArgb(0xA8, 0xF1, 0xF2, 0xED));
     private static readonly Brush Turquoise = Frozen(Color.FromRgb(0x5C, 0xD2, 0xE0));
     private static readonly FontFamily Display = LyricCardRenderer.InterDisplay;
     private static readonly FontFamily Icons = new("Segoe Fluent Icons, Segoe MDL2 Assets");
@@ -90,7 +90,9 @@ public sealed class TourWindow : Window
         _steps.Add(new("Privacy", BuildPrivacy, Atmosphere("#0C1A20", "#163037", "#2E5A55")));
         _steps.Add(new("Home", BuildHome, Atmosphere("#111C2A", "#2A3550", "#B08A55"), CustomActions: true));
 
-        Content = new Viewbox { Stretch = Stretch.Uniform, Child = BuildShell() };
+        // The atmosphere fills the whole window; only the content keeps the design proportions.
+        _backB.Opacity = 0;
+        Content = new Grid { Children = { _backA, _backB, new Viewbox { Stretch = Stretch.Uniform, Child = BuildShell() } } };
         PreviewKeyDown += OnKey;
         Loaded += (_, _) => Go(0);
         Closed += (_, _) =>
@@ -108,9 +110,6 @@ public sealed class TourWindow : Window
     private Grid BuildShell()
     {
         var root = new Grid { Width = DesignWidth, Height = DesignHeight, ClipToBounds = true };
-        root.Children.Add(_backA);
-        root.Children.Add(_backB);
-        _backB.Opacity = 0;
 
         _content.Margin = new Thickness(56, 76, 56, 92);
         root.Children.Add(_content);
@@ -336,9 +335,10 @@ public sealed class TourWindow : Window
         return new Border
         {
             Margin = new Thickness(9), Padding = new Thickness(24, 24, 22, 22), CornerRadius = new CornerRadius(18),
-            Background = Frozen(Color.FromArgb(active ? (byte)0x2A : (byte)0x18, 0xFF, 0xFF, 0xFF)),
-            BorderBrush = active ? Frozen(Color.FromArgb(0x90, accent.R, accent.G, accent.B)) : Frozen(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF)),
+            Background = Frozen(active ? Color.FromRgb(0x1B, 0x2C, 0x37) : Color.FromRgb(0x15, 0x23, 0x2D)),
+            BorderBrush = active ? Frozen(Color.FromArgb(0xB0, accent.R, accent.G, accent.B)) : SurfaceLine,
             BorderThickness = new Thickness(active ? 1.5 : 1), Child = stack,
+            Effect = new DropShadowEffect { BlurRadius = 30, ShadowDepth = 10, Direction = 270, Opacity = .35, Color = Colors.Black },
         };
     }
 
@@ -372,7 +372,7 @@ public sealed class TourWindow : Window
         var popup = Live(step, () => _stage.Mini(1.6), 380);
         popup.HorizontalAlignment = HorizontalAlignment.Right;
         popup.VerticalAlignment = VerticalAlignment.Bottom;
-        popup.Margin = new Thickness(0, 0, 150, 70);
+        popup.Margin = new Thickness(0, 0, 190, 84);
         popup.Opacity = 0;
         popup.IsHitTestVisible = false;
         var scale = new ScaleTransform(.92, .92);
@@ -380,7 +380,7 @@ public sealed class TourWindow : Window
         popup.RenderTransform = scale;
         stagePanel.Children.Add(popup);
 
-        var bar = TaskbarMock(step, 1008, compact: false, onPlayerClick: () =>
+        var bar = TaskbarMock(step, 1008 / 1.32, compact: false, onPlayerClick: () =>
         {
             var open = popup.Opacity < .5;
             Fade(popup, open ? 1 : 0, 220);
@@ -388,13 +388,14 @@ public sealed class TourWindow : Window
             Animate(scale, ScaleTransform.ScaleYProperty, open ? 1 : .92, 260);
         });
         bar.VerticalAlignment = VerticalAlignment.Bottom;
+        bar.LayoutTransform = new ScaleTransform(1.32, 1.32);
         stagePanel.Children.Add(bar);
         var hint = IconText("  " + T("TaskbarClick"));
         hint.FontSize = 13;
         hint.Foreground = CreamBrush;
         hint.HorizontalAlignment = HorizontalAlignment.Right;
         hint.VerticalAlignment = VerticalAlignment.Bottom;
-        hint.Margin = new Thickness(0, 0, 24, 66);
+        hint.Margin = new Thickness(0, 0, 24, 84);
         hint.Effect = new DropShadowEffect { BlurRadius = 8, ShadowDepth = 0, Opacity = .7, Color = Colors.Black };
         stagePanel.Children.Add(hint);
         root.Children.Add(stagePanel);
@@ -406,7 +407,12 @@ public sealed class TourWindow : Window
     {
         var bar = new Grid { Height = 52 };
         var left = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
-        foreach (var (glyph, color) in new[] { ("", "#4CC2FF"), ("", "#F1F2ED"), ("", "#E8C468"), ("", "#5FC4D8"), ("", "#8FB2E8") }.Take(compact ? 3 : 5))
+        // Windows' Start button, drawn: the icon font has no logo.
+        var startGlyph = new UniformGrid { Rows = 2, Columns = 2, Width = 16, Height = 16, Margin = new Thickness(12, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center };
+        for (var q = 0; q < 4; q++)
+            startGlyph.Children.Add(new Border { Margin = new Thickness(0.8), CornerRadius = new CornerRadius(1.5), Background = Frozen(Color.FromRgb(0x4C, 0xC2, 0xFF)) });
+        left.Children.Add(startGlyph);
+        foreach (var (glyph, color) in new[] { ("", "#F1F2ED"), ("", "#E8C468"), ("", "#5FC4D8"), ("", "#8FB2E8") }.Take(compact ? 2 : 4))
             left.Children.Add(new TextBlock { Text = glyph, FontFamily = Icons, FontSize = 18, Width = 40, TextAlignment = TextAlignment.Center, Foreground = Frozen((Color)ColorConverter.ConvertFromString(color)) });
         bar.Children.Add(left);
         var right = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 14, 0) };
@@ -476,11 +482,12 @@ public sealed class TourWindow : Window
         segment.VerticalAlignment = VerticalAlignment.Top;
         root.Children.Add(segment);
 
-        var stage = new Grid { Margin = new Thickness(0, 86, 0, 0) };
-        var desktop = new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Background = PhotoBrush("fuji.jpg", .3, Stretch.UniformToFill), Height = 210, VerticalAlignment = VerticalAlignment.Bottom };
+        var stage = new Grid { Margin = new Thickness(0, 74, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        var desktop = new Border { CornerRadius = new CornerRadius(16), ClipToBounds = true, Background = PhotoBrush("fuji.jpg", .35, Stretch.UniformToFill), Height = 150, VerticalAlignment = VerticalAlignment.Bottom };
         stage.Children.Add(desktop);
-        var bar = TaskbarMock(step, 1008, compact: false);
+        var bar = TaskbarMock(step, 1008 / 1.4, compact: false);
         bar.VerticalAlignment = VerticalAlignment.Bottom;
+        bar.LayoutTransform = new ScaleTransform(1.4, 1.4);
         stage.Children.Add(bar);
         Grid.SetRow(stage, 1);
         root.Children.Add(stage);
@@ -525,7 +532,7 @@ public sealed class TourWindow : Window
     private FrameworkElement BuildMini()
     {
         var step = Current("Mini");
-        var grid = Columns(380);
+        var grid = Columns(404);
         var left = Stack(Eyebrow(T("MiniEyebrow")), Headline(T("MiniTitle"), 38), Body(T("MiniBody"), 15, top: 10));
         MiniPlayerStyle Look() => _stage.Settings.Current.MiniPlayerLook;
         void Change(Action<MiniPlayerStyle> change) => _stage.Update(s => change(s.MiniPlayerLook));
@@ -548,7 +555,7 @@ public sealed class TourWindow : Window
             (T("HighProgressive"), () => Look().Highlight == LyricsHighlight.Progressive, () => Change(l => l.Highlight = LyricsHighlight.Progressive))));
 
         var songs = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0) };
-        songs.Children.Add(new TextBlock { Text = T("GroupSong"), FontSize = 12.5, Foreground = Faint, VerticalAlignment = VerticalAlignment.Center, Width = 92 });
+        songs.Children.Add(new TextBlock { Text = T("GroupSong"), FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = Muted, VerticalAlignment = VerticalAlignment.Center, Width = 96 });
         foreach (var song in TourSong.All)
         {
             var b = new Button
@@ -575,8 +582,8 @@ public sealed class TourWindow : Window
     private StackPanel Group(string label, params (string Text, Func<bool> IsOn, Action Apply)[] options)
     {
         var row = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 14, 0, 0) };
-        row.Children.Add(new TextBlock { Text = label, FontSize = 12.5, Foreground = Faint, VerticalAlignment = VerticalAlignment.Center, Width = 92 });
-        var wrap = new WrapPanel { MaxWidth = 290 };
+        row.Children.Add(new TextBlock { Text = label, FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = Muted, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 6, 0, 0), Width = 96 });
+        var wrap = new WrapPanel { MaxWidth = 300 };
         var buttons = new List<Button>();
         foreach (var option in options)
         {
@@ -734,7 +741,7 @@ public sealed class TourWindow : Window
             (LyricCardStyle.Paint98, 0), (LyricCardStyle.LyricReceipt, 0), (LyricCardStyle.CassetteTape, 1), (LyricCardStyle.Polaroid, 2),
             (LyricCardStyle.GameBoy, 3), (LyricCardStyle.FilmNegative, 4),
         };
-        var fan = new Grid { Margin = new Thickness(60, 0, 0, 0), ClipToBounds = false };
+        var fan = new Grid { Margin = new Thickness(40, -20, 0, -20), ClipToBounds = true };
         var cards = new List<(Border Card, RotateTransform Turn, TranslateTransform Move, ScaleTransform Size)>();
         foreach (var (style, songIndex) in styles)
         {
@@ -772,7 +779,7 @@ public sealed class TourWindow : Window
                 Panel.SetZIndex(card, 100 - Math.Abs(offset) * 10);
                 var ms = animate ? 520 : 0;
                 Animate(turn, RotateTransform.AngleProperty, offset * 7, ms);
-                Animate(move, TranslateTransform.XProperty, offset * 92, ms);
+                Animate(move, TranslateTransform.XProperty, offset * 84, ms);
                 Animate(move, TranslateTransform.YProperty, Math.Abs(offset) * 22, ms);
                 Animate(size, ScaleTransform.ScaleXProperty, offset == 0 ? 1.04 : .9, ms);
                 Animate(size, ScaleTransform.ScaleYProperty, offset == 0 ? 1.04 : .9, ms);
@@ -795,7 +802,7 @@ public sealed class TourWindow : Window
 
     private FrameworkElement BuildPrivacy()
     {
-        var grid = Columns(470);
+        var grid = Columns(560);
         var left = Stack(Eyebrow(T("PrivacyEyebrow")), Headline(T("PrivacyTitle"), 42),
             Body(T("PrivacyNo"), 19, top: 16, brush: CreamBrush),
             Body(T("PrivacyWhy"), 15, top: 12),
@@ -811,17 +818,16 @@ public sealed class TourWindow : Window
         left.Children.Add(links);
         grid.Children.Add(left);
 
-        var values = new UniformGrid { Columns = 2, Margin = new Thickness(44, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
-        foreach (var (glyph, key) in new[] { ("", "ValueTelemetry"), ("", "ValueTracking"), ("", "ValueAccount"), ("", "ValueFree"), ("", "ValueOpen"), ("", "ValueMit") })
+        var values = new StackPanel { Margin = new Thickness(56, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        foreach (var (glyph, key) in new[] { ("\uE9D9", "ValueTelemetry"), ("\uE890", "ValueTracking"), ("\uE77B", "ValueAccount"), ("\uEB51", "ValueFree"), ("\uE943", "ValueOpen"), ("\uE8A5", "ValueMit") })
         {
-            var tile = new StackPanel { Margin = new Thickness(0, 0, 0, 0) };
-            tile.Children.Add(new TextBlock { Text = glyph, FontFamily = Icons, FontSize = 22, Foreground = Turquoise });
-            tile.Children.Add(new TextBlock { Text = T(key), FontFamily = Display, FontWeight = FontWeights.SemiBold, FontSize = 18, Margin = new Thickness(0, 10, 0, 0), TextWrapping = TextWrapping.Wrap });
+            var row = new StackPanel { Orientation = Orientation.Horizontal };
+            row.Children.Add(new TextBlock { Text = glyph, FontFamily = Icons, FontSize = 16, Foreground = Turquoise, Width = 30, VerticalAlignment = VerticalAlignment.Center });
+            row.Children.Add(new TextBlock { Text = T(key), FontSize = 16, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
             values.Children.Add(new Border
             {
-                Margin = new Thickness(7), Padding = new Thickness(20, 18, 16, 18), CornerRadius = new CornerRadius(16),
-                Background = Frozen(Color.FromArgb(0x1C, 0xFF, 0xFF, 0xFF)), BorderBrush = Frozen(Color.FromArgb(0x22, 0xFF, 0xFF, 0xFF)), BorderThickness = new Thickness(1),
-                Child = tile,
+                Margin = new Thickness(0, 0, 0, 10), Padding = new Thickness(16, 11, 18, 12), CornerRadius = new CornerRadius(10), HorizontalAlignment = HorizontalAlignment.Left,
+                Background = Surface, BorderBrush = SurfaceLine, BorderThickness = new Thickness(1), Child = row,
             });
         }
         Grid.SetColumn(values, 1);
@@ -837,13 +843,13 @@ public sealed class TourWindow : Window
         var root = new Grid();
         // The five demonstration covers, drifting softly behind the words.
         var covers = new Canvas { IsHitTestVisible = false };
-        var spots = new[] { (40.0, 30.0, -8.0), (860, 10, 7), (900, 330, -5), (20, 360, 6), (470, 420, -3) };
+        var spots = new[] { (-10.0, 20.0, -8.0), (900, 0, 7), (918, 300, -5), (10, 330, 6), (870, 440, 4) };
         for (var i = 0; i < TourSong.All.Length; i++)
         {
             var (x, y, angle) = spots[i];
             var cover = new Border
             {
-                Width = 128, Height = 128, CornerRadius = new CornerRadius(14), Opacity = .55,
+                Width = 104, Height = 104, CornerRadius = new CornerRadius(12), Opacity = .5,
                 Background = new ImageBrush(TourSong.All[i].Cover(256)),
                 RenderTransform = new RotateTransform(angle, 64, 64),
                 Effect = new DropShadowEffect { BlurRadius = 24, ShadowDepth = 8, Direction = 270, Opacity = .4, Color = Colors.Black },
@@ -852,25 +858,27 @@ public sealed class TourWindow : Window
             Canvas.SetTop(cover, y);
             covers.Children.Add(cover);
             var drift = new TranslateTransform();
-            cover.RenderTransform = new TransformGroup { Children = { new RotateTransform(angle, 64, 64), drift } };
+            cover.RenderTransform = new TransformGroup { Children = { new RotateTransform(angle, 52, 52), drift } };
             var phase = i * 1.3;
             Every(step, 40, () => drift.Y = Math.Sin(DateTime.Now.TimeOfDay.TotalSeconds * .6 + phase) * 8);
         }
         root.Children.Add(covers);
 
         var center = Stack(Eyebrow(T("HomeEyebrow")), Headline(T("HomeTitle"), 54), Body(T("HomeLine"), 20, top: 8, brush: CreamBrush), Body(T("HomeThanks"), 15, top: 18));
+        var rule = new Border { Width = 56, Height = 1, Background = Frozen(Color.FromArgb(0x70, 0xE2, 0xC4, 0x6F)), Margin = new Thickness(0, 26, 0, 0) };
+        center.Children.Add(rule);
         var favor = new Border
         {
-            Margin = new Thickness(0, 26, 0, 0), Padding = new Thickness(26, 18, 26, 20), CornerRadius = new CornerRadius(18), MaxWidth = 560,
-            Background = Frozen(Color.FromArgb(0x24, 0xFF, 0xFF, 0xFF)), BorderBrush = Frozen(Color.FromArgb(0x30, 0xE2, 0xC4, 0x6F)), BorderThickness = new Thickness(1),
+            Margin = new Thickness(0, 18, 0, 0), MaxWidth = 520,
             Child = Stack(
-                new TextBlock { Text = T("HomeFavor"), FontFamily = Display, FontWeight = FontWeights.Bold, FontSize = 19, TextAlignment = TextAlignment.Center },
+                new TextBlock { Text = "\uE735", FontFamily = Icons, FontSize = 18, Foreground = Frozen(Color.FromRgb(0xE2, 0xC4, 0x6F)), HorizontalAlignment = HorizontalAlignment.Center },
+                new TextBlock { Text = T("HomeFavor"), FontFamily = Display, FontWeight = FontWeights.Bold, FontSize = 21, TextAlignment = TextAlignment.Center, Margin = new Thickness(0, 8, 0, 0) },
                 Body(T("HomeStar"), 15, top: 6, center: true),
                 Body(T("HomeEnjoy"), 15, top: 10, center: true, brush: CreamBrush),
                 new TextBlock { Text = T("HomeSignature"), FontSize = 14, FontStyle = FontStyles.Italic, Foreground = Muted, Margin = new Thickness(0, 10, 0, 0), TextAlignment = TextAlignment.Center }),
         };
         center.Children.Add(favor);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 24, 0, 0) };
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, 28, 0, 0) };
         var start = Primary(T("HomeStart"), Close);
         buttons.Children.Add(start);
         var star = Ghost("  " + T("HomeGitHub"), () => Open(ContactInfo.Repository));
@@ -879,6 +887,8 @@ public sealed class TourWindow : Window
         center.Children.Add(buttons);
         center.HorizontalAlignment = HorizontalAlignment.Center;
         center.VerticalAlignment = VerticalAlignment.Center;
+        center.MaxWidth = 640;
+        rule.HorizontalAlignment = HorizontalAlignment.Center;
         foreach (var child in center.Children.OfType<TextBlock>())
             child.TextAlignment = TextAlignment.Center;
         root.Children.Add(center);
@@ -921,14 +931,14 @@ public sealed class TourWindow : Window
         LineHeight = size * 1.45, LineStackingStrategy = LineStackingStrategy.BlockLineHeight, TextAlignment = center ? TextAlignment.Center : TextAlignment.Left,
     };
 
-    private static Button Make(string text, Action click, Brush background, Brush foreground, Brush? border, double fontSize = 15, Thickness? padding = null, FontWeight? weight = null)
+    private static Button Make(string text, Action click, Brush background, Brush foreground, Brush? border, double fontSize = 15, Thickness? padding = null, FontWeight? weight = null, double radius = 10)
     {
         var label = IconText(text);
         var button = new Button
         {
             Content = label, Background = background, Foreground = foreground, BorderBrush = border ?? Brushes.Transparent, BorderThickness = new Thickness(border is null ? 0 : 1),
             Padding = padding ?? new Thickness(22, 10, 22, 11), FontSize = fontSize, FontWeight = weight ?? FontWeights.SemiBold, Cursor = Cursors.Hand,
-            Template = ButtonTemplate(),
+            Template = ButtonTemplate(radius),
         };
         System.Windows.Automation.AutomationProperties.SetName(button, text.TrimStart('', '', '', ' '));
         button.Click += (_, _) => click();
@@ -948,11 +958,11 @@ public sealed class TourWindow : Window
         return block;
     }
 
-    private static ControlTemplate ButtonTemplate()
+    private static ControlTemplate ButtonTemplate(double radius)
     {
         var template = new ControlTemplate(typeof(Button));
         var border = new FrameworkElementFactory(typeof(Border), "Chrome");
-        border.SetValue(Border.CornerRadiusProperty, new CornerRadius(22));
+        border.SetValue(Border.CornerRadiusProperty, new CornerRadius(radius));
         border.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding("Background") { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
         border.SetBinding(Border.BorderBrushProperty, new System.Windows.Data.Binding("BorderBrush") { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
         border.SetBinding(Border.BorderThicknessProperty, new System.Windows.Data.Binding("BorderThickness") { RelativeSource = System.Windows.Data.RelativeSource.TemplatedParent });
@@ -990,17 +1000,20 @@ public sealed class TourWindow : Window
 
     private static Button Primary(string text, Action click) => Make(text, click, CreamBrush, Frozen(Color.FromRgb(0x10, 0x20, 0x2A)), null);
 
-    private static Button Ghost(string text, Action click) => Make(text, click, Frozen(Color.FromArgb(0x1E, 0xFF, 0xFF, 0xFF)), CreamBrush, Frozen(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)));
+    private static readonly Brush Surface = Frozen(Color.FromRgb(0x18, 0x26, 0x31));
+    private static readonly Brush SurfaceLine = Frozen(Color.FromRgb(0x2C, 0x3D, 0x49));
+
+    private static Button Ghost(string text, Action click) => Make(text, click, Surface, CreamBrush, SurfaceLine);
 
     private static Button Link(string text, Action click) =>
-        Make(text, click, Brushes.Transparent, Muted, null, 13.5, new Thickness(10, 6, 10, 7), FontWeights.Normal);
+        Make(text, click, Brushes.Transparent, Muted, null, 13.5, new Thickness(10, 6, 10, 7), FontWeights.Normal, radius: 8);
 
     private static Button Segment(string text, Action click) =>
-        Make(text, click, Frozen(Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF)), Muted, Frozen(Color.FromArgb(0x26, 0xFF, 0xFF, 0xFF)), 13.5, new Thickness(14, 7, 14, 8));
+        Make(text, click, Surface, Muted, SurfaceLine, 13.5, new Thickness(14, 7, 14, 8), radius: 16);
 
     private static void Select(Button button, bool on)
     {
-        button.Background = on ? CreamBrush : Frozen(Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
+        button.Background = on ? CreamBrush : Surface;
         button.Foreground = on ? Frozen(Color.FromRgb(0x10, 0x20, 0x2A)) : Muted;
     }
 
@@ -1026,35 +1039,60 @@ public sealed class TourWindow : Window
         return image;
     }
 
+    /// <summary>
+    /// A dark base lit by large, soft radial lights. Everything is clipped to the design rectangle, so
+    /// the brush's bounds are exactly that rectangle (lights reaching past it used to enlarge the
+    /// drawing and squeeze the gradient into a visible box).
+    /// </summary>
     private static Brush Atmosphere(string from, string middle, string to)
     {
+        var c = (string h) => (Color)ColorConverter.ConvertFromString(h);
+        var (dark, light, warm) = (c(from), c(middle), c(to));
+        var rect = new Rect(0, 0, DesignWidth, DesignHeight);
         var group = new DrawingGroup();
         using (var dc = group.Open())
         {
-            var c = (string h) => (Color)ColorConverter.ConvertFromString(h);
-            dc.DrawRectangle(new LinearGradientBrush(new GradientStopCollection { new(c(from), 0), new(c(middle), .55), new(c(to), 1) }, new Point(0, 0), new Point(1, 1)), null, new Rect(0, 0, DesignWidth, DesignHeight));
-            dc.DrawEllipse(new RadialGradientBrush(Color.FromArgb(0x38, 0x18, 0x9B, 0xB3), Color.FromArgb(0, 0x18, 0x9B, 0xB3)), null, new Point(820, 220), 560, 420);
-            dc.DrawEllipse(new RadialGradientBrush(Color.FromArgb(0x60, 0x06, 0x10, 0x18), Color.FromArgb(0, 0x06, 0x10, 0x18)), null, new Point(80, 80), 520, 420);
+            dc.PushClip(new RectangleGeometry(rect));
+            dc.DrawRectangle(Frozen(dark), null, rect);
+            Light(dc, light, 0xD0, new Point(820, 200), 760, 560);
+            Light(dc, warm, 0x90, new Point(1060, 700), 640, 460);
+            Light(dc, Color.FromRgb(0x18, 0x9B, 0xB3), 0x26, new Point(560, 360), 620, 420);
+            Light(dc, Color.FromRgb(0x04, 0x0A, 0x10), 0x90, new Point(40, 40), 560, 460);
+            dc.Pop();
         }
         group.Freeze();
-        var brush = new DrawingBrush(group) { Stretch = Stretch.Fill };
+        var brush = new DrawingBrush(group) { Stretch = Stretch.Fill, Viewbox = rect, ViewboxUnits = BrushMappingMode.Absolute };
         brush.Freeze();
         return brush;
     }
 
+    /// <summary>A radial light that is fully transparent well before its ellipse ends.</summary>
+    private static void Light(DrawingContext dc, Color color, byte alpha, Point centre, double rx, double ry)
+    {
+        var brush = new RadialGradientBrush(new GradientStopCollection
+        {
+            new(Color.FromArgb(alpha, color.R, color.G, color.B), 0),
+            new(Color.FromArgb((byte)(alpha * .55), color.R, color.G, color.B), .35),
+            new(Color.FromArgb((byte)(alpha * .18), color.R, color.G, color.B), .7),
+            new(Color.FromArgb(0, color.R, color.G, color.B), 1),
+        });
+        brush.Freeze();
+        dc.DrawEllipse(brush, null, centre, rx, ry);
+    }
+
     private static Brush Photo(string name, double darken)
     {
+        var rect = new Rect(0, 0, DesignWidth, DesignHeight);
         var group = new DrawingGroup();
         using (var dc = group.Open())
         {
-            var image = Load(name);
-            var rect = new Rect(0, 0, DesignWidth, DesignHeight);
-            var fill = new ImageBrush(image) { Stretch = Stretch.UniformToFill };
-            dc.DrawRectangle(fill, null, rect);
-            dc.DrawRectangle(new LinearGradientBrush(Color.FromArgb((byte)(255 * darken + 40), 8, 14, 24), Color.FromArgb((byte)(255 * darken), 8, 14, 24), 0), null, rect);
+            dc.PushClip(new RectangleGeometry(rect));
+            dc.DrawRectangle(new ImageBrush(Load(name)) { Stretch = Stretch.UniformToFill }, null, rect);
+            dc.DrawRectangle(new LinearGradientBrush(Color.FromArgb((byte)Math.Min(255, 255 * darken + 60), 8, 14, 24), Color.FromArgb((byte)(255 * darken), 8, 14, 24), 0), null, rect);
+            dc.Pop();
         }
         group.Freeze();
-        var brush = new DrawingBrush(group) { Stretch = Stretch.Fill };
+        var brush = new DrawingBrush(group) { Stretch = Stretch.UniformToFill, Viewbox = rect, ViewboxUnits = BrushMappingMode.Absolute };
         brush.Freeze();
         return brush;
     }
