@@ -27,6 +27,9 @@ export type WallEntry = {
 
 export type GuestbookPage = { names: string[]; nextOffset: number | null };
 
+export const communityWallPageSizes = { preview: 12, full: 30 } as const;
+export type WallPageSize = typeof communityWallPageSizes[keyof typeof communityWallPageSizes];
+
 export type WallPage = { entries: WallEntry[]; hasMore: boolean; totalPages: number };
 
 export function publicSuggestion(value: unknown): WallEntry | null {

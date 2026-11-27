@@ -142,7 +142,7 @@
 .names li { padding: 5px 0; border-bottom: 1px solid #62747d55; font: 400 1.45rem/1.18 var(--hand); }
 .thanks, .bookMessage { margin-top: 10px; color: #415962; font-size: .88rem; }
 .thanks { display: flex; align-items: center; gap: 7px; }
-.bookNav, .wallNav { display: flex; justify-content: space-between; align-items: center; gap: 9px 16px; }
+.bookNav { display: flex; justify-content: space-between; align-items: center; gap: 9px 16px; }
 .bookNav { margin-bottom: 4px; }
 
 .board {
@@ -208,7 +208,7 @@
   transform: rotate(-3deg);
 }
 .recommendation[data-mount="2"]::before { left: 52%; width: 6px; height: 6px; background: #766d61; }
-.track h3 {
+.track :is(h2, h3) {
   margin: 0;
   color: #273743;
   font: 600 .98rem/1.25 "Figtree", sans-serif;
@@ -232,31 +232,57 @@
 .boardMessage { margin: 0; color: #162126; font-size: .97rem; }
 .boardFooter { display: flex; justify-content: flex-end; margin-top: 18px; }
 .pinCta { display: inline-flex; align-items: center; min-height: 44px; color: #162126; text-decoration: underline; text-underline-offset: .22em; }
-.wallNav { margin-top: 13px; flex-wrap: wrap; }
-.wallNav form { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 10px; }
-.wallNav form span { font-size: .82rem; color: var(--muted); }
-.wallNav input {
-  width: 4.2rem;
-  min-height: 40px;
-  padding: .3rem .45rem;
-  border: 1px solid #4c646e;
-  border-radius: 3px;
-  background: #17252e;
-  color: var(--paper);
-}
-.wallNav button, .boardButton { min-height: 44px; padding: 5px; border: 0; color: var(--teal); background: transparent; cursor: pointer; }
-.wallNav button:disabled { color: var(--muted); opacity: .63; cursor: default; }
-.boardButton { color: #162126; text-decoration: underline; }
-.wallNav button:not(:disabled):hover { text-decoration: underline; }
+.boardButton { display: inline-flex; align-items: center; min-height: 44px; padding: 5px; border: 0; background: transparent; color: #162126; cursor: pointer; text-decoration: underline; }
 
 @media (max-width: 660px) {
   .book { grid-template-columns: 1fr; min-height: 0; border-width: 2px 4px 8px; }
   .paper { border-radius: 3px; padding: 24px clamp(16px, 5vw, 34px); box-shadow: 0 2px 0 #b9b9b1; background-image: none; }
   .rightPage { border-top: 2px solid #b1b7b6; }
-  .wallNav { justify-content: space-between; }
-  .wallNav form { flex: 1 0 100%; order: -1; }
 }
 @media (max-width: 420px) {
   .tracks { grid-template-columns: repeat(auto-fill, minmax(min(100%, 118px), 1fr)); gap: 15px; }
   .board { padding: 15px; }
+}
+
+.explore { display: flex; justify-content: flex-end; margin-top: 17px; }
+.wallFull { width: calc(100% - 2 * clamp(13px, 2.7vw, 48px)); padding-block: clamp(26px, 4vw, 54px) 54px; }
+.wallFull .heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px 22px; }
+.wallFull .heading h1 { color: #eeede6; font-size: clamp(1.6rem, 3vw, 2.35rem); letter-spacing: -.025em; }
+.wallActions { display: flex; flex-wrap: wrap; gap: 8px; }
+.wallActions :global(.button) { min-height: 42px; }
+.fullPagination {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 22px;
+  margin-top: 17px;
+}
+.fullPagination ul, .fullPagination li, .fullPagination form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+.fullPagination ul { list-style: none; padding: 0; }
+.fullPagination a, .fullPagination button, .currentPage, .paginationGap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  min-width: 42px;
+  padding: 4px 8px;
+}
+.fullPagination a, .fullPagination button { color: var(--teal); }
+.fullPagination a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.currentPage { border: 1px solid #6e858c; border-radius: 3px; color: var(--paper); }
+.paginationGap { min-width: 22px; color: var(--muted); }
+.fullPagination label { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+.fullPagination input { width: 4rem; min-height: 40px; padding: 4px 6px; background: #17252e; color: var(--paper); border: 1px solid #557079; border-radius: 3px; font: inherit; }
+.fullPagination button { border: 0; background: transparent; cursor: pointer; }
+@media (min-width: 1100px) {
+  .wallFull .tracks { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+@media (min-width: 1360px) {
+  .wallFull .tracks { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }

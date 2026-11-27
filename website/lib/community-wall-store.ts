@@ -1,9 +1,9 @@
 import { get, list } from "@vercel/blob";
 import { unstable_cache } from "next/cache";
 import { createHash } from "node:crypto";
-import { publicSuggestion, wallEntryTag, wallIndexTag, wallPathPattern, wallPrefix, type GuestbookPage, type WallEntry, type WallPage } from "./community-wall";
+import { communityWallPageSizes, publicSuggestion, wallEntryTag, wallIndexTag, wallPathPattern, wallPrefix, type GuestbookPage, type WallEntry, type WallPage, type WallPageSize } from "./community-wall";
 
-const pageSize = 12;
+const pageSize = communityWallPageSizes.preview;
 const cacheSeconds = 3600;
 
 const wallIndex = unstable_cache(async (_store: string) => {
@@ -34,13 +34,13 @@ function storeCacheKey() {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export async function getWallPage(page: number): Promise<WallPage> {
+export async function getWallPage(page: number, size: WallPageSize = pageSize): Promise<WallPage> {
   const store = storeCacheKey();
   const index = await wallIndex(store);
-  const start = (page - 1) * pageSize;
-  const totalPages = Math.ceil(index.length / pageSize);
+  const start = (page - 1) * size;
+  const totalPages = Math.ceil(index.length / size);
   if (start >= index.length) return { entries: [], hasMore: false, totalPages };
-  const rows = await Promise.all(index.slice(start, start + pageSize).map((path) => readEntry(store, path)));
+  const rows = await Promise.all(index.slice(start, start + size).map((path) => readEntry(store, path)));
   return { entries: rows.filter((row): row is WallEntry => row !== null), hasMore: page < totalPages, totalPages };
 }
 

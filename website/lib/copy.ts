@@ -67,6 +67,8 @@ export const copy = {
       error: "Your suggestion couldn’t be saved right now. Please try again later.",
       privacy: "How suggestions are handled",
       wall: {
+        explore: "Explore the full wall", back: "Back to the community", contribute: "Leave a song",
+        fullDescription: "Music recommendations left by the Taskitify community.",
         title: "Community Wall", intro: "Songs worth passing on, shared by the Taskitify community.",
         formNote: "Your name and song will appear on our public community wall.",
         page: "Page", of: "of", go: "Go",
@@ -167,6 +169,8 @@ export const copy = {
       error: "Sua sugestão não pôde ser salva agora. Tente novamente mais tarde.",
       privacy: "Como as sugestões são tratadas",
       wall: {
+        explore: "Ver mural completo", back: "Voltar à comunidade", contribute: "Deixar uma música",
+        fullDescription: "Recomendações musicais deixadas pela comunidade do Taskitify.",
         title: "Mural da Comunidade", intro: "Músicas que valem compartilhar, escolhidas pela comunidade do Taskitify.",
         formNote: "Seu nome e sua música aparecerão no mural público da comunidade.",
         page: "Página", of: "de", go: "Ir",

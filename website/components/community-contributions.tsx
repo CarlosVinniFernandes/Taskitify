@@ -1,27 +1,16 @@
 "use client";
 
 import { BookOpen, Heart } from "lucide-react";
-import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { copy, type Locale } from "@/lib/copy";
 import { guestbookCopy } from "@/lib/guestbook-copy";
 import type { Fields } from "@/lib/suggestion-fields";
 import type { GuestbookPage, WallPage } from "@/lib/community-wall";
 import { SongForm } from "./song-form";
+import { MusicBoard } from "./music-board";
+import { pathFor } from "@/lib/site";
 import styles from "./community-wall.module.css";
-
-const papers = ["#efebe0", "#e7e8df", "#efe6da", "#ede8e3", "#e9ece7", "#f0ece4"] as const;
-
-function noteStyle(seed: number) {
-  return {
-    mount: (seed >>> 23) % 3,
-    style: {
-      "--tint": papers[(seed >>> 8) % papers.length],
-      "--tilt": (((seed >>> 17) % 7 - 3) * .48) + "deg",
-      "--note-width": (183 + ((seed >>> 15) % 3) * 15) + "px",
-      "--note-top": (18 + (seed % 3) * 3) + "px",
-    } as CSSProperties,
-  };
-}
 
 type PageResult<T> = T | "error" | null;
 const firstWallPage = "/api/community/wall?page=1";
@@ -77,77 +66,6 @@ function GuestSignatures({ locale, thanked, onWrite }: {
     </nav>}
     <button className={styles.paperLink} type="button" onClick={onWrite}>{t.write}</button>
   </div>;
-}
-
-function MusicBoard({ locale, first, reloadFirst, onWrite }: {
-  locale: Locale; first: PageResult<WallPage>; reloadFirst: () => void; onWrite: () => void;
-}) {
-  const t = copy[locale].community.wall;
-  const book = guestbookCopy[locale];
-  const [{ page, knownPages }, setPage] = useState({ page: 1, knownPages: 0 });
-  const wallHeading = useRef<HTMLHeadingElement>(null);
-  const [retry, setRetry] = useState(0);
-  const older = usePage<WallPage>(page === 1 ? null : `/api/community/wall?page=${page}`, retry);
-  const result = page === 1 ? first : older;
-  const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" });
-  const entries = result && result !== "error" ? result.entries : [];
-  const hasMore = result !== null && result !== "error" && result.hasMore;
-  const totalPages = result && result !== "error" ? result.totalPages : knownPages;
-
-  function goTo(next: number) {
-    if (!Number.isInteger(next) || next < 1 || next > totalPages || next === page) return;
-    setPage({ page: next, knownPages: totalPages });
-    wallHeading.current?.focus();
-  }
-
-  function jump(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    goTo(Number(new FormData(event.currentTarget).get("page")));
-  }
-
-  return <section className={`wrap ${styles.wall}`} id="wall" aria-labelledby="wall-title" aria-busy={result === null}>
-    <header className={styles.heading}>
-      <p className={styles.kicker}>{t.title}</p>
-      <h2 id="wall-title" tabIndex={-1} ref={wallHeading}>{book.boardTitle}</h2>
-      <p>{book.boardIntro}</p>
-    </header>
-    <div className={styles.board}>
-      {entries.length > 0 ? <ul className={styles.tracks}>
-        {entries.map((entry, index) => {
-          const query = `${entry.song} ${entry.artist}`.replace(/[\uD800-\uDFFF]/gu, "�");
-          const { mount, style } = noteStyle(entry.artSeed);
-          return <li className={styles.recommendation} key={`${entry.artSeed}-${index}`} data-mount={mount} style={style}>
-            <div className={styles.track}>
-              <h3 dir="auto">{entry.song}</h3>
-              <p dir="auto">{entry.artist}</p>
-              {entry.name && <p className={styles.attribution}><bdi>{entry.name}</bdi></p>}
-              <p className={styles.meta}>
-                <time dateTime={entry.date}>{date.format(new Date(entry.date))}</time>
-                {entry.status === "added" && <span className={styles.added}>{t.added}</span>}
-              </p>
-            </div>
-            <a className={styles.spotify} href={`https://open.spotify.com/search/${encodeURIComponent(query)}`}
-              target="_blank" rel="noreferrer">{t.spotify}</a>
-          </li>;
-        })}
-      </ul> : <p className={styles.boardMessage} role="status">{result === "error" ? t.error
-        : result === null ? t.loading : hasMore || page > 1 ? t.emptyPage : t.empty}</p>}
-      {result === "error" && <button className={styles.boardButton} type="button"
-        onClick={page === 1 ? reloadFirst : () => setRetry(retry + 1)}>{t.retry}</button>}
-      <div className={styles.boardFooter}>
-        <a href="#suggest" className={styles.pinCta} onClick={onWrite}>+ {book.boardCta}</a>
-      </div>
-    </div>
-    {(page > 1 || totalPages > 1) && <nav aria-label={t.pagination} className={styles.wallNav}>
-      <button type="button" disabled={page === 1 || result === null} onClick={() => goTo(page - 1)}>{t.previous}</button>
-      <form key={page} onSubmit={jump}>
-        <label>{t.page} <input type="number" name="page" min={1} max={totalPages} step={1} required defaultValue={page} /></label>
-        <span aria-current="page" role="status">{t.page} {page} {t.of} {totalPages}</span>
-        <button type="submit" disabled={result === null}>{t.go}</button>
-      </form>
-      <button type="button" disabled={!hasMore} onClick={() => goTo(page + 1)}>{t.next}</button>
-    </nav>}
-  </section>;
 }
 
 const emptyFields = { song: "", artist: "", name: "" };
@@ -214,6 +132,10 @@ export function CommunityContributions({ locale, initial, wallEnabled, privacyHr
         </div>
       </div>
     </section>
-    {wallEnabled && <MusicBoard key={revision} locale={locale} first={first} reloadFirst={reloadFirst} onWrite={openForm} />}
+    {wallEnabled && <MusicBoard locale={locale} result={first} onRetry={reloadFirst} onWrite={openForm}>
+      <div className={styles.explore}>
+        <Link href={pathFor(locale, "wall")} prefetch={false} className="button button-outline">{t.wall.explore}</Link>
+      </div>
+    </MusicBoard>}
   </>;
 }
