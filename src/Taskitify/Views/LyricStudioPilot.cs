@@ -99,9 +99,9 @@ public static partial class LyricCardRenderer
         });
         var face = d.UserFace;
         // A thin dot-matrix face, each lyric line kept whole when it can be (else wrapped evenly).
-        var lyric = LyricLines(d.LyricText, face?.Family ?? Vt323, face?.Weight ?? FontWeights.Normal, ink, 444, 290, 66 * d.TextScale, 42,
-            d.Align(TextAlignment.Left), 1.02, gap: 10);
-        var copy = new DockPanel { Margin = new Thickness(32, 24, 32, 22) };
+        var lyric = LyricLines(d.LyricText, face?.Family ?? Vt323, face?.Weight ?? FontWeights.Normal, ink, 464, 300, Presence(d, 66), 38,
+            d.Align(TextAlignment.Left), Leading(d, 1.02), gap: d.LyricText.Length > 140 ? 4 : 10, wholeShrink: .55);
+        var copy = new DockPanel { Margin = new Thickness(22, 22, 22, 20) };
         var note = Label("\u266A " + d.Text("note").ToUpperInvariant(), Vt323, 28, FontWeights.Normal, Alpha(ink, 190), TextAlignment.Left);
         DockPanel.SetDock(note, Dock.Top);
         copy.Children.Add(note);
@@ -247,8 +247,8 @@ public static partial class LyricCardRenderer
         {
             new(Alpha(C("#3B2E1E"), 70), 0), new(Alpha(C("#3B2E1E"), 0), .09), new(Alpha(C("#3B2E1E"), 0), .93), new(Alpha(C("#8A6A3E"), 34), 1),
         }, 0) });
-        var left = (d.Wide ? 200 : 128) * u;
-        var right = (d.Wide ? 240 : 158) * u;
+        var left = (d.Wide ? 170 : 96) * u;
+        var right = (d.Wide ? 200 : 136) * u;
         var width = W - left - right;
         var tall = !d.Wide && H > 1500;
 
@@ -294,7 +294,7 @@ public static partial class LyricCardRenderer
         grammar.Inlines.Add(new System.Windows.Documents.Run("/" + Syllables(word) + "/   "));
         grammar.Inlines.Add(new System.Windows.Documents.Run(string.IsNullOrWhiteSpace(category) ? "n." : category)
             { FontStyle = FontStyles.Italic, FontSize = 34 * u, Foreground = Brush(accent) });
-        var context = string.IsNullOrWhiteSpace(cls) ? d.Album : cls;
+        var context = cls;
         if (!string.IsNullOrWhiteSpace(context))
         {
             grammar.Inlines.Add(new System.Windows.Documents.Run("   ["));
@@ -313,7 +313,7 @@ public static partial class LyricCardRenderer
         var face = d.UserFace;
         // The definition is the point of the page: the largest reading text, each line whole when it can be.
         var meaning = LyricLines(d.LyricText, face?.Family ?? Georgia, face?.Weight ?? FontWeights.Normal, ink,
-            width - 60 * u, (tall ? 640 : 340) * u, (tall ? 84 : 66) * u * d.TextScale, 34 * u, d.Align(TextAlignment.Left), 1.24, gap: 8 * u);
+            width - 60 * u, (tall ? 640 : 340) * u, Presence(d, tall ? 84 : 66) * u, 30 * u, d.Align(TextAlignment.Left), Leading(d, 1.24), gap: (d.LyricText.Length > 140 ? 3 : 8) * u, wholeShrink: .72);
         Grid.SetColumn(meaning, 1);
         definition.Children.Add(meaning);
         entry.Children.Add(definition);
@@ -480,8 +480,8 @@ public static partial class LyricCardRenderer
         writing.Children.Add(At(hello, inner - 6, top - rule + 6));
         var face = d.UserFace;
         // The lines are what the letter is for: the largest hand on the page, pressed a little harder.
-        var body = Handwriting(d.LyricText, face?.Family ?? HandFont, 80 * d.TextScale, ink, w - inner - 66, 13, d.Align(TextAlignment.Left), rule,
-            maxHeight: rule * 6, weight: face?.Weight ?? FontWeights.SemiBold, preferWhole: true);
+        var body = Handwriting(d.LyricText, face?.Family ?? HandFont, Math.Min(Presence(d, 80), 96), ink, w - inner - 66, 13, d.Align(TextAlignment.Left), rule,
+            maxHeight: rule * (d.LyricText.Length > 110 ? 9 : 6), weight: face?.Weight ?? FontWeights.SemiBold, preferWhole: d.LyricText.Length <= 110);
         writing.Children.Add(At(body, inner, top + 6));
         body.Measure(new Size(w - inner - 70, double.PositiveInfinity));
         var lines = Math.Max(1, (int)Math.Round(body.DesiredSize.Height / rule));
@@ -496,9 +496,20 @@ public static partial class LyricCardRenderer
         var note = Handwriting("\u266A " + d.Title, HandFont, 32, Alpha(ink, 200), 330, 16, TextAlignment.Left, 38, maxHeight: 40);
         note.RenderTransformOrigin = new Point(0, 0);
         note.RenderTransform = new RotateTransform(-7);
+        var ps = d.Text("ps");
+        if (!string.IsNullOrWhiteSpace(ps))
+        {
+            var post = Handwriting("P.S. " + ps, HandFont, 44, Alpha(ink, 225), w - inner - 90, 17, TextAlignment.Left, rule, maxHeight: rule * 2);
+            writing.Children.Add(At(post, inner, top + ((lines + 4) * rule) + 6));
+            post.Measure(new Size(w - inner - 90, double.PositiveInfinity));
+            lines += Math.Max(1, (int)Math.Round(post.DesiredSize.Height / rule)) + 1;
+        }
         var noteY = top + ((lines + 4) * rule) + 20;
+        if (noteY > h - 60)
+            note.Visibility = Visibility.Collapsed;
         writing.Children.Add(At(note, inner - 10, noteY));
-        writing.Children.Add(Pen(Geometry.Parse(FormattableString.Invariant($"M{inner + 40},{noteY - 10} C{inner + 30},{noteY - 60} {inner + 50},{noteY - 110} {inner + 90},{noteY - 140} M{inner + 90},{noteY - 140} l-24,6 M{inner + 90},{noteY - 140} l-4,24")), Alpha(ink, 210), 2.6));
+        if (string.IsNullOrWhiteSpace(ps) && noteY <= h - 60)
+            writing.Children.Add(Pen(Geometry.Parse(FormattableString.Invariant($"M{inner + 40},{noteY - 10} C{inner + 30},{noteY - 60} {inner + 50},{noteY - 110} {inner + 90},{noteY - 140} M{inner + 90},{noteY - 140} l-24,6 M{inner + 90},{noteY - 140} l-4,24")), Alpha(ink, 210), 2.6));
         sheet.Children.Add(writing);
 
         var sheetBox = new Border { Width = w, Height = h, Child = sheet, ClipToBounds = true };
@@ -695,7 +706,7 @@ public static partial class LyricCardRenderer
     /// lines wrap, each one balanced so no word is left alone on its last line.
     /// </summary>
     private static FrameworkElement LyricLines(string text, FontFamily font, FontWeight weight, Color ink, double width, double maxHeight,
-        double start, double min, TextAlignment align, double lineFactor, double gap = 0)
+        double start, double min, TextAlignment align, double lineFactor, double gap = 0, double wholeShrink = .8, bool italic = false)
     {
         var lines = text.Split('\n');
         StackPanel Build(double size, bool wrap)
@@ -705,7 +716,7 @@ public static partial class LyricCardRenderer
             {
                 var block = new TextBlock
                 {
-                    Text = lines[i], FontFamily = font, FontWeight = weight, FontSize = size, Foreground = Brush(ink), TextAlignment = align,
+                    Text = lines[i], FontFamily = font, FontWeight = weight, FontStyle = italic ? FontStyles.Italic : FontStyles.Normal, FontSize = size, Foreground = Brush(ink), TextAlignment = align,
                     TextWrapping = wrap ? TextWrapping.Wrap : TextWrapping.NoWrap, LineHeight = size * lineFactor,
                     LineStackingStrategy = LineStackingStrategy.BlockLineHeight, Margin = new Thickness(0, i == 0 ? 0 : gap, 0, 0),
                     HorizontalAlignment = align switch { TextAlignment.Center => HorizontalAlignment.Center, TextAlignment.Right => HorizontalAlignment.Right, _ => HorizontalAlignment.Left },
@@ -718,9 +729,9 @@ public static partial class LyricCardRenderer
             return stack;
         }
         // Whole lines first, but only a little smaller: a big, evenly broken line beats a small whole one.
-        for (var size = start; size >= Math.Max(min, start * .8); size *= .96)
+        for (var size = start; size >= Math.Max(min, start * wholeShrink); size *= .96)
         {
-            if (lines.All(line => MeasureWidth(line, font, size, weight) <= width))
+            if (lines.All(line => MeasureWidth(line, font, size, weight) * (italic ? 1.04 : 1) <= width))
             {
                 var whole = Build(size, wrap: false);
                 if (whole.DesiredSize.Height <= maxHeight)
@@ -789,8 +800,7 @@ public static partial class LyricCardRenderer
             var whole = !preferWhole || scale < .72 || stack.Children.OfType<TextBlock>().All(b => b.DesiredSize.Height <= rule * 1.2);
             if ((stack.DesiredSize.Height <= maxHeight && whole) || scale < .5)
             {
-                if (preferWhole)
-                    foreach (var b in stack.Children.OfType<TextBlock>())
+                foreach (var b in stack.Children.OfType<TextBlock>())
                         Balance(b, width);
                 return stack;
             }

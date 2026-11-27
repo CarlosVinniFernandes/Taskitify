@@ -31,7 +31,7 @@ public static class LyricStudioCatalog
         S(LyricCardStyle.PhotoBooth, StudioCategory.Memories, "Photo Booth", image: true, fields:
         [F("title","Print title","After the music"), F("ref","Print identification","PB–004 / CONTACT PRINT")]),
         S(LyricCardStyle.Letter, StudioCategory.Memories, "Letter", LyricCardFont.Serif, false,
-            F("to","Recipient","You"), F("hello","Greeting","Dear you,"), F("bye","Closing","With love,"), F("sign","Signature","{artist}"), F("date","Date","{date}")),
+            F("to","Recipient","You"), F("hello","Greeting","Dear you,"), F("bye","Closing","With love,"), F("sign","Signature","{artist}"), F("date","Date","{date}"), F("ps","P.S. (optional)","")),
         S(LyricCardStyle.FilmNegative, StudioCategory.Memories, "Film Negative", image: true, fields:
         [F("frame","Frame identification","27A"), F("stock","Film stock","35 MM / 400"), F("note","Exposure note","AVAILABLE LIGHT")]),
         S(LyricCardStyle.Telegram, StudioCategory.Memories, "Telegram", LyricCardFont.Mono, false,
@@ -92,7 +92,7 @@ public static class LyricStudioCatalog
 
         S(LyricCardStyle.Editorial, StudioCategory.Literary, font: LyricCardFont.Serif),
         S(LyricCardStyle.Dictionary, StudioCategory.Literary, "Dictionary", LyricCardFont.Serif, false,
-            F("word","Headword","{title}"), F("category","Category",""), F("class","Classification",""), F("number","Definition number","1"), F("note","Additional detail","{artist}"),
+            F("word","Headword","{title}"), F("category","Category",""), F("class","Your category (e.g. saudade, road trip)",""), F("number","Definition number","1"), F("note","Additional detail","{artist}"),
             F("memo","Personal note",""), F("memo2","Second personal note","")),
         S(LyricCardStyle.BookPage, StudioCategory.Literary, "Book Page", LyricCardFont.Serif, false,
             F("chapter","Chapter","Chapter VII"), F("page","Page","127"), F("initial","Drop cap","On","On","Off"), F("highlight","Highlight","Off","On","Off"), F("note","Page note","{artist}")),
