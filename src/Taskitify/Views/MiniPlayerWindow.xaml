@@ -90,8 +90,12 @@
 
                 <!-- Lyrics: a fixed viewport; the list is translated so the current line sits in the middle.
                      A transparent background lets the wheel scroll it anywhere, between lines too. -->
-                <Grid x:Name="LyricsPart" Margin="0,10,0,6" TextOptions.TextFormattingMode="Ideal">
-                    <Grid x:Name="LyricsViewport" Height="176" ClipToBounds="True" Background="Transparent">
+                <Grid x:Name="LyricsPart" Height="176" Margin="0,10,0,6" TextOptions.TextFormattingMode="Ideal">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid x:Name="LyricsViewport" ClipToBounds="True" Background="Transparent">
                         <Grid.OpacityMask>
                             <!-- Absolute: relative mapping would use the bounds of the whole (translated) list. -->
                             <LinearGradientBrush x:Name="LyricsFade" MappingMode="Absolute" StartPoint="0,0" EndPoint="0,176">
@@ -129,10 +133,6 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <!-- Who licenses the lyrics, after the last line. -->
-                                <TextBlock Text="{Binding Credit}" FontSize="11" Margin="4,16,4,4" TextWrapping="Wrap"
-                                           TextAlignment="{Binding LyricsTextAlignment}"
-                                           Foreground="{DynamicResource TextTertiaryBrush}" Visibility="{Binding Credit, Converter={StaticResource NullToCollapsed}}" />
                             </StackPanel>
                         </Canvas>
 
@@ -144,6 +144,9 @@
                     <Button x:Name="ResyncButton" Style="{StaticResource FlatButton}" Visibility="Collapsed" Click="OnResync"
                             VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,2" Padding="12,4" FontSize="12"
                             Background="{DynamicResource WindowBackgroundBrush}" Content="{DynamicResource Loc.LyricsResync}" />
+                    <TextBlock Grid.Row="1" Text="{Binding Credit}" FontSize="14" FontWeight="SemiBold" Margin="4,2,4,4"
+                               TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}"
+                               Visibility="{Binding Credit, Converter={StaticResource NullToCollapsed}}" />
                 </Grid>
 
                 <!-- Progress -->

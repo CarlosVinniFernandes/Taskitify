@@ -462,7 +462,7 @@
         <Border Grid.Column="1" Background="{DynamicResource ControlBackgroundBrush}">
             <Grid>
                 <!-- The shadow is its own layer: an effect over the image would re-rasterise it unsmoothed. -->
-                <Viewbox Margin="22,52" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Viewbox Margin="22,64" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <Grid Width="{Binding PreviewWidth}" Height="{Binding PreviewHeight}">
                         <Border Background="Black">
                             <Border.Effect>
@@ -473,10 +473,10 @@
                     </Grid>
                 </Viewbox>
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="8,0,8,10">
-                    <TextBlock Text="{Binding PreviewDimensions}" FontSize="12" TextAlignment="Center"
+                    <TextBlock Text="{Binding Credit}" FontSize="15" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextPrimaryBrush}" Visibility="{Binding Credit, Converter={StaticResource NullToCollapsed}}" />
+                    <TextBlock Text="{Binding PreviewDimensions}" FontSize="12" TextAlignment="Center" Margin="0,4,0,0"
                                Foreground="{DynamicResource TextSecondaryBrush}" />
-                    <TextBlock Text="{Binding Credit}" FontSize="12" TextAlignment="Center" Margin="0,4,0,0"
-                               Foreground="{DynamicResource TextTertiaryBrush}" Visibility="{Binding Credit, Converter={StaticResource NullToCollapsed}}" />
                 </StackPanel>
             </Grid>
         </Border>

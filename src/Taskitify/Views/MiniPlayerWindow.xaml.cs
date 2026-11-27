@@ -49,7 +49,11 @@ public partial class MiniPlayerWindow : Window
         DataContext = vm;
         _lyricInk = new LyricInkDriver(TimeSpan.FromMilliseconds(1000d / 30), SampleLyricInk);
         vm.LyricPositionChanged += (_, _) => QueueLyricInk();
-        LyricsViewport.SizeChanged += (_, _) => QueueLyrics(animate: false);
+        LyricsViewport.SizeChanged += (_, e) =>
+        {
+            LyricsFade.EndPoint = new Point(0, e.NewSize.Height);
+            QueueLyrics(animate: false);
+        };
 
         _outsideClicks = new OutsideClickWatcher((x, y) =>
         {
@@ -550,7 +554,7 @@ public partial class MiniPlayerWindow : Window
             ActionsPart.Margin = new Thickness(-8, 6, 0, 0);
             ActionsPart.HorizontalAlignment = HorizontalAlignment.Left;
             LyricsPart.Margin = new Thickness(18, 0, 0, 8);
-            SetLyricsHeight(_vm.ShowCover ? 268 : 200);
+            LyricsPart.Height = _vm.ShowCover ? 268 : 200;
             HeaderPart.VerticalAlignment = VerticalAlignment.Top;
         }
         else
@@ -573,7 +577,7 @@ public partial class MiniPlayerWindow : Window
             ActionsPart.Margin = new Thickness(8, 0, -6, 0);
             ActionsPart.HorizontalAlignment = HorizontalAlignment.Right;
             LyricsPart.Margin = new Thickness(0, 12, 0, 6);
-            SetLyricsHeight(176);
+            LyricsPart.Height = 176;
         }
         Width = _vm.WindowWidth;
     }
@@ -584,12 +588,6 @@ public partial class MiniPlayerWindow : Window
         Grid.SetColumn(element, column);
         Grid.SetColumnSpan(element, span);
         Grid.SetRowSpan(element, 1);
-    }
-
-    private void SetLyricsHeight(double height)
-    {
-        LyricsViewport.Height = height;
-        LyricsFade.EndPoint = new Point(0, height);
     }
 
     private void UpdateProgressValue()
