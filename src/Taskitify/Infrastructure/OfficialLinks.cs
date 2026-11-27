@@ -5,6 +5,8 @@ public static class OfficialLinks
 {
     public const string Website = "https://taskitify.vercel.app/";
     public const string Community = "https://taskitify.vercel.app/community";
+    /// <summary>The Community Soundtrack on Spotify.</summary>
+    public const string Playlist = "https://open.spotify.com/playlist/0CMy9wXwlq6FRRdrIvvcWD";
     public const string SuggestSong = "https://taskitify.vercel.app/community#suggest";
     public const string LyricsShare = "https://taskitify.vercel.app/s";
     public const string Repository = "https://github.com/CarlosVinniFernandes/Taskitify";

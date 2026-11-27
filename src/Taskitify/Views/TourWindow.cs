@@ -852,7 +852,7 @@ public sealed class TourWindow : Window
         var left = Stack(Eyebrow(T("CommunityEyebrow")), Headline(T("CommunityTitle"), 40), Body(T("CommunityBody"), 16, top: 14),
             Body(T("CommunityNote"), 13.5, top: 12));
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 26, 0, 0) };
-        buttons.Children.Add(Primary("\uE8D6  " + T("CommunityListen"), () => OfficialLinks.Open(OfficialLinks.Community)));
+        buttons.Children.Add(Primary("\uE8D6  " + T("CommunityListen"), () => OfficialLinks.Open(OfficialLinks.Playlist)));
         var suggest = Ghost("\uE710  " + T("CommunitySuggest"), () => OfficialLinks.Open(OfficialLinks.SuggestSong));
         suggest.Margin = new Thickness(12, 0, 0, 0);
         buttons.Children.Add(suggest);
