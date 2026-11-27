@@ -24,7 +24,7 @@ public static partial class LyricCardRenderer
         return ctx.O.Style switch
         {
             LyricCardStyle.PhotoBooth => PhotoBooth(d),
-            LyricCardStyle.Letter => Letter(d),
+            LyricCardStyle.Letter => PersonalLetter(d),
             LyricCardStyle.FilmNegative => FilmNegative(d),
             LyricCardStyle.Telegram => Telegram(d),
             LyricCardStyle.MuseumExhibit => Museum(d),
@@ -41,15 +41,15 @@ public static partial class LyricCardRenderer
             LyricCardStyle.CassetteTape => Cassette(d),
             LyricCardStyle.ConcertTicket => ConcertTicket(d),
             LyricCardStyle.LyricReceipt => Receipt(d),
-            LyricCardStyle.BoardingPass => BoardingPass(d),
+            LyricCardStyle.BoardingPass => BoardingPassTicket(d),
             LyricCardStyle.LibraryCard => Library(d),
             LyricCardStyle.MusicPassport => Passport(d),
             LyricCardStyle.ClassifiedDocument => Classified(d),
-            LyricCardStyle.Dictionary => DictionaryPage(d),
+            LyricCardStyle.Dictionary => DictionaryEntry(d),
             LyricCardStyle.BookPage => Book(d),
             LyricCardStyle.PeriodicTable => ElementTile(d),
             LyricCardStyle.Crossword => Crossword(d),
-            LyricCardStyle.GameBoy => PocketGame(d),
+            LyricCardStyle.GameBoy => PocketConsole(d),
             LyricCardStyle.NintendoDs => DualScreen(d),
             LyricCardStyle.PokemonEncounter => Encounter(d),
             LyricCardStyle.RpgInventory => Inventory(d),
@@ -266,6 +266,24 @@ public static partial class LyricCardRenderer
         }
 
         public double Width { get; }
+        public double CardWidth => _ctx.W;
+        public double U => _ctx.U;
+
+        /// <summary>The chosen lines as one text, one per line ("♪" when none is chosen).</summary>
+        public string LyricText => _ctx.C.Lines.Count == 0 ? "♪" : string.Join("\n", _ctx.C.Lines.Select(line => line.Text));
+
+        /// <summary>The typeface the user picked for the lines, or null to keep the style's own.</summary>
+        public Face? UserFace => _ctx.O.Font == LyricCardFont.Auto ? null : _ctx.Face(LyricCardFont.Modern);
+
+        /// <summary>The user's text size, as a factor.</summary>
+        public double TextScale => Math.Clamp(_ctx.O.FontScale, 0.6, 1.5);
+
+        /// <summary>The signature row (Spotify, Taskitify or none, and the timestamp).</summary>
+        public FrameworkElement Signature(Color fg, Color bg, TextAlignment align = TextAlignment.Center) =>
+            Footer(_ctx, fg, bg, align, new Thickness());
+
+        public TextAlignment Align(TextAlignment fallback) => _ctx.Align(fallback);
+
         public bool Wide => _ctx.Landscape;
         public bool Story => _ctx.O.Format == LyricCardFormat.Story;
         public double Height => _ctx.H;
