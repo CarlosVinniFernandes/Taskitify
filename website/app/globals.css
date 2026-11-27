@@ -323,18 +323,6 @@ figcaption { color: var(--muted); font-size: .84rem; }
   max-width: 450px;
   gap: 14px;
 }
-.community-featured {
-  min-width: 0;
-  align-self: center;
-  border-left: 1px solid #77b4ae;
-  padding: 2px 0 2px 14px;
-  overflow-wrap: anywhere;
-}
-.community-featured-label { color: var(--teal); font-size: .84rem; font-weight: 600; line-height: 1.3; margin-bottom: 7px; }
-.community-featured-song { color: var(--paper); font-size: clamp(1.05rem, 2vw, 1.3rem); font-weight: 700; line-height: 1.14; }
-.community-featured-artist { margin-top: 3px; color: var(--muted); font-size: .95rem; }
-.community-featured-by { margin-top: 7px; color: var(--muted); font-size: .79rem; line-height: 1.3; }
-.community-featured a { display: inline-flex; align-items: center; min-height: 44px; color: var(--teal); font-size: .85rem; text-decoration: underline; text-underline-offset: .22em; }
 .text-link { display: inline-block; color: var(--teal); text-decoration: underline; text-underline-offset: 4px; margin-top: 16px; }
 .song-form {
   min-width: 0;
@@ -415,7 +403,6 @@ figcaption { color: var(--muted); font-size: .84rem; }
   .community-record .record-sleeve > svg { width: clamp(16px, 6vw, 31px); height: auto; }
   .community-record .sleeve-title span { font-size: clamp(.46rem, 1.5vw, .66rem); margin-bottom: 4px; }
   .community-record .sleeve-title strong { font-size: clamp(.85rem, 3.7vw, 1.85rem); }
-  .community-featured { padding-left: clamp(8px, 2.6vw, 14px); }
   .sleeve-title strong { font-size: clamp(1.45rem, 5vw, 2.55rem); }
   .feature-split { gap: 27px; }
   .bar-samples { gap: 14px; }

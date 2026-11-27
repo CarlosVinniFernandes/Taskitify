@@ -1,11 +1,12 @@
 "use client";
 
-import { useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import { copy, type Locale } from "@/lib/copy";
 import { guestbookCopy } from "@/lib/guestbook-copy";
 import { pathFor } from "@/lib/site";
 import { communityWallPageSizes, spotifySearchUrl, type WallEntry, type WallPage } from "@/lib/community-wall";
 import styles from "./community-wall.module.css";
+import { noteStyle } from "./community-note-style";
 
 const receiptKey = "taskitify-community-contribution";
 let currentReceipt: string | undefined;
@@ -37,19 +38,6 @@ function personalEntry(receipt: string | null): WallEntry | null {
   } catch {
     return null;
   }
-}
-
-const papers = ["#efebe0", "#e7e8df", "#efe6da", "#ede8e3", "#e9ece7", "#f0ece4"] as const;
-
-function noteStyle(seed: number) {
-  return {
-    mount: (seed >>> 23) % 3,
-    style: {
-      "--tint": papers[(seed >>> 8) % papers.length],
-      "--tilt": (((seed >>> 17) % 7 - 3) * .48) + "deg",
-      "--note-top": (18 + (seed % 3) * 3) + "px",
-    } as CSSProperties,
-  };
 }
 
 export function MusicBoard({ locale, result, page = 1, full, onRetry, onWrite, retryHref, actions, topPagination, children }: {
