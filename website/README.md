@@ -28,3 +28,11 @@ The API reserves one suggestion per address per minute using an atomic Blob writ
 Product images come from the [Store campaign and onboarding assets](../marketing/microsoft-store/SOURCES.md). Font license notices are in `public/fonts/`.
 
 For browser moderation, set the server-only `COMMUNITY_ADMIN_KEY` in Vercel and redeploy. Generate a random key with `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"` and put it in the password field at `/community/admin`. The admin page is disabled without a key. It edits the title, artist, and status of existing wall entries and refreshes the wall after each save. The session lasts 30 minutes. Changing the key invalidates existing sessions.
+
+## Send a Song experiment
+
+Run `npm run dev` and open `http://localhost:3000/s#CODE` with a code from `shared/lyrics-share-v1.md` on the desktop branch `t3/lyrics-share`. If testing a full desktop link locally, keep its fragment and replace the host. For a non-production build, set `LYRICS_SHARE_EXPERIMENT=1` before building. Keep previews restricted to testers while lyric-sharing rights are being verified. The viewer is disabled when `VERCEL_ENV=production` and is excluded from navigation and search indexing.
+
+Visit `/s/demo` in development to try Letter, CassetteTape and Retro in direct and surprise modes with original demonstration lyrics.
+
+To test the short-link API, enable `LYRICS_SHORT_LINK_EXPERIMENT=1`, connect a private Blob store to the test environment, and set `SHARE_CODE_RATE_SECRET` to a server-only secret of at least 32 characters. On hosted previews, set `SITE_URL` to the preview origin and enable `LYRICS_SHARE_EXPERIMENT=1` as well. The viewer and API stay disabled in Vercel production even with all flags set. See the [short-link API, retention and Hobby quota instructions](../shared/lyrics-short-link-v1.md).
