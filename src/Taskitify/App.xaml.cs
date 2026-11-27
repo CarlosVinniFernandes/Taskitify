@@ -271,7 +271,7 @@ public partial class App : Application
         {
             if (page is { } p)
                 _settingsWindow.ShowPage(p);
-            _settingsWindow.Activate();
+            BringToFront(_settingsWindow);
             return;
         }
         _spotifyLyrics?.CheckSession();
@@ -307,6 +307,23 @@ public partial class App : Application
         WindowInterop.SetDarkTitleBar(_settingsWindow, !_theme!.AppsUseLightTheme);
         _settingsWindow.Show();
         _settingsWindow.Activate();
+    }
+
+    /// <summary>
+    /// An open window asked for again (tray, second launch, a button): restored if minimized and
+    /// brought to the front with the focus, even when another app has it.
+    /// </summary>
+    private static void BringToFront(Window window)
+    {
+        if (window.WindowState == WindowState.Minimized)
+            window.WindowState = WindowState.Normal;
+        window.Show();
+        window.Activate();
+        // Activate alone may only flash the taskbar button when another app has the focus.
+        var hwnd = WindowInterop.EnsureHandle(window);
+        if (NativeMethods.GetForegroundWindow() != hwnd)
+            FocusHelper.ForceForeground(hwnd);
+        window.Focus();
     }
 
     private TourWindow? _tour;

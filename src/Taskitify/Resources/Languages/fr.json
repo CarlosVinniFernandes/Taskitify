@@ -575,5 +575,6 @@
   "MinimalButtons": "Boutons flottants",
   "MinimalStateCatching": "Capte les clics",
   "MinimalStateThrough": "Clics traversants",
-  "MinimalMarkTip": "Pointeur barré quand les clics traversent"
+  "MinimalMarkTip": "Pointeur barré quand les clics traversent",
+  "MinimalShortcut": "Raccourci"
 }

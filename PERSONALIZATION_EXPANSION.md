@@ -26,6 +26,8 @@ Branch `t3/personalization-expansion`, from `t3/release-candidate` (aca354f). No
 - Sync: same `LyricsSyncService` (track change, pause, seek, offsets, Lyric Flow by line and by word, no lyrics). No timer of its own; hidden = unsubscribed. Nothing shown while nothing plays; only the song when there are no synced lyrics.
 
 ## UX decisions
+- Minimal Mode page, by importance from the top: on/keep taskbar, Shortcut (picture), Floating buttons, Lyrics (verses shown, graduated sizes, size, auto fit, typeface, alignment, highlight, motion, spacing), Background and text, Elements, Window (set-and-forget behaviour last).
+- Asking for the open Settings again (tray, second launch, a button) restores it if minimized and brings it to the front with the focus.
 - Every option is on the page, no submenus; pictured choices reuse `ThumbTile`/`ChoiceList` and `MiniPlayerLookThumbnails` (new pictures: verses shown, background/text/legibility over a real desktop photo with the song's colours).
 - Changes apply at once and show on the real window (preview while Minimal Mode is off, ended when Settings close), like the mini player.
 - Personal looks live in the Templates section: one Save button, inline name box (focused after saving), Update and Delete on the same row; a small person badge marks them. Look and layout stay independent (layout and width are never stored).

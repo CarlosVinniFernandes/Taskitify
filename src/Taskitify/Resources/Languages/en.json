@@ -575,5 +575,6 @@
   "MinimalButtons": "Floating buttons",
   "MinimalStateCatching": "Catching clicks",
   "MinimalStateThrough": "Clicks pass through",
-  "MinimalMarkTip": "Crossed-out pointer while clicks pass through"
+  "MinimalMarkTip": "Crossed-out pointer while clicks pass through",
+  "MinimalShortcut": "Shortcut"
 }

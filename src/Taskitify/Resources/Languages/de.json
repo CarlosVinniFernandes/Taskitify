@@ -575,5 +575,6 @@
   "MinimalButtons": "Schwebende Schaltflächen",
   "MinimalStateCatching": "Fängt Klicks ab",
   "MinimalStateThrough": "Klicks gehen durch",
-  "MinimalMarkTip": "Durchgestrichener Zeiger, solange Klicks durchgehen"
+  "MinimalMarkTip": "Durchgestrichener Zeiger, solange Klicks durchgehen",
+  "MinimalShortcut": "Tastenkürzel"
 }

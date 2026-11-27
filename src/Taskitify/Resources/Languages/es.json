@@ -575,5 +575,6 @@
   "MinimalButtons": "Botones flotantes",
   "MinimalStateCatching": "Capturando clics",
   "MinimalStateThrough": "Clics atravesando",
-  "MinimalMarkTip": "Puntero tachado mientras los clics atraviesan"
+  "MinimalMarkTip": "Puntero tachado mientras los clics atraviesan",
+  "MinimalShortcut": "Atajo"
 }

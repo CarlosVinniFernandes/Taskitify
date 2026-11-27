@@ -575,5 +575,6 @@
   "MinimalButtons": "Pulsanti fluttuanti",
   "MinimalStateCatching": "Cattura i clic",
   "MinimalStateThrough": "Clic passanti",
-  "MinimalMarkTip": "Puntatore barrato mentre i clic passano"
+  "MinimalMarkTip": "Puntatore barrato mentre i clic passano",
+  "MinimalShortcut": "Scorciatoia"
 }
