@@ -59,6 +59,9 @@ public sealed class SettingsService
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
             Log.Error("Could not read settings, using defaults", ex);
+            // Keep the unreadable file: the next save would otherwise replace it with the defaults.
+            try { File.Copy(FilePath, FilePath + ".invalid", overwrite: true); }
+            catch (Exception copy) when (copy is IOException or UnauthorizedAccessException) { Log.Warn($"Could not keep the unreadable settings: {copy.Message}"); }
         }
         // New settings already have every button they default to; only older files are migrated.
         Current = new AppSettings { LikeButtonAdded = true };
