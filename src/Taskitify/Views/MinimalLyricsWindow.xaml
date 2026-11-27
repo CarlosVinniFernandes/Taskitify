@@ -51,6 +51,13 @@
                             ToolTip="{DynamicResource Loc.ShowPlayer}" AutomationProperties.Name="{DynamicResource Loc.ShowPlayer}" />
                     <Button Style="{StaticResource ToolButton}" Content="&#xE713;" Command="{Binding SettingsCommand}"
                             ToolTip="{DynamicResource Loc.MinimalSettings}" AutomationProperties.Name="{DynamicResource Loc.MinimalSettings}" />
+                    <Button Style="{StaticResource ToolButton}" Command="{Binding ClickThroughCommand}"
+                            ToolTip="{DynamicResource Loc.MinimalClickThroughTip}" AutomationProperties.Name="{DynamicResource Loc.MinimalClickThroughTip}">
+                        <Grid Width="16" Height="16">
+                            <Path Data="M4,2 L4,12 L6.5,9.6 L8.6,13.8 L10.2,13 L8.2,8.9 L11.6,8.9 Z" Fill="{DynamicResource TextPrimaryBrush}" />
+                            <Path Data="M2.5,14 L13.5,2.5" Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        </Grid>
+                    </Button>
                     <Button x:Name="LockButton" Style="{StaticResource ToolButton}" Content="{Binding LockGlyph}" Command="{Binding ToggleLockCommand}"
                             ToolTip="{Binding LockTip}" AutomationProperties.Name="{Binding LockTip}" />
                     <Button Style="{StaticResource ToolButton}" Content="&#xE711;" Command="{Binding CloseCommand}"

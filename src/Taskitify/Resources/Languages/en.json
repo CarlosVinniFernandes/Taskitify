@@ -493,7 +493,7 @@
   "MinimalLocked": "Lock position and size",
   "MinimalLockedHint": "Unlocked, drag the lyrics anywhere and resize them from their edges.",
   "MinimalClickThrough": "Let clicks pass through the lyrics",
-  "MinimalClickThroughHint": "On by default, so a game or app under the lyrics gets every click; a small crossed-out pointer marks it. To move or resize them, Shift + Alt + click the lyrics, or turn this off here or from the notification area icon.",
+  "MinimalClickThroughHint": "On by default, so a game or app under the lyrics gets every click; a small crossed-out pointer marks it. Also from the lyrics' button, Shift + Alt + click, or the notification area icon.",
   "MinimalPlace": "Position and size",
   "MinimalPlaceHint": "Remembered between restarts. If that screen is gone, the lyrics come back to the main one.",
   "MinimalResetPlace": "Reset",
@@ -566,5 +566,10 @@
   "WebTourHint": "What Taskitify can do, again, step by step.",
   "RepositoryLabel": "Source code",
   "RepositoryHint": "Taskitify is free and open source (MIT), on GitHub.",
-  "RepositoryOpen": "Open on GitHub"
+  "RepositoryOpen": "Open on GitHub",
+  "MinimalAutoFit": "Shrink text automatically",
+  "MinimalAutoFitHint": "When the window is resized smaller, the text shrinks so the verses chosen still fit. Never larger than Size.",
+  "MinimalClickThroughTip": "Let clicks pass through (Shift + Alt + click)",
+  "MinimalShortcutTitle": "Shift + Alt + click on the lyrics",
+  "MinimalShortcutHint": "Switches between letting clicks through to the game or app underneath (the crossed-out pointer) and catching them to move, resize or use the buttons."
 }

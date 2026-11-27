@@ -493,7 +493,7 @@
   "MinimalLocked": "Blocca posizione e dimensioni",
   "MinimalLockedHint": "Sbloccati, trascina i testi ovunque e ridimensionali dai bordi.",
   "MinimalClickThrough": "Lascia passare i clic attraverso i testi",
-  "MinimalClickThroughHint": "Attivo per impostazione: il gioco o l'app sotto i testi riceve ogni clic; un piccolo puntatore barrato lo indica. Per spostarli o ridimensionarli, Maiusc + Alt + clic sui testi, oppure disattivalo qui o dall'icona nell'area di notifica.",
+  "MinimalClickThroughHint": "Attivo per impostazione: il gioco o l'app sotto i testi riceve ogni clic; un piccolo puntatore barrato lo indica. Anche dal pulsante sui testi, con Maiusc + Alt + clic o dall'icona nell'area di notifica.",
   "MinimalPlace": "Posizione e dimensioni",
   "MinimalPlaceHint": "Ricordate tra i riavvii. Se quello schermo non c'è più, i testi tornano su quello principale.",
   "MinimalResetPlace": "Ripristina",
@@ -566,5 +566,10 @@
   "WebTourHint": "Cosa sa fare Taskitify, di nuovo, passo dopo passo.",
   "RepositoryLabel": "Codice sorgente",
   "RepositoryHint": "Taskitify è gratuito e open source (MIT), su GitHub.",
-  "RepositoryOpen": "Apri su GitHub"
+  "RepositoryOpen": "Apri su GitHub",
+  "MinimalAutoFit": "Riduci il testo automaticamente",
+  "MinimalAutoFitHint": "Quando la finestra si rimpicciolisce, il testo si riduce perché i versi scelti continuino a starci. Mai più grande della Dimensione.",
+  "MinimalClickThroughTip": "Lascia passare i clic (Maiusc + Alt + clic)",
+  "MinimalShortcutTitle": "Maiusc + Alt + clic sui testi",
+  "MinimalShortcutHint": "Alterna tra lasciar passare i clic al gioco o all'app sotto (il puntatore barrato) e catturarli per spostare, ridimensionare o usare i pulsanti."
 }

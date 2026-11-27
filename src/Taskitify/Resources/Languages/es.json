@@ -493,7 +493,7 @@
   "MinimalLocked": "Bloquear posición y tamaño",
   "MinimalLockedHint": "Desbloqueadas, arrastra las letras a cualquier lugar y cambia su tamaño desde los bordes.",
   "MinimalClickThrough": "Dejar que los clics atraviesen las letras",
-  "MinimalClickThroughHint": "Activado por defecto: el juego o la app bajo las letras recibe todos los clics; un pequeño puntero tachado lo indica. Para moverlas o cambiar su tamaño, haz Shift + Alt + clic en las letras, o desactívalo aquí o desde el icono del área de notificación.",
+  "MinimalClickThroughHint": "Activado por defecto: el juego o la app bajo las letras recibe todos los clics; un pequeño puntero tachado lo indica. También con el botón de las letras, Shift + Alt + clic o el icono del área de notificación.",
   "MinimalPlace": "Posición y tamaño",
   "MinimalPlaceHint": "Se recuerdan entre reinicios. Si esa pantalla ya no está, las letras vuelven a la principal.",
   "MinimalResetPlace": "Restablecer",
@@ -566,5 +566,10 @@
   "WebTourHint": "Lo que Taskitify puede hacer, otra vez, paso a paso.",
   "RepositoryLabel": "Código fuente",
   "RepositoryHint": "Taskitify es gratuito y de código abierto (MIT), en GitHub.",
-  "RepositoryOpen": "Abrir en GitHub"
+  "RepositoryOpen": "Abrir en GitHub",
+  "MinimalAutoFit": "Reducir el texto automáticamente",
+  "MinimalAutoFitHint": "Al hacer la ventana más pequeña, el texto se reduce para que los versos elegidos sigan cabiendo. Nunca supera el Tamaño.",
+  "MinimalClickThroughTip": "Dejar que los clics atraviesen (Shift + Alt + clic)",
+  "MinimalShortcutTitle": "Shift + Alt + clic en las letras",
+  "MinimalShortcutHint": "Alterna entre dejar pasar los clics al juego o la app de abajo (el puntero tachado) y capturarlos para mover, cambiar el tamaño o usar los botones."
 }

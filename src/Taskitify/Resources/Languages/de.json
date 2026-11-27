@@ -493,7 +493,7 @@
   "MinimalLocked": "Position und Größe sperren",
   "MinimalLockedHint": "Entsperrt kannst du den Songtext überallhin ziehen und an den Rändern die Größe ändern.",
   "MinimalClickThrough": "Klicks durch den Songtext durchlassen",
-  "MinimalClickThroughHint": "Standardmäßig an: Spiel oder App unter dem Songtext erhalten jeden Klick; ein kleiner durchgestrichener Zeiger zeigt das an. Zum Verschieben oder Ändern der Größe Umschalt + Alt + Klick auf den Songtext, oder hier bzw. über das Symbol im Infobereich ausschalten.",
+  "MinimalClickThroughHint": "Standardmäßig an: Spiel oder App unter dem Songtext erhalten jeden Klick; ein kleiner durchgestrichener Zeiger zeigt das an. Auch über die Schaltfläche am Songtext, Umschalt + Alt + Klick oder das Symbol im Infobereich.",
   "MinimalPlace": "Position und Größe",
   "MinimalPlaceHint": "Bleiben nach Neustarts erhalten. Fehlt dieser Bildschirm, kehrt der Songtext auf den Hauptbildschirm zurück.",
   "MinimalResetPlace": "Zurücksetzen",
@@ -566,5 +566,10 @@
   "WebTourHint": "Was Taskitify kann, noch einmal Schritt für Schritt.",
   "RepositoryLabel": "Quellcode",
   "RepositoryHint": "Taskitify ist kostenlos und quelloffen (MIT), auf GitHub.",
-  "RepositoryOpen": "Auf GitHub öffnen"
+  "RepositoryOpen": "Auf GitHub öffnen",
+  "MinimalAutoFit": "Text automatisch verkleinern",
+  "MinimalAutoFitHint": "Wird das Fenster kleiner, schrumpft der Text, damit die gewählten Zeilen weiter hineinpassen. Nie größer als die Größe.",
+  "MinimalClickThroughTip": "Klicks durchlassen (Umschalt + Alt + Klick)",
+  "MinimalShortcutTitle": "Umschalt + Alt + Klick auf den Songtext",
+  "MinimalShortcutHint": "Wechselt zwischen Klicks an das Spiel oder die App darunter durchlassen (der durchgestrichene Zeiger) und sie abfangen, um zu verschieben, zu skalieren oder die Schaltflächen zu nutzen."
 }

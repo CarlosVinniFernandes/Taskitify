@@ -741,6 +741,12 @@ public sealed class MinimalModeSettings
     /// <summary>Verses get smaller the further they are from the current one (small, medium, current, medium, small).</summary>
     public bool GraduatedSizes { get; set; } = true;
 
+    /// <summary>
+    /// The text gets smaller when the window is too small for the verses chosen (never larger than
+    /// <see cref="FontSize"/>): resizing the window resizes the lyrics.
+    /// </summary>
+    public bool AutoFit { get; set; } = true;
+
     /// <summary>Room between verses, relative to the usual (0.6 to 1.8).</summary>
     public double LineSpacing { get; set; } = 1;
 
@@ -777,6 +783,23 @@ public sealed class MinimalModeSettings
     };
 
     public static double ClampFontSize(double size) => Math.Clamp(Math.Round(size), 18, 64);
+
+    /// <summary>Height of one verse's slot for a font size (the line, its padding above and below).</summary>
+    public double VerseHeight(double fontSize) => fontSize * (1.14 + (0.4 * ClampSpacing(LineSpacing)));
+
+    /// <summary>
+    /// The largest font size at which the verses shown fit a lyrics area of this height (DIPs), and
+    /// most of the song's verses its width (<paramref name="widthAt100"/>: a typical verse's width at
+    /// 100 px, 0 if unknown). Long verses may still wrap rather than make everything tiny.
+    /// </summary>
+    public double FitFontSize(double height, double width, double widthAt100)
+    {
+        var (before, after) = Around;
+        var byHeight = height * 0.96 / ((before + after + 1) * VerseHeight(1));
+        var byWidth = widthAt100 > 0 ? (width - 12) * 0.98 / widthAt100 * 100 : double.MaxValue;
+        var fit = Math.Min(byHeight, Math.Max(byWidth, ClampFontSize(FontSize) * 0.6));
+        return Math.Clamp(Math.Floor(fit), 10, ClampFontSize(FontSize));
+    }
 
     /// <summary>A verse's size relative to the current one's, by its distance from it.</summary>
     public double SizeAt(int distance) => !GraduatedSizes ? 1 : Math.Abs(distance) switch

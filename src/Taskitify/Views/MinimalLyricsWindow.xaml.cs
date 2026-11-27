@@ -128,7 +128,9 @@ public partial class MinimalLyricsWindow : Window
             {
                 _activeText = null;
                 _lyricInk.Invalidate();
+                _verseWidth = null;
             }
+            QueueFit();
             QueueLyrics(animate: false);
         };
         LyricsViewport.SizeChanged += (_, _) =>
@@ -139,6 +141,7 @@ public partial class MinimalLyricsWindow : Window
             var edge = Math.Clamp(_vm.LyricsFontSize * .45 / height, 0.02, 0.2);
             LyricsFade.GradientStops[1].Offset = edge;
             LyricsFade.GradientStops[2].Offset = 1 - edge;
+            UpdateFit();
             QueueLyrics(animate: false);
         };
 
@@ -296,8 +299,56 @@ public partial class MinimalLyricsWindow : Window
         if (IsVisible && _fittedTo is { } was && was != fit)
             FitHeight();
         _fittedTo = fit;
+        _verseWidth = null;
+        UpdateFit();
         _lyricInk.Invalidate();
         QueueLyrics(animate: false);
+    }
+
+    // ---- Auto fit: the text shrinks so the chosen verses fit the window as it is resized ----
+
+    private (string Key, double Width)? _verseWidth;
+    private bool _fitQueued;
+
+    private void QueueFit()
+    {
+        if (_fitQueued || !IsVisible)
+            return;
+        _fitQueued = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+        {
+            _fitQueued = false;
+            UpdateFit();
+        });
+    }
+
+    private void UpdateFit()
+    {
+        var s = _settings.Current.Minimal;
+        if (!s.AutoFit || LyricsViewport.ActualHeight <= 0)
+        {
+            _vm.SetFitSize(null);
+            return;
+        }
+        _vm.SetFitSize(s.FitFontSize(LyricsViewport.ActualHeight, LyricsViewport.ActualWidth, VerseWidthAt100()));
+    }
+
+    /// <summary>A typical verse's width at 100 px in the lyrics' type (the 85th percentile, so one long verse does not shrink them all); once per song and type.</summary>
+    private double VerseWidthAt100()
+    {
+        var lines = _vm.Lines;
+        if (lines.Count == 0)
+            return 0;
+        var key = $"{lines.Count}|{lines[0].Text}|{lines[^1].Text}|{_vm.LyricsFont.Source}";
+        if (_verseWidth is { } cached && cached.Key == key)
+            return cached.Width;
+        var face = new Typeface(_vm.LyricsFont, FontStyles.Normal, FontWeights.Bold, FontStretches.Normal);
+        var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+        var widths = lines.Select(l => new FormattedText(l.Text, System.Globalization.CultureInfo.CurrentUICulture, FlowDirection.LeftToRight,
+            face, 100, Brushes.White, dpi).WidthIncludingTrailingWhitespace).OrderBy(w => w).ToList();
+        var width = widths[(int)Math.Min(widths.Count - 1, Math.Floor(widths.Count * 0.85))] + 12;
+        _verseWidth = (key, width);
+        return width;
     }
 
     /// <summary>
@@ -353,7 +404,8 @@ public partial class MinimalLyricsWindow : Window
     {
         var s = _settings.Current.Minimal;
         var (before, after) = s.Around;
-        var verse = (_vm.LineHeight * 1.25) + _vm.LinePadding.Top + _vm.LinePadding.Bottom;
+        // From the size chosen, not the fitted one: the height is what lets that size fit.
+        var verse = s.VerseHeight(MinimalModeSettings.ClampFontSize(s.FontSize)) * 1.1;
         return 14 + 30 + ((before + after + 1) * verse) + (s.ShowControls ? 40 : 0) + 12;
     }
 
@@ -434,6 +486,14 @@ public partial class MinimalLyricsWindow : Window
 
     private void OnResizeStart(object sender, MouseButtonEventArgs e)
     {
+        // Shift + Alt + click: clicks pass through from now on (the same shortcut brings them back).
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) && Keyboard.Modifiers.HasFlag(ModifierKeys.Alt)
+            || NativeMethods.GetAsyncKeyState(0x10) < 0 && NativeMethods.GetAsyncKeyState(0x12) < 0)
+        {
+            e.Handled = true;
+            _settings.Update(x => x.Minimal.ClickThrough = true);
+            return;
+        }
         var s = _settings.Current.Minimal;
         if (s.Locked || s.ClickThrough || e.OriginalSource is DependencyObject source && IsInButton(source))
             return;

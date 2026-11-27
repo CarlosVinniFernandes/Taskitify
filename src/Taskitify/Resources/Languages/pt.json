@@ -493,7 +493,7 @@
   "MinimalLocked": "Travar posição e tamanho",
   "MinimalLockedHint": "Destravadas, arraste as letras para qualquer lugar e redimensione pelas bordas.",
   "MinimalClickThrough": "Deixar os cliques atravessarem as letras",
-  "MinimalClickThroughHint": "Ligado por padrão: o jogo ou app sob as letras recebe todos os cliques; um pequeno cursor riscado indica isso. Para mover ou redimensionar, faça Shift + Alt + clique nas letras, ou desligue aqui ou pelo ícone da área de notificação.",
+  "MinimalClickThroughHint": "Ligado por padrão: o jogo ou app sob as letras recebe todos os cliques; um pequeno cursor riscado indica isso. Também pelo botão nas letras, por Shift + Alt + clique ou pelo ícone da área de notificação.",
   "MinimalPlace": "Posição e tamanho",
   "MinimalPlaceHint": "Lembrados entre reinicializações. Se aquela tela não existir mais, as letras voltam para a principal.",
   "MinimalResetPlace": "Restaurar",
@@ -566,5 +566,10 @@
   "WebTourHint": "O que o Taskitify faz, de novo, passo a passo.",
   "RepositoryLabel": "Código-fonte",
   "RepositoryHint": "O Taskitify é gratuito e open source (MIT), no GitHub.",
-  "RepositoryOpen": "Abrir no GitHub"
+  "RepositoryOpen": "Abrir no GitHub",
+  "MinimalAutoFit": "Diminuir fonte automaticamente",
+  "MinimalAutoFitHint": "Ao diminuir a janela, a letra encolhe para os versos escolhidos continuarem cabendo. Nunca passa do Tamanho.",
+  "MinimalClickThroughTip": "Deixar os cliques atravessarem (Shift + Alt + clique)",
+  "MinimalShortcutTitle": "Shift + Alt + clique nas letras",
+  "MinimalShortcutHint": "Alterna entre deixar os cliques passarem para o jogo ou app embaixo (o cursor riscado) e capturá-los para mover, redimensionar ou usar os botões."
 }

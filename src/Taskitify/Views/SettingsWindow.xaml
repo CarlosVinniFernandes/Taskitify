@@ -686,6 +686,60 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- The shortcut that matters most here, drawn: Shift + Alt + left click on the lyrics. -->
+                    <Border Style="{StaticResource Stage}" Margin="0,24,0,0" Padding="24,20">
+                        <Border.Resources>
+                            <Style x:Key="Keycap" TargetType="Border">
+                                <Setter Property="MinWidth" Value="58" />
+                                <Setter Property="Height" Value="44" />
+                                <Setter Property="CornerRadius" Value="8" />
+                                <Setter Property="BorderThickness" Value="1,1,1,3" />
+                                <Setter Property="BorderBrush" Value="#59FFFFFF" />
+                                <Setter Property="Background" Value="#1FFFFFFF" />
+                                <Setter Property="Padding" Value="14,0" />
+                                <Setter Property="VerticalAlignment" Value="Center" />
+                            </Style>
+                            <Style x:Key="KeyText" TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="White" />
+                                <Setter Property="FontSize" Value="15" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                                <Setter Property="HorizontalAlignment" Value="Center" />
+                                <Setter Property="VerticalAlignment" Value="Center" />
+                            </Style>
+                            <Style x:Key="Plus" TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#99FFFFFF" />
+                                <Setter Property="FontSize" Value="18" />
+                                <Setter Property="Margin" Value="10,0" />
+                                <Setter Property="VerticalAlignment" Value="Center" />
+                            </Style>
+                        </Border.Resources>
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,24,0">
+                                <Border Style="{StaticResource Keycap}"><TextBlock Style="{StaticResource KeyText}" Text="Shift" /></Border>
+                                <TextBlock Style="{StaticResource Plus}" Text="+" />
+                                <Border Style="{StaticResource Keycap}"><TextBlock Style="{StaticResource KeyText}" Text="Alt" /></Border>
+                                <TextBlock Style="{StaticResource Plus}" Text="+" />
+                                <!-- A mouse, its left button lit. -->
+                                <Grid Width="34" Height="48" VerticalAlignment="Center">
+                                    <Path Data="M17,1 C8,1 2,7 2,16 L2,32 C2,41 8,47 17,47 C26,47 32,41 32,32 L32,16 C32,7 26,1 17,1 Z"
+                                          Stroke="#B3FFFFFF" StrokeThickness="1.6" />
+                                    <Path Data="M16.2,1.4 C8.4,1.8 2.8,7.6 2.8,16 L2.8,19 L16.2,19 Z" Fill="#FF1ED760" />
+                                    <Path Data="M17,2 L17,19 M2.5,19.5 L31.5,19.5" Stroke="#80FFFFFF" StrokeThickness="1.2" />
+                                </Grid>
+                                <!-- On the lyrics, both ways: the crossed-out pointer and back. -->
+                                <TextBlock Text="&#xE8AB;" FontFamily="{StaticResource IconFont}" FontSize="16" Foreground="#99FFFFFF" Margin="16,0,10,0" VerticalAlignment="Center" />
+                                <Grid Width="22" Height="22" VerticalAlignment="Center">
+                                    <Path Data="M6,3 L6,16 L9.3,12.8 L12,18.3 L14.2,17.2 L11.5,11.8 L16,11.8 Z" Fill="White" />
+                                    <Path Data="M3,19.5 L19.5,3" Stroke="White" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                </Grid>
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource Loc.MinimalShortcutTitle}" Foreground="White" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <TextBlock Text="{DynamicResource Loc.MinimalShortcutHint}" Foreground="#B3FFFFFF" FontSize="12.5" TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.MinimalWindow}" />
                     <Border Style="{StaticResource Group}">
                         <StackPanel>
@@ -786,6 +840,15 @@
                                     <Slider Minimum="18" Maximum="64" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,8,0,0"
                                             Value="{Binding MinimalLook.FontSize}" AutomationProperties.Name="{DynamicResource Loc.MinimalSize}" />
                                 </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <DockPanel>
+                                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding MinimalLook.AutoFit}" AutomationProperties.Name="{DynamicResource Loc.MinimalAutoFit}" />
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.MinimalAutoFit}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.MinimalAutoFitHint}" />
+                                    </StackPanel>
+                                </DockPanel>
                             </Border>
                             <Border Style="{StaticResource Row}">
                                 <StackPanel>

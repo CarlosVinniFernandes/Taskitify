@@ -34,6 +34,7 @@ public sealed class MinimalLyricsViewModel : ObservableObject, IDisposable
         NextCommand = new RelayCommand(() => _ = _monitor.NextAsync(), () => _monitor.CanGoNext);
         PreviousCommand = new RelayCommand(() => _ = _monitor.PreviousAsync(), () => _monitor.CanGoPrevious);
         ToggleLockCommand = new RelayCommand(() => _settings.Update(s => s.Minimal.Locked = !s.Minimal.Locked));
+        ClickThroughCommand = new RelayCommand(() => _settings.Update(s => s.Minimal.ClickThrough = true));
         CloseCommand = new RelayCommand(() => _settings.Update(s => s.Minimal.Enabled = false));
         SettingsCommand = new RelayCommand(() => (Application.Current as App)?.ShowSettings(Views.SettingsPage.Minimal));
         MiniPlayerCommand = new RelayCommand(() => MiniPlayerRequested?.Invoke(this, EventArgs.Empty));
@@ -45,6 +46,9 @@ public sealed class MinimalLyricsViewModel : ObservableObject, IDisposable
     public ICommand NextCommand { get; }
     public ICommand PreviousCommand { get; }
     public ICommand ToggleLockCommand { get; }
+
+    /// <summary>The toolbar's "let clicks through" button (Shift + Alt + click toggles it too).</summary>
+    public ICommand ClickThroughCommand { get; }
     public ICommand CloseCommand { get; }
     public ICommand SettingsCommand { get; }
     public ICommand MiniPlayerCommand { get; }
@@ -80,7 +84,23 @@ public sealed class MinimalLyricsViewModel : ObservableObject, IDisposable
 
     private bool DisplayType => S.Typeface != LyricsTypeface.System;
     public FontFamily LyricsFont => MiniPlayerViewModel.FontFor(S.Typeface);
-    public double LyricsFontSize => MinimalModeSettings.ClampFontSize(S.FontSize);
+    private double? _fitSize;
+
+    /// <summary>The size used: the chosen one, or smaller when the window is too small for the verses (auto fit).</summary>
+    public double LyricsFontSize => S.AutoFit && _fitSize is { } fit ? Math.Min(fit, MinimalModeSettings.ClampFontSize(S.FontSize)) : MinimalModeSettings.ClampFontSize(S.FontSize);
+
+    /// <summary>The view reports the size that fits its lyrics area (null: no limit).</summary>
+    public void SetFitSize(double? size)
+    {
+        if (_fitSize == size || (_fitSize is { } a && size is { } b && Math.Abs(a - b) < 0.5))
+            return;
+        _fitSize = size;
+        OnPropertyChanged(nameof(LyricsFontSize));
+        OnPropertyChanged(nameof(LineHeight));
+        OnPropertyChanged(nameof(LinePadding));
+        OnPropertyChanged(nameof(SongFontSize));
+    }
+
     public double LineHeight => LyricsFontSize * 1.14;
     public Thickness LinePadding => new(6, LyricsFontSize * .2 * MinimalModeSettings.ClampSpacing(S.LineSpacing), 6, LyricsFontSize * .2 * MinimalModeSettings.ClampSpacing(S.LineSpacing));
     public TextAlignment LyricsTextAlignment => S.Alignment == LyricsAlignment.Left ? TextAlignment.Left : TextAlignment.Center;

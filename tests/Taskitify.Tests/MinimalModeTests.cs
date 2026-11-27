@@ -66,4 +66,20 @@ public sealed class MinimalModeTests
     [InlineData(MinimalLines.Five, 2, 2)]
     public void VersesAroundTheCurrentOne(MinimalLines lines, int before, int after) =>
         Assert.Equal((before, after), new MinimalModeSettings { Lines = lines }.Around);
+
+    [Fact]
+    public void AutoFitShrinksTheTextSoTheChosenVersesFitButNeverGrowsIt()
+    {
+        var s = new MinimalModeSettings { FontSize = 30, Lines = MinimalLines.Three };
+        // Room enough: the chosen size.
+        Assert.Equal(30, s.FitFontSize(400, 900, 0));
+        // A third of the height: about a third of the size, and the three verses fit.
+        var small = s.FitFontSize(60, 900, 0);
+        Assert.True(small < 30 && 3 * s.VerseHeight(small) <= 60);
+        // Five verses need a smaller size than three in the same window.
+        Assert.True(new MinimalModeSettings { FontSize = 30, Lines = MinimalLines.Five }.FitFontSize(120, 900, 0) < s.FitFontSize(120, 900, 0));
+        // A narrow window shrinks long verses too, but not below 60% of the chosen size.
+        var narrow = s.FitFontSize(400, 300, 1200);
+        Assert.True(narrow < 30 && narrow >= 10);
+    }
 }

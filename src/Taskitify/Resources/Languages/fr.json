@@ -493,7 +493,7 @@
   "MinimalLocked": "Verrouiller la position et la taille",
   "MinimalLockedHint": "Déverrouillées, faites glisser les paroles n'importe où et redimensionnez-les par les bords.",
   "MinimalClickThrough": "Laisser les clics traverser les paroles",
-  "MinimalClickThroughHint": "Activé par défaut : le jeu ou l'app sous les paroles reçoit tous les clics ; un petit pointeur barré l'indique. Pour les déplacer ou les redimensionner, faites Maj + Alt + clic sur les paroles, ou désactivez-le ici ou depuis l'icône de la zone de notification.",
+  "MinimalClickThroughHint": "Activé par défaut : le jeu ou l'app sous les paroles reçoit tous les clics ; un petit pointeur barré l'indique. Aussi avec le bouton des paroles, Maj + Alt + clic ou l'icône de la zone de notification.",
   "MinimalPlace": "Position et taille",
   "MinimalPlaceHint": "Mémorisées entre les redémarrages. Si cet écran n'est plus là, les paroles reviennent sur l'écran principal.",
   "MinimalResetPlace": "Réinitialiser",
@@ -566,5 +566,10 @@
   "WebTourHint": "Ce que Taskitify sait faire, à nouveau, étape par étape.",
   "RepositoryLabel": "Code source",
   "RepositoryHint": "Taskitify est gratuit et open source (MIT), sur GitHub.",
-  "RepositoryOpen": "Ouvrir sur GitHub"
+  "RepositoryOpen": "Ouvrir sur GitHub",
+  "MinimalAutoFit": "Réduire le texte automatiquement",
+  "MinimalAutoFitHint": "Quand la fenêtre rétrécit, le texte se réduit pour que les vers choisis tiennent toujours. Jamais plus grand que la Taille.",
+  "MinimalClickThroughTip": "Laisser passer les clics (Maj + Alt + clic)",
+  "MinimalShortcutTitle": "Maj + Alt + clic sur les paroles",
+  "MinimalShortcutHint": "Bascule entre laisser passer les clics vers le jeu ou l'app en dessous (le pointeur barré) et les capter pour déplacer, redimensionner ou utiliser les boutons."
 }

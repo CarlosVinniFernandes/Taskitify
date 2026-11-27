@@ -15,8 +15,9 @@ Branch `t3/personalization-expansion`, from `t3/release-candidate` (aca354f). No
 
 ### Minimal Mode
 - Defaults (game-friendly, per review): three verses, the ones around the current one smaller (graduated sizes, can be turned off), no background, outline for legibility, no title/controls/buttons, clicks pass through (a small crossed-out pointer marks it), topmost. Off until turned on.
-- Shift + Alt + left click on the lyrics while clicks pass through gives the clicks back (low-level mouse hook installed only in that state; that click is swallowed, never reaches the game).
+- Shift + Alt + left click on the lyrics toggles click-through both ways (also a toolbar button with the crossed-out pointer; Settings shows the shortcut as a picture above Window). While clicks pass through, the shortcut gives the clicks back (low-level mouse hook installed only in that state; that click is swallowed, never reaches the game).
 - Options: verses shown (1, current+next, 3, 5), graduated sizes on/off, highlight, motion, alignment, typeface, size, spacing, background (clear/soft/album) + opacity, text colour (white/warm/album/dark), legibility (none/shadow/outline), title+artist, playback controls, keep the taskbar player, topmost, lock, click-through.
+- Auto fit (on by default): resizing the window shrinks the text so the verses chosen fit its height and most verses its width; never larger than Size, never below 60% of it for width.
 - Window: drag anywhere, resize by hand from 10 px edges or the always-visible corner grip (the window has no system sizing frame, so the system hit test could not size it); position/size persist in physical px and come back on screen when a monitor/resolution is gone (`FloatingPlacement`). Toolbar (mini player, settings, lock, close) is always visible while clicks are caught, never hover-only.
 - Click-through: `WS_EX_TRANSPARENT`, no polling; turned off with Shift + Alt + click, the tray item or Settings (the window's buttons hide while it is on).
 - Games: never takes focus (`WS_EX_NOACTIVATE`, tool window); topmost is reasserted on foreground changes (WinEvent hook + one delayed retry), so it stays over borderless full-screen games.
@@ -46,6 +47,7 @@ Branch `t3/personalization-expansion`, from `t3/release-candidate` (aca354f). No
 - Real app runs on a throwaway copy of the user's data (`TASKITIFY_DATA_DIR`, English for screenshots): Minimal Mode over the desktop with real songs (track changes, Lyric Flow ink, 1/3/5 verses, left/centre, album/soft/clear, outline), window ex-style checked (`TRANSPARENT|LAYERED|TOPMOST|NOACTIVATE|TOOLWINDOW`), placement on first run and after a lost position, taskbar player hidden, settings pages (Minimal, mini player templates with a personal look, background sliders, sync section), tour steps in en/pt/it.
 
 ## Known limitations
+- Shift + Alt is also Windows' default input-language switch: with several keyboard layouts installed, the shortcut may switch the layout too.
 - Exclusive full-screen games (the game owns the display) show no other window; borderless/windowed full screen works.
 - Graduated sizes are a render scale: every verse keeps the same slot, so spacing is even rather than tight.
 - Per-song key is artist + title: Windows gives no Spotify id, and the id Spotify's lookup learns is missing for cached/local/LRCLIB lyrics. Two different songs with identical names share an adjustment.
