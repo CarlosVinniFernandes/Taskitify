@@ -44,7 +44,8 @@ public partial class SettingsWindow : Window
         // settings are in use they go above it, and back to a normal window once another one is.
         Activated += (_, _) => Topmost = Application.Current.Windows.OfType<MiniPlayerWindow>().Any(w => w.IsVisible && w.IsPinned);
         Deactivated += (_, _) => Topmost = false;
-        WirePlayerToolDrag();
+        WirePlayerToolDrag(PlayerToolList);
+        WirePlayerToolDrag(PopupToolList);
         // A saved look gets its name right away: the cursor waits in it, the default name selected.
         if (vm.MiniLook is { } look)
             look.LookSaved += (_, _) => Dispatcher.InvokeAsync(() =>
@@ -58,7 +59,7 @@ public partial class SettingsWindow : Window
     /// The floating player's simulated button bar: a click shows or hides a button; pressed, held
     /// and dragged, it lifts and takes the place of the one it passes (the player follows live).
     /// </summary>
-    private void WirePlayerToolDrag()
+    private void WirePlayerToolDrag(ItemsControl PlayerToolList)
     {
         PlayerToolItem? pressed = null;
         FrameworkElement? pressedFace = null;

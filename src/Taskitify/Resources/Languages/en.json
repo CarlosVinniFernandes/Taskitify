@@ -754,7 +754,7 @@
   "ExitFullScreen": "Exit full screen (Esc)",
   "PlayerToolSize": "Lyrics size (A- and A+)",
   "PlayerToolsTitle": "Hover buttons",
-  "PlayerToolsHint": "The buttons as they sit on the floating player. Click one to show or hide it; press, hold and drag it to move it.",
+  "PlayerToolsHint": "The buttons over the mini player and the floating player (lock, click-through and close only when floating). Click one to show or hide it; press, hold and drag it to move it.",
   "PlayerToolsReset": "Restore the default order",
   "MoveLeft": "Move left",
   "MoveRight": "Move right",

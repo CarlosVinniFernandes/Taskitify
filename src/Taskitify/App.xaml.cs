@@ -201,6 +201,14 @@ public partial class App : Application
         _miniPlayer.LyricsSizeRequested += (_, step) => _settings.Update(s =>
             s.MiniPlayerLook.LyricsScale = Math.Clamp(Math.Round((s.MiniPlayerLook.LyricsScale + (step * 0.1)) * 10) / 10, 0.7, 2.2));
         _miniPlayer.FloatRequested += (_, _) => _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, true));
+        // The popup's maximize and full screen: float the player (it shows synchronously), then fill the screen.
+        _miniPlayer.PresentRequested += (_, fullScreen) =>
+        {
+            _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, true));
+            Dispatcher.BeginInvoke(() => _miniPlayer?.Present(fullScreen), DispatcherPriority.Loaded);
+        };
+        // Minimized while filling the screen: the taskbar player shows again, as the way back.
+        _miniPlayer.PresentationMinimizedChanged += (_, _) => _overlay?.Reevaluate();
         _miniPlayer.MinimalRequested += (_, _) =>
         {
             _miniPlayer.HidePopup(force: true);
@@ -212,7 +220,7 @@ public partial class App : Application
         _minimalVm.MiniPlayerRequested += (_, _) => _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, true));
         _minimal = new MinimalLyricsWindow(_minimalVm, _settings, _monitor);
         _hotkey = new GlobalHotkey(OnMinimalHotkey);
-        _overlay.MinimalActive = () => MinimalShown;
+        _overlay.MinimalActive = () => MinimalShown && _miniPlayer?.IsPresentationMinimized != true;
 
         _tray = new TrayIconService(ShowSettings, ShowMiniPlayerFromTray, ShowLyricCard, ShowDebug, Shutdown, ShowTour)
         {
@@ -505,6 +513,20 @@ public partial class App : Application
     {
         if (_miniPlayer is null || _overlay is null)
             return;
+        // Maximized or full screen, minimized: back as the regular mini player over the bar.
+        if (_miniPlayer.IsPresentationMinimized)
+        {
+            _miniPlayer.LeavePresentation();
+            if (_settings!.Current.Minimal.Enabled)
+                _settings.Update(s => s.Minimal.Enabled = false);
+            if (_minimalAuto)
+                _minimalSuppressed = true;
+            UpdateMinimal();
+            _overlay.Reevaluate();
+            var bounds = _overlay.Bounds;
+            Dispatcher.BeginInvoke(() => OpenMiniPlayer(_overlay.IsShown ? _overlay.Bounds : bounds), DispatcherPriority.Loaded);
+            return;
+        }
         // Floating with the taskbar player kept: the bar's click brings the floating player forward.
         if (_miniPlayer.IsPinned)
         {
@@ -687,6 +709,13 @@ public partial class App : Application
         if (_minimal is null || _settings is null || IsShuttingDown)
             return;
         var on = MinimalShown;
+        if (_miniPlayer is not null)
+        {
+            var t = _settings.Current.Minimal;
+            _miniPlayer.Tools = new PlayerTools(t.PlayerShowSwitchButton, t.PlayerShowSizeButtons, t.PlayerShowFillButton, t.PlayerShowFullScreenButton,
+                t.PlayerShowSettingsButton, t.PlayerShowClickThroughButton, t.PlayerShowLockButton, t.PlayerShowCloseButton,
+                Models.PlayerToolIds.Normalize(t.PlayerToolOrder));
+        }
         // Not that minimal: the mini player floats instead of the lyrics alone.
         if (on && _settings.Current.Minimal.NotThatMinimal && _miniPlayer is not null)
         {

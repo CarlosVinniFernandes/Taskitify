@@ -99,7 +99,7 @@ public partial class MiniPlayerWindow : Window
         // Ctrl + Alt + click on the floating player: clicks pass through from now on.
         ContentCard.PreviewMouseLeftButtonDown += (_, e) =>
         {
-            if (IsPinned && NativeMethods.GetAsyncKeyState(0x11) < 0 && NativeMethods.GetAsyncKeyState(0x12) < 0)
+            if (IsPinned && !_presenting && NativeMethods.GetAsyncKeyState(0x11) < 0 && NativeMethods.GetAsyncKeyState(0x12) < 0)
             {
                 e.Handled = true;
                 _pinned?.SetClickThrough(true);
@@ -121,8 +121,8 @@ public partial class MiniPlayerWindow : Window
         PopupFloat.Click += (_, _) => FloatRequested?.Invoke(this, EventArgs.Empty);
         LyricsSmaller.Click += (_, _) => LyricsSizeRequested?.Invoke(this, -1);
         LyricsBigger.Click += (_, _) => LyricsSizeRequested?.Invoke(this, 1);
-        PinnedMaximize.Click += (_, _) => TogglePresentation(fullScreen: false);
-        PinnedFullScreen.Click += (_, _) => TogglePresentation(fullScreen: true);
+        PinnedMaximize.Click += (_, _) => RequestPresentation(fullScreen: false);
+        PinnedFullScreen.Click += (_, _) => RequestPresentation(fullScreen: true);
         CaptionRestore.Click += (_, _) => ExitPresentation();
         CaptionClose.Click += (_, _) => _pinned?.TurnOff();
         CaptionMinimize.Click += (_, _) => WindowState = WindowState.Minimized;
@@ -131,6 +131,7 @@ public partial class MiniPlayerWindow : Window
         {
             if (_presenting && WindowState == WindowState.Normal)
                 Dispatcher.BeginInvoke(PlacePresentation);
+            PresentationMinimizedChanged?.Invoke(this, EventArgs.Empty);
         };
         PopupKeepOpen.Click += (_, _) =>
         {
@@ -458,6 +459,19 @@ public partial class MiniPlayerWindow : Window
     {
         if (_pinned is not { } o)
             return;
+        // Maximized or full screen, a settings change must not turn it back into a floating window
+        // (on top of everything, never focused, maybe click-through): it stays an app until it leaves.
+        if (_presenting)
+        {
+            Topmost = false;
+            PinnedMark.Visibility = PinnedGrip.Visibility = Visibility.Collapsed;
+            _unpinClicks?.Stop();
+            ApplyLayout();
+            UpdateFit();
+            UpdateHoverChrome();
+            UpdatePinnedToolbar();
+            return;
+        }
         Topmost = o.Topmost;
         if (!o.Topmost)
             NativeMethods.SetWindowPos(_hwnd, new IntPtr(-2), 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
@@ -653,13 +667,6 @@ public partial class MiniPlayerWindow : Window
         if (WindowState != WindowState.Normal)
             WindowState = WindowState.Normal;
         SetAppWindow(false);
-        // Floating again: above the others if it is set so.
-        if (_pinned is { } back)
-        {
-            Topmost = back.Topmost;
-            if (back.Topmost)
-                WindowInterop.BringToTopmost(_hwnd);
-        }
         _vm.PresentationHeight = 0;
         ApplyLayout();
         SetBaseWidth(before.Width);
@@ -670,10 +677,54 @@ public partial class MiniPlayerWindow : Window
         UpdateLayout();
         if (_hwnd != IntPtr.Zero)
             WindowInterop.SetPosition(_hwnd, before.Bounds.X, before.Bounds.Y);
-        UpdatePinnedToolbar();
+        // Floating again: all of its options (on top, click-through, lock, mark) as they are now.
+        ApplyPinned();
+        if (_pinned is { Topmost: false })
+            NativeMethods.SetWindowPos(_hwnd, new IntPtr(-2), 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
+        PresentationMinimizedChanged?.Invoke(this, EventArgs.Empty);
         ScrollToCurrent(animate: false);
         QueueLyrics(animate: false);
     }
+
+    /// <summary>Maximized or full screen and minimized: out of sight, so the taskbar player is the way back.</summary>
+    public bool IsPresentationMinimized => _presenting && WindowState == WindowState.Minimized;
+
+    /// <summary>The maximized or full screen player was minimized, restored or left.</summary>
+    public event EventHandler? PresentationMinimizedChanged;
+
+    /// <summary>The popup's maximize or full screen button: the app floats the player, then calls <see cref="Present"/>.</summary>
+    public event EventHandler<bool>? PresentRequested;
+
+    /// <summary>Floating: maximized (false) or full screen (true), as its buttons do.</summary>
+    public void Present(bool fullScreen)
+    {
+        if (IsPinned && !(_presenting && _fullScreen == fullScreen))
+            TogglePresentation(fullScreen);
+    }
+
+    private void RequestPresentation(bool fullScreen)
+    {
+        if (IsPinned)
+            TogglePresentation(fullScreen);
+        else
+            PresentRequested?.Invoke(this, fullScreen);
+    }
+
+    /// <summary>
+    /// Maximized or full screen, then minimized, and the taskbar player clicked: the player comes
+    /// back as the regular mini player over the bar (the app turns floating off first).
+    /// </summary>
+    public void LeavePresentation()
+    {
+        if (!_presenting)
+            return;
+        if (WindowState != WindowState.Normal)
+            WindowState = WindowState.Normal;
+        ExitPresentation();
+    }
+
+    /// <summary>The hover buttons' choices (which, in which order): the popup follows them too.</summary>
+    public PlayerTools? Tools { get; set; }
 
     /// <summary>The full screen arrangement, after ApplyLayout has placed the usual one.</summary>
     private void ApplyPresentation()
@@ -1467,20 +1518,21 @@ public partial class MiniPlayerWindow : Window
         else
             PopupKeepOpen.ClearValue(ForegroundProperty);
         // The floating player's buttons the user chose to show, in the user's order (the popup keeps all of its own).
-        var tools = IsPinned ? o?.Tools ?? PlayerTools.Default : null;
+        // The popup has the same choices; click-through, lock and close only mean something floating.
+        var tools = (IsPinned ? o?.Tools : null) ?? Tools ?? PlayerTools.Default;
         static Visibility Vis(bool on) => on ? Visibility.Visible : Visibility.Collapsed;
-        PinnedSwitch.Visibility = Vis(tools?.Switch ?? true);
-        LyricsSmaller.Visibility = LyricsBigger.Visibility = Vis(tools?.Size ?? true);
-        PinnedSettings.Visibility = Vis(tools?.Settings ?? true);
-        PinnedMaximize.Visibility = Vis(tools?.Maximize ?? false);
-        PinnedFullScreen.Visibility = Vis(tools?.FullScreen ?? false);
-        PinnedClickThrough.Visibility = Vis(tools?.ClickThrough ?? false);
-        PinnedLock.Visibility = Vis(tools?.Lock ?? false);
-        PinnedClose.Visibility = Vis(tools?.Close ?? false);
+        PinnedSwitch.Visibility = Vis(tools.Switch);
+        LyricsSmaller.Visibility = LyricsBigger.Visibility = Vis(tools.Size);
+        PinnedSettings.Visibility = Vis(tools.Settings);
+        PinnedMaximize.Visibility = Vis(tools.Maximize);
+        PinnedFullScreen.Visibility = Vis(tools.FullScreen);
+        PinnedClickThrough.Visibility = Vis(IsPinned && tools.ClickThrough);
+        PinnedLock.Visibility = Vis(IsPinned && tools.Lock);
+        PinnedClose.Visibility = Vis(IsPinned && tools.Close);
         // Maximized or full screen, the window buttons beside these restore and close.
         if (_presenting)
             PinnedClose.Visibility = PinnedLock.Visibility = PinnedClickThrough.Visibility = Visibility.Collapsed;
-        OrderToolbar(tools?.Order ?? PlayerToolIds.DefaultOrder);
+        OrderToolbar(tools.Order);
         ApplyToolbarLook();
         var maximized = _presenting && !_fullScreen;
         var full = _presenting && _fullScreen;

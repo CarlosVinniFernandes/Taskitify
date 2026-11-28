@@ -754,7 +754,7 @@
   "ExitFullScreen": "Vollbild beenden (Esc)",
   "PlayerToolSize": "Songtextgröße (A- und A+)",
   "PlayerToolsTitle": "Schaltflächen beim Überfahren",
-  "PlayerToolsHint": "Die Schaltflächen so, wie sie auf dem schwebenden Player sitzen. Klicke eine an, um sie ein- oder auszublenden; halten und ziehen, um sie zu verschieben.",
+  "PlayerToolsHint": "Die Schaltflächen über dem Mini-Player und dem schwebenden Player (Schloss, Durchklicken und Schließen nur schwebend). Klicke eine an, um sie ein- oder auszublenden; halten und ziehen, um sie zu verschieben.",
   "PlayerToolsReset": "Standardreihenfolge wiederherstellen",
   "MoveLeft": "Nach links",
   "MoveRight": "Nach rechts",

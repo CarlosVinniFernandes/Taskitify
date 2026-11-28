@@ -754,7 +754,7 @@
   "ExitFullScreen": "Sair da tela cheia (Esc)",
   "PlayerToolSize": "Tamanho da letra (A- e A+)",
   "PlayerToolsTitle": "Botões do hover",
-  "PlayerToolsHint": "Os botões como ficam no Player Flutuante. Clique em um para mostrar ou ocultar; segure e arraste para mudar de lugar.",
+  "PlayerToolsHint": "Os botões sobre o mini player e o Player Flutuante (cadeado, cliques e fechar só no flutuante). Clique em um para mostrar ou ocultar; segure e arraste para mudar de lugar.",
   "PlayerToolsReset": "Restaurar a ordem padrão",
   "MoveLeft": "Mover para a esquerda",
   "MoveRight": "Mover para a direita",

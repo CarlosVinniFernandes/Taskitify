@@ -754,7 +754,7 @@
   "ExitFullScreen": "Salir de pantalla completa (Esc)",
   "PlayerToolSize": "Tamaño de la letra (A- y A+)",
   "PlayerToolsTitle": "Botones al pasar el ratón",
-  "PlayerToolsHint": "Los botones tal como están en el reproductor flotante. Haz clic en uno para mostrarlo u ocultarlo; mantén pulsado y arrastra para moverlo.",
+  "PlayerToolsHint": "Los botones sobre el mini reproductor y el reproductor flotante (candado, clics y cerrar solo en el flotante). Haz clic en uno para mostrarlo u ocultarlo; mantén pulsado y arrastra para moverlo.",
   "PlayerToolsReset": "Restaurar el orden predeterminado",
   "MoveLeft": "Mover a la izquierda",
   "MoveRight": "Mover a la derecha",

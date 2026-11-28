@@ -754,7 +754,7 @@
   "ExitFullScreen": "Quitter le plein écran (Échap)",
   "PlayerToolSize": "Taille des paroles (A- et A+)",
   "PlayerToolsTitle": "Boutons au survol",
-  "PlayerToolsHint": "Les boutons tels qu’ils sont sur le lecteur flottant. Cliquez sur l’un pour l’afficher ou le masquer ; maintenez et faites glisser pour le déplacer.",
+  "PlayerToolsHint": "Les boutons sur le mini lecteur et le lecteur flottant (cadenas, clics et fermer seulement en flottant). Cliquez sur l’un pour l’afficher ou le masquer ; maintenez et faites glisser pour le déplacer.",
   "PlayerToolsReset": "Rétablir l’ordre par défaut",
   "MoveLeft": "Déplacer vers la gauche",
   "MoveRight": "Déplacer vers la droite",

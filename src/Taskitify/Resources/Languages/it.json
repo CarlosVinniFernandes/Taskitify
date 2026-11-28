@@ -754,7 +754,7 @@
   "ExitFullScreen": "Esci dallo schermo intero (Esc)",
   "PlayerToolSize": "Dimensione del testo (A- e A+)",
   "PlayerToolsTitle": "Pulsanti al passaggio del mouse",
-  "PlayerToolsHint": "I pulsanti come stanno sul player flottante. Fai clic su uno per mostrarlo o nasconderlo; tieni premuto e trascina per spostarlo.",
+  "PlayerToolsHint": "I pulsanti sul mini player e sul player flottante (lucchetto, clic e chiudi solo da flottante). Fai clic su uno per mostrarlo o nasconderlo; tieni premuto e trascina per spostarlo.",
   "PlayerToolsReset": "Ripristina l’ordine predefinito",
   "MoveLeft": "Sposta a sinistra",
   "MoveRight": "Sposta a destra",
