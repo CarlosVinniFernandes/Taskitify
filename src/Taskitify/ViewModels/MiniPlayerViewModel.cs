@@ -237,8 +237,26 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     public MiniPlayerStyle Look => _settings.Current.MiniPlayerLook;
 
-    /// <summary>One Lyric Flow setting (Lyrics tab) for the taskbar and the mini player alike.</summary>
-    public LyricFlowMode FlowMode => _settings.Current.TaskbarLyricFlow;
+    private bool? _karaokeOverride;
+    private LyricFlowMode PreferredFlow => _settings.Current.TaskbarLyricFlow;
+    public LyricFlowMode FlowMode => _karaokeOverride switch
+    {
+        true when PreferredFlow == LyricFlowMode.Off => LyricFlowMode.Automatic,
+        false => LyricFlowMode.Off,
+        _ => PreferredFlow,
+    };
+    public bool HasSyncedLyrics => _monitor.Track is not null && Lines.Count > 0;
+    public bool IsKaraokeEnabled
+    {
+        get => FlowMode != LyricFlowMode.Off;
+        set
+        {
+            if (value == IsKaraokeEnabled)
+                return;
+            _karaokeOverride = value;
+            OnPropertyChanged();
+        }
+    }
     public LyricMotionMode MotionMode => Look.Motion;
     public bool ExpressiveMotion => MotionMode == LyricMotionMode.Expressive;
 
@@ -469,6 +487,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
             OnPropertyChanged(name);
         if (ShowVolume)
             Volume.Refresh();
+        OnPropertyChanged(nameof(IsKaraokeEnabled));
         UpdateCurrentLine();
         LyricPositionChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -529,6 +548,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         }
 
         Credit = Lines.Count > 0 ? LyricsCredit.For(_sync.Result) : null;
+        OnPropertyChanged(nameof(HasSyncedLyrics));
         StatusMessage = _monitor.Track is null ? null : _sync.State switch
         {
             LyricsState.Synced => null,

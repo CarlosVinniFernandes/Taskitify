@@ -146,6 +146,38 @@
                     <Button x:Name="ResyncButton" Style="{StaticResource FlatButton}" Visibility="Collapsed" Click="OnResync"
                             VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,2" Padding="12,4" FontSize="12"
                             Background="{DynamicResource WindowBackgroundBrush}" Content="{DynamicResource Loc.LyricsResync}" />
+                    <ToggleButton x:Name="KaraokeButton" Width="30" Height="30" Visibility="Collapsed"
+                                  HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,2"
+                                  FontFamily="{StaticResource IconFont}" FontSize="15" Content="&#xE720;"
+                                  IsChecked="{Binding IsKaraokeEnabled, Mode=TwoWay}"
+                                  ToolTip="{DynamicResource Loc.PlayerKaraoke}" AutomationProperties.Name="{DynamicResource Loc.PlayerKaraoke}">
+                        <ToggleButton.Style>
+                            <Style TargetType="ToggleButton">
+                                <Setter Property="Cursor" Value="Hand" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+                                <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Border CornerRadius="6" Background="{TemplateBinding Background}"
+                                                    BorderBrush="{DynamicResource TrackBrush}" BorderThickness="1">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource PopupBackgroundBrush}" />
+                                    </Trigger>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+                                        <Setter Property="Foreground" Value="Black" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ToggleButton.Style>
+                    </ToggleButton>
                 </Grid>
 
                 <!-- Progress -->

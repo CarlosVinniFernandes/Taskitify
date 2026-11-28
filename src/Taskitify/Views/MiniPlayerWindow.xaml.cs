@@ -39,6 +39,8 @@ public partial class MiniPlayerWindow : Window
     private bool _inkUpdateQueued;
     private readonly LyricInkDriver _lyricInk;
     private TextBlock? _activeText;
+    private readonly DispatcherTimer _karaokeIdleTimer = new() { Interval = TimeSpan.FromSeconds(2.5) };
+    private Point? _lastKaraokePointer;
 
     public MiniPlayerWindow(MiniPlayerViewModel vm, Func<bool> animationsEnabled, Func<bool> useGradient)
     {
@@ -108,6 +110,10 @@ public partial class MiniPlayerWindow : Window
         // The pointer's own state: IsMouseOver can still be true while MouseLeave is raised.
         MouseEnter += (_, _) => { _pointerOver = true; UpdateHoverChrome(); UpdatePinnedToolbar(); };
         MouseLeave += (_, _) => { _pointerOver = false; UpdateHoverChrome(); UpdatePinnedToolbar(); };
+        ContentCard.PreviewMouseMove += OnKaraokePointerMoved;
+        ContentCard.MouseLeave += (_, _) => HideKaraokeButton();
+        IsVisibleChanged += (_, _) => HideKaraokeButton();
+        _karaokeIdleTimer.Tick += (_, _) => HideKaraokeButton(clearPointer: false);
         IsVisibleChanged += (_, _) => { if (!IsVisible) _pointerOver = false; };
         PinnedSwitch.Click += (_, _) =>
         {
@@ -464,6 +470,8 @@ public partial class MiniPlayerWindow : Window
             NativeMethods.SetWindowPos(_hwnd, new IntPtr(-2), 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
         // Games keep the focus: the player never takes it while floating.
         SetExStyle(o.ClickThrough, noActivate: true);
+        if (o.ClickThrough)
+            HideKaraokeButton();
         PinnedMark.Visibility = o.ClickThrough && o.ShowMark ? Visibility.Visible : Visibility.Collapsed;
         PinnedGrip.Visibility = o.ClickThrough || o.Locked || _presenting ? Visibility.Collapsed : Visibility.Visible;
         _unpinClicks ??= new ModifierClickWatcher(
@@ -1023,6 +1031,13 @@ public partial class MiniPlayerWindow : Window
     {
         switch (e.PropertyName)
         {
+            case nameof(MiniPlayerViewModel.IsKaraokeEnabled):
+                _lyricInk.Refresh();
+                break;
+            case nameof(MiniPlayerViewModel.HasSyncedLyrics):
+                if (!_vm.HasSyncedLyrics)
+                    HideKaraokeButton();
+                break;
             case nameof(MiniPlayerViewModel.IsPlaying):
                 UpdatePlayGlyph();
                 break;
@@ -1054,6 +1069,27 @@ public partial class MiniPlayerWindow : Window
                 QueueLyrics(animate: false);
                 break;
         }
+    }
+
+    private void OnKaraokePointerMoved(object sender, MouseEventArgs e)
+    {
+        var pointer = PointToScreen(e.GetPosition(this));
+        if (_lastKaraokePointer == pointer)
+            return;
+        _lastKaraokePointer = pointer;
+        if (IsPreview || _pinned is { ClickThrough: true } || !_vm.HasSyncedLyrics)
+            return;
+        KaraokeButton.Visibility = Visibility.Visible;
+        _karaokeIdleTimer.Stop();
+        _karaokeIdleTimer.Start();
+    }
+
+    private void HideKaraokeButton(bool clearPointer = true)
+    {
+        _karaokeIdleTimer.Stop();
+        KaraokeButton.Visibility = Visibility.Collapsed;
+        if (clearPointer)
+            _lastKaraokePointer = null;
     }
 
     /// <summary>
@@ -1496,7 +1532,7 @@ public partial class MiniPlayerWindow : Window
             : 0;
         _scrollEndsAt = DateTime.UtcNow + TimeSpan.FromMilliseconds(duration + 80);
         LyricMotionText.Tween(LyricsOffset, TranslateTransform.YProperty, target, duration, _vm.ExpressiveMotion);
-        if (_vm.FlowMode != LyricFlowMode.Off && index >= 0 && container is ContentPresenter presenter
+        if (index >= 0 && container is ContentPresenter presenter
             && VisualTreeHelper.GetChildrenCount(presenter) > 0)
             _activeText = VisualTreeHelper.GetChild(presenter, 0) as TextBlock;
         else

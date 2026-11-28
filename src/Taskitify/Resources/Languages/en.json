@@ -1,4 +1,7 @@
 {
+  "SettingsSearch": "Search settings",
+  "SettingsSearchEmpty": "No settings found.",
+  "PlayerKaraoke": "Karaoke",
   "SpotifyLyricsTitle": "Spotify lyrics (experimental)",
   "SpotifyLyricsHint": "Connect your Spotify account to use Spotify as the main lyrics source. LRCLIB is used when Spotify has no synced lyrics. This unofficial connection may stop working after Spotify changes.",
   "SpotifyLyricsConnect": "Connect Spotify",
