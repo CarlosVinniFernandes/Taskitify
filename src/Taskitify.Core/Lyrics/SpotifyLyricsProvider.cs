@@ -562,7 +562,10 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
     {
         if (!root.TryGetProperty("lyrics", out var lyrics) || !lyrics.TryGetProperty("lines", out var lines)
             || lines.ValueKind != JsonValueKind.Array) return null;
-        var synced = String(lyrics, "syncType") == "LINE_SYNCED";
+        // Syllable-synced lyrics are line-synced too: their lines keep startTimeMs. Dropping them as
+        // unsynced (only LINE_SYNCED was read) lost the timing of exactly the best-timed songs.
+        var syncType = String(lyrics, "syncType");
+        var synced = syncType is "LINE_SYNCED" or "SYLLABLE_SYNCED";
         var lrc = new StringBuilder();
         var plain = new List<string>();
         foreach (var line in lines.EnumerateArray())
@@ -574,12 +577,41 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
             if (!synced || !line.TryGetProperty("startTimeMs", out var time)
                 || !long.TryParse(time.ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out var ms)
                 || ms < 0 || ms >= 60_000_000) continue;
-            lrc.Append(CultureInfo.InvariantCulture, $"[{ms / 60000:00}:{ms / 1000 % 60:00}.{ms % 1000:000}]{words}\n");
+            lrc.Append(CultureInfo.InvariantCulture, $"[{ms / 60000:00}:{ms / 1000 % 60:00}.{ms % 1000:000}]{SyllableTagged(line, words)}\n");
         }
         if (plain.All(string.IsNullOrWhiteSpace)) return null;
         // Spotify names its lyrics partner; it is credited where the lyrics are shown.
         var credit = String(lyrics, "providerDisplayName") ?? String(lyrics, "provider");
         return metadata with { PlainLyrics = string.Join('\n', plain), SyncedLyrics = lrc.Length > 0 ? lrc.ToString() : null, Credit = credit };
+    }
+
+    /// <summary>
+    /// A syllable-synced line as Enhanced LRC: each syllable's start as a word tag at its first
+    /// character ("syllables": [{ startTimeMs, numChars }]), so the fill follows the real timing.
+    /// The line unchanged when there are none or they do not add up to its text.
+    /// </summary>
+    internal static string SyllableTagged(JsonElement line, string words)
+    {
+        if (!line.TryGetProperty("syllables", out var syllables) || syllables.ValueKind != JsonValueKind.Array || syllables.GetArrayLength() == 0)
+            return words;
+        var sb = new StringBuilder(words.Length + (syllables.GetArrayLength() * 12));
+        var offset = 0;
+        foreach (var syllable in syllables.EnumerateArray())
+        {
+            if (!syllable.TryGetProperty("startTimeMs", out var start) || !long.TryParse(start.ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out var ms)
+                || !syllable.TryGetProperty("numChars", out var chars) || !int.TryParse(chars.ToString(), NumberStyles.None, CultureInfo.InvariantCulture, out var count)
+                || count <= 0 || offset + count > words.Length || ms >= 60_000_000)
+                return words;
+            // Spaces before a syllable belong to the gap, not to the syllable.
+            while (offset < words.Length && words[offset] == ' ')
+                sb.Append(words[offset++]);
+            sb.Append(CultureInfo.InvariantCulture, $"<{ms / 60000:00}:{ms / 1000 % 60:00}.{ms % 1000:000}>");
+            var take = Math.Min(count, words.Length - offset);
+            sb.Append(words, offset, take);
+            offset += take;
+        }
+        sb.Append(words, offset, words.Length - offset);
+        return sb.ToString();
     }
 
     private static string? String(JsonElement element, string name) =>

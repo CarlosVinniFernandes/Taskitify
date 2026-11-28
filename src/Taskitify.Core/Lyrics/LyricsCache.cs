@@ -66,6 +66,8 @@ public sealed class LyricsCache
                 return null;
             // Lyrics with no source on record predate this field: like a stand-in, they may be the
             // fallback's version from a time the primary was failing.
+            if (entry.Kind == LyricsKind.PlainOnly && entry.Revision < CurrentRevision && entry.Source == "Spotify")
+                return (result with { Source = entry.Source, Credit = entry.Credit }, true);
             var temporary = entry.Kind == LyricsKind.NotFound || entry.Provisional || entry.Source is null;
             return (result with { Source = entry.Source, Provisional = entry.Provisional, Credit = entry.Credit }, temporary && _now() - entry.SavedAt > NegativeTtl);
         }
@@ -80,7 +82,7 @@ public sealed class LyricsCache
         if (result.Kind == LyricsKind.Error)
             return;
         System.IO.Directory.CreateDirectory(_directory);
-        var entry = new Entry(FormatVersion, result.Kind, rawSynced, result.PlainText, result.MatchedTitle, result.MatchedArtist, _now(), result.Source, result.Provisional, result.Credit);
+        var entry = new Entry(FormatVersion, result.Kind, rawSynced, result.PlainText, result.MatchedTitle, result.MatchedArtist, _now(), result.Source, result.Provisional, result.Credit, CurrentRevision);
         var path = PathFor(query);
         var tmp = path + ".tmp";
         await using (var stream = File.Create(tmp))
@@ -121,5 +123,10 @@ public sealed class LyricsCache
         // Added after version 2 shipped; older entries read them as null ("unknown") and false.
         string? Source = null,
         bool Provisional = false,
-        string? Credit = null);
+        string? Credit = null,
+        // 1: written after Spotify's syllable-synced lyrics were read as synced (they were saved as
+        // plain before). A plain Spotify entry from before that is looked up once more.
+        int Revision = 0);
+
+    private const int CurrentRevision = 1;
 }

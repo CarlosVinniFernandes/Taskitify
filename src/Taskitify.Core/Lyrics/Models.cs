@@ -5,6 +5,53 @@ public sealed record LyricsLine(TimeSpan Time, string Text)
 {
     /// <summary>Optional Enhanced LRC anchors, indexed into the normalized UTF-16 text.</summary>
     public IReadOnlyList<LyricAnchor>? Anchors { get; init; }
+
+    /// <summary>When the voice stops, when the source says (karaoke sources do; LRC does not).</summary>
+    public TimeSpan? End { get; init; }
+
+    /// <summary>Which singer of a duet: 0 the first (the usual side), 1 another (the opposite side).</summary>
+    public int Singer { get; init; }
+
+    /// <summary>Backing vocals sung with this line ("(oh-oh)"), each with its own timing.</summary>
+    public IReadOnlyList<LyricsVocal>? Background { get; init; }
+}
+
+/// <summary>A secondary vocal part: its text, when it is sung and (optionally) word or syllable anchors.</summary>
+public sealed record LyricsVocal(string Text, TimeSpan Start, TimeSpan End, IReadOnlyList<LyricAnchor>? Anchors);
+
+/// <summary>How finely lyrics are timed. Ordered: a higher value is finer.</summary>
+public enum LyricsSyncLevel
+{
+    Plain,
+    Line,
+    Word,
+    Syllable,
+}
+
+/// <summary>
+/// Lyrics timed word by word or syllable by syllable, from a karaoke source. Granularity and
+/// vocal capabilities are separate: a word-timed lyric may have backing vocals, a syllable-timed
+/// one may be a duet.
+/// </summary>
+public sealed record KaraokeLyrics(IReadOnlyList<LyricsLine> Lines, LyricsSyncLevel Sync, string Source)
+{
+    public bool HasBackground => Lines.Any(l => l.Background is { Count: > 0 });
+
+    public bool HasDuet => Lines.Any(l => l.Singer != 0);
+
+    /// <summary>Who to credit, shown where the lyrics are (a source's own terms may ask for it).</summary>
+    public string? Credit { get; init; }
+
+    /// <summary>Where the credit links to.</summary>
+    public string? CreditUrl { get; init; }
+
+    /// <summary>The source's own name for the song, to check it is the one playing.</summary>
+    public string? MatchedTitle { get; init; }
+
+    public string? MatchedArtist { get; init; }
+
+    /// <summary>A score to pick the best of several: finer timing first, then backing vocals, then duets.</summary>
+    public int Quality => ((int)Sync * 4) + (HasBackground ? 2 : 0) + (HasDuet ? 1 : 0);
 }
 
 public readonly record struct LyricAnchor(TimeSpan Time, int TextOffset);
@@ -57,6 +104,12 @@ public sealed record LrclibRecord(
     string? PlainLyrics,
     string? SyncedLyrics)
 {
+    /// <summary>LRCLIB: the Lyricsfile document has word timings (lines[].words).</summary>
+    public bool HasWordSync { get; init; }
+
+    /// <summary>LRCLIB: the raw Lyricsfile YAML (every record has one; word timings when <see cref="HasWordSync"/>).</summary>
+    public string? Lyricsfile { get; init; }
+
     /// <summary>Name of the provider that found this record; set by the provider chain, never by the API.</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public string? Source { get; init; }
