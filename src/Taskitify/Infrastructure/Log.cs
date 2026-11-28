@@ -84,6 +84,9 @@ internal static class AppPaths
 
     public static string LyricsCacheDirectory { get; } = Path.Combine(LocalDataDirectory, "lyrics-cache");
 
+    /// <summary>Karaoke (word- and syllable-timed) lyrics, one file per song; cleared with the lyrics cache.</summary>
+    public static string KaraokeCacheDirectory { get; } = Path.Combine(LocalDataDirectory, "lyrics-cache", "karaoke");
+
     /// <summary>%AppData%\Taskitify\lyrics — the user's own .lrc files, checked before LRCLIB.</summary>
     public static string UserLyricsDirectory { get; } = Path.Combine(RoamingDirectory, "lyrics");
 

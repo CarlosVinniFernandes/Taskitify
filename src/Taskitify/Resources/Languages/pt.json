@@ -769,5 +769,14 @@
   "LookDepthHint": "O desfoque cresce com a distância do verso atual e com o tamanho da letra.",
   "FloatingKeepTaskbarHint": "Ligado: o Player Flutuante e o player da barra juntos; um clique na barra traz o flutuante para a frente.",
   "LookInterludeDots": "Pausas instrumentais em pontos",
-  "LookInterludeDotsHint": "Três pontos acendem um após o outro enquanto a música toca sem voz, mostrando quanto falta para ela voltar. Desligado: uma nota musical."
+  "LookInterludeDotsHint": "Três pontos acendem um após o outro enquanto a música toca sem voz, mostrando quanto falta para ela voltar. Desligado: uma nota musical.",
+  "KaraokeSearching": "Procurando karaokê sincronizado…",
+  "KaraokeUnavailable": "Karaokê sincronizado indisponível para esta música",
+  "KaraokeSearch": "Procurar karaokê",
+  "KaraokeTurnOn": "Ativar karaokê",
+  "KaraokeTurnOff": "Desativar karaokê",
+  "KaraokeWithBacking": "com vocais de apoio",
+  "KaraokeWithDuet": "dueto",
+  "KaraokeSource": "Fonte: {0}",
+  "LyricsVia": "Letra via {0}"
 }

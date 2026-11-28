@@ -86,13 +86,16 @@ public sealed partial class LyricFlow
         }
     }
 
-    public LyricFill At(int index, TimeSpan position, LyricFlowMode mode)
+    /// <param name="estimate">False: only real (word or syllable) timing fills; other lines stay full.</param>
+    public LyricFill At(int index, TimeSpan position, LyricFlowMode mode, bool estimate = true)
     {
         if ((uint)index >= (uint)_phrases.Length || mode == LyricFlowMode.Off)
             return LyricFill.Full;
 
         var phrase = _phrases[index];
         var elapsed = (position - phrase.Start).TotalSeconds;
+        if (!estimate)
+            return phrase.Actual is { } real ? Interpolate(real, elapsed) : LyricFill.Full;
         if (phrase.Estimated.Length == 0)
             return LyricFill.Full;
         if (mode == LyricFlowMode.Automatic && phrase.Actual is { } actual)
@@ -106,6 +109,19 @@ public sealed partial class LyricFlow
             return new LyricFill(Math.Clamp(elapsed / phrase.LinearDuration, 0, 1), false, false);
         }
         return Interpolate(phrase.Estimated, elapsed);
+    }
+
+    /// <summary>How much of a vocal is sung at <paramref name="position"/>, from its own anchors (a backing vocal's).</summary>
+    public static LyricFill ForVocal(LyricsVocal vocal, TimeSpan position)
+    {
+        var line = new LyricsLine(vocal.Start, vocal.Text) { Anchors = vocal.Anchors };
+        if (ReadAnchors(line, (vocal.End - vocal.Start).TotalSeconds) is not { } points)
+        {
+            var length = (vocal.End - vocal.Start).TotalSeconds;
+            var share = length > 0 ? Math.Clamp((position - vocal.Start).TotalSeconds / length, 0, 1) : 1;
+            return share >= 1 ? LyricFill.Full : new LyricFill(share, false, false);
+        }
+        return Interpolate(points, (position - vocal.Start).TotalSeconds);
     }
 
     private static LyricFill Interpolate(Point[] points, double elapsed)

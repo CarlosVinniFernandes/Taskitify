@@ -29,6 +29,7 @@ public partial class App : Application
     private HttpClient? _spotifyHttp;
     private SpotifyLyricsSession? _spotifyLyrics;
     private LyricsCache? _cache;
+    private KaraokeService? _karaoke;
     private SpotifyMonitor? _monitor;
     private LyricsSyncService? _sync;
     private TaskbarViewModel? _taskbarVm;
@@ -140,11 +141,21 @@ public partial class App : Application
         var spotifyProvider = new SpotifyLyricsProvider(_spotifyHttp, _spotifyLyrics, Log.Debug);
         // Spotify is the primary source; LRCLIB only fills in songs Spotify has no synced lyrics
         // for. The diagnostic mode skips local files and the disk cache, which may hold LRCLIB lyrics.
+        // One LRCLIB client for the line fallback and the karaoke lookup: their requests are shared.
+        var lrclib = new MemoizingLrclibClient(new LrclibClient(_http));
+        // Karaoke (word- and syllable-timed) lyrics, looked up after the usual lyrics are shown.
+        // lrc.red asks apps to identify themselves: the same User-Agent as LRCLIB (name and link).
+        _karaoke = new KaraokeService([new LrcRedProvider(_http), new LrclibKaraokeProvider(lrclib)],
+            spotifyOnly ? null : new KaraokeCache(AppPaths.KaraokeCacheDirectory))
+        {
+            Enabled = () => _settings.Current.LyricsSources.EnabledKaraoke(),
+        };
+        _karaoke.ProviderFailed += (id, message) => Log.Debug($"Karaoke source {id}: {message}");
         var lyrics = spotifyOnly
             ? new LyricsService([spotifyProvider], cache: null)
             : new LyricsService(
                 [new LocalLyricsProvider(AppPaths.UserLyricsDirectory),
-                 new FallbackLyricsProvider(spotifyProvider, new LrclibProvider(new LrclibClient(_http)))], _cache);
+                 new FallbackLyricsProvider(spotifyProvider, new LrclibProvider(lrclib))], _cache);
         if (spotifyOnly) Log.Info("Spotify-only test mode: LRCLIB, local files and disk cache disabled");
 
         _monitor = new SpotifyMonitor(Dispatcher)
@@ -158,7 +169,7 @@ public partial class App : Application
                 ? spotifyProvider.FindCoverAsync(new TrackQuery(track.Title, track.Artist, track.Album, duration), CancellationToken.None, large: true)
                 : Task.FromResult<byte[]?>(null),
         };
-        _sync = new LyricsSyncService(_monitor, lyrics, _settings);
+        _sync = new LyricsSyncService(_monitor, lyrics, _settings, _karaoke);
         var spotifyStatus = _spotifyLyrics.StatusKey;
         _spotifyLyrics.StatusChanged += (_, _) =>
         {

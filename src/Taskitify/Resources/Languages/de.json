@@ -769,5 +769,14 @@
   "LookDepthHint": "Die Unschärfe wächst mit dem Abstand zur aktuellen Zeile und mit der Schriftgröße.",
   "FloatingKeepTaskbarHint": "Ein: schwebender Player und Taskleisten-Player zusammen; ein Klick auf die Leiste holt den schwebenden Player nach vorn.",
   "LookInterludeDots": "Instrumentalpausen als Punkte",
-  "LookInterludeDotsHint": "Drei Punkte leuchten nacheinander auf, während die Musik ohne Stimme spielt, und zeigen, wann sie zurückkommt. Aus: eine Note."
+  "LookInterludeDotsHint": "Drei Punkte leuchten nacheinander auf, während die Musik ohne Stimme spielt, und zeigen, wann sie zurückkommt. Aus: eine Note.",
+  "KaraokeSearching": "Suche nach synchronem Karaoke…",
+  "KaraokeUnavailable": "Synchrones Karaoke für diesen Song nicht verfügbar",
+  "KaraokeSearch": "Karaoke suchen",
+  "KaraokeTurnOn": "Karaoke einschalten",
+  "KaraokeTurnOff": "Karaoke ausschalten",
+  "KaraokeWithBacking": "mit Backgroundgesang",
+  "KaraokeWithDuet": "Duett",
+  "KaraokeSource": "Quelle: {0}",
+  "LyricsVia": "Songtext über {0}"
 }

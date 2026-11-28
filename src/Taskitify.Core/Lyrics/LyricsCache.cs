@@ -101,13 +101,32 @@ public sealed class LyricsCache
         }
     }
 
+    /// <summary>Everything cached, the karaoke lyrics in the subfolder too.</summary>
     public void Clear()
     {
         if (System.IO.Directory.Exists(_directory))
         {
-            foreach (var file in System.IO.Directory.EnumerateFiles(_directory, "*.json"))
+            foreach (var file in System.IO.Directory.EnumerateFiles(_directory, "*.json", SearchOption.AllDirectories))
                 File.Delete(file);
         }
+    }
+
+    /// <summary>How many songs are cached (lyrics and karaoke lyrics) and the space they take.</summary>
+    public (int Lyrics, int Karaoke, long Bytes) Measure()
+    {
+        if (!System.IO.Directory.Exists(_directory))
+            return (0, 0, 0);
+        int lyrics = 0, karaoke = 0;
+        long bytes = 0;
+        foreach (var file in new DirectoryInfo(_directory).EnumerateFiles("*.json", SearchOption.AllDirectories))
+        {
+            bytes += file.Length;
+            if (string.Equals(file.Directory?.FullName.TrimEnd(Path.DirectorySeparatorChar), _directory.TrimEnd(Path.DirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+                lyrics++;
+            else
+                karaoke++;
+        }
+        return (lyrics, karaoke, bytes);
     }
 
     private string PathFor(TrackQuery q) => Path.Combine(_directory, KeyFor(q) + ".json");

@@ -39,6 +39,9 @@ public partial class MiniPlayerWindow : Window
     private bool _inkUpdateQueued;
     private readonly LyricInkDriver _lyricInk;
     private TextBlock? _activeText;
+    // Karaoke: the current line's backing vocals, filled on their own timing.
+    private readonly LyricInkDriver _backingInk;
+    private TextBlock? _activeBacking;
 
     public MiniPlayerWindow(MiniPlayerViewModel vm, Func<bool> animationsEnabled, Func<bool> useGradient)
     {
@@ -48,6 +51,8 @@ public partial class MiniPlayerWindow : Window
         _useGradient = useGradient;
         DataContext = vm;
         _lyricInk = new LyricInkDriver(TimeSpan.FromMilliseconds(1000d / 30), SampleLyricInk);
+        _backingInk = new LyricInkDriver(TimeSpan.FromMilliseconds(1000d / 30), SampleBackingInk);
+        CreditText.MouseLeftButtonUp += (_, _) => OpenCreditLink();
         vm.LyricPositionChanged += (_, _) => QueueLyricInk();
         LyricsViewport.SizeChanged += (_, _) => QueueLyrics(animate: false);
 
@@ -63,6 +68,8 @@ public partial class MiniPlayerWindow : Window
             {
                 _activeText = null;
                 _lyricInk.Invalidate();
+                _activeBacking = null;
+                _backingInk.Invalidate();
                 SetBrowsing(false);
             }
             QueueLyrics(animate: false);
@@ -180,6 +187,8 @@ public partial class MiniPlayerWindow : Window
             {
                 _lyricInk.Invalidate();
                 _activeText = null;
+                _backingInk.Invalidate();
+                _activeBacking = null;
                 LyricsOffset.BeginAnimation(TranslateTransform.YProperty, null);
                 GpuRendering.Release();
             }
@@ -1149,6 +1158,15 @@ public partial class MiniPlayerWindow : Window
                 _lyricInk.Invalidate();
                 QueueLyrics(animate: false);
                 break;
+            case nameof(MiniPlayerViewModel.KaraokeState):
+                UpdateKaraokeButton();
+                // Karaoke on or off changes what is filled (and how): the ink follows.
+                QueueLyrics(animate: false);
+                break;
+            case nameof(MiniPlayerViewModel.CreditUrl):
+                CreditText.Cursor = _vm.CreditUrl is null ? null : Cursors.Hand;
+                CreditText.TextDecorations = _vm.CreditUrl is null ? null : TextDecorations.Underline;
+                break;
             case nameof(MiniPlayerViewModel.LyricsFontSize):
                 if (IsVisible)
                     ApplyVerses();
@@ -1668,6 +1686,46 @@ public partial class MiniPlayerWindow : Window
         });
     }
 
+    private (TextBlock?, LyricFill, bool) SampleBackingInk()
+    {
+        if (!IsVisible || _browsing || _activeBacking?.DataContext is not LyricLineViewModel line || line.Index != _vm.CurrentIndex)
+            return (null, LyricFill.Full, false);
+        return (_activeBacking, _vm.BackingFill, _vm.IsPlaying);
+    }
+
+    /// <summary>Looking for karaoke lyrics: the icon breathes, quietly (no spinner, nothing in the way).</summary>
+    private void UpdateKaraokeButton()
+    {
+        if (_vm.KaraokeState == "Searching" && _animationsEnabled() && SystemParameters.ClientAreaAnimation)
+        {
+            KaraokeGlyph.BeginAnimation(OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(0.25, 0.75, TimeSpan.FromMilliseconds(700))
+            {
+                AutoReverse = true,
+                RepeatBehavior = System.Windows.Media.Animation.RepeatBehavior.Forever,
+            });
+        }
+        else
+        {
+            KaraokeGlyph.BeginAnimation(OpacityProperty, null);
+            KaraokeGlyph.Opacity = _vm.KaraokeState == "Searching" ? 0.5 : 1;
+        }
+    }
+
+    /// <summary>The credit of a source that asks to be linked (lrc.red): its site, in the browser.</summary>
+    private void OpenCreditLink()
+    {
+        if (_vm.CreditUrl is not { } url || !Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+            return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            Log.Warn($"Could not open {uri.Host}: {ex.Message}");
+        }
+    }
+
     private (TextBlock?, LyricFill, bool) SampleLyricInk()
     {
         if (!IsVisible || _browsing || _vm.FlowMode == LyricFlowMode.Off
@@ -1808,12 +1866,14 @@ public partial class MiniPlayerWindow : Window
             : 0;
         _scrollEndsAt = DateTime.UtcNow + TimeSpan.FromMilliseconds(duration + 80);
         LyricMotionText.Tween(LyricsOffset, TranslateTransform.YProperty, target, duration, _vm.ExpressiveMotion);
-        if (_vm.FlowMode != LyricFlowMode.Off && index >= 0 && container is ContentPresenter presenter
-            && VisualTreeHelper.GetChildrenCount(presenter) > 0)
-            _activeText = VisualTreeHelper.GetChild(presenter, 0) as TextBlock;
-        else
-            _activeText = null;
+        // The line's own text (and its backing vocals) inside the template, for the fill.
+        var current = index >= 0 && container is ContentPresenter presenter && presenter.ContentTemplate is { } template
+            ? (Main: template.FindName("Main", presenter) as TextBlock, Backing: template.FindName("Backing", presenter) as TextBlock)
+            : (Main: null, Backing: null);
+        _activeText = _vm.FlowMode != LyricFlowMode.Off || _vm.KaraokeState == "Active" ? current.Main : null;
+        _activeBacking = _vm.KaraokeState == "Active" && current.Backing is { Visibility: Visibility.Visible } backing ? backing : null;
         _lyricInk.Refresh();
+        _backingInk.Refresh();
     }
 }
 

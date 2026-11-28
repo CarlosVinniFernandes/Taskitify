@@ -769,5 +769,14 @@
   "LookDepthHint": "The blur grows with the distance from the current line and with the size of the text.",
   "FloatingKeepTaskbarHint": "On: the floating player and the taskbar player together; a click on the bar brings the floating player forward.",
   "LookInterludeDots": "Instrumental breaks as dots",
-  "LookInterludeDotsHint": "Three dots light up one after another while the music plays without a voice, showing how long until it returns. Off: a note."
+  "LookInterludeDotsHint": "Three dots light up one after another while the music plays without a voice, showing how long until it returns. Off: a note.",
+  "KaraokeSearching": "Looking for synced karaoke lyrics…",
+  "KaraokeUnavailable": "Synced karaoke unavailable for this song",
+  "KaraokeSearch": "Look for karaoke lyrics",
+  "KaraokeTurnOn": "Turn on karaoke",
+  "KaraokeTurnOff": "Turn off karaoke",
+  "KaraokeWithBacking": "with backing vocals",
+  "KaraokeWithDuet": "duet",
+  "KaraokeSource": "Source: {0}",
+  "LyricsVia": "Lyrics via {0}"
 }

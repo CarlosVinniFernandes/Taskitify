@@ -88,6 +88,35 @@
                         </Button>
                         <Button Style="{StaticResource IconButton}" Width="34" Height="34" FontSize="15" Command="{Binding ShareCommand}" Content="&#xE72D;"
                                 ToolTip="{DynamicResource Loc.LyricCardOpen}" AutomationProperties.Name="{DynamicResource Loc.LyricCardOpen}" />
+                        <!-- Karaoke: whether the song has real word/syllable timing, and showing it or not. -->
+                        <Button x:Name="KaraokeButton" Width="34" Height="34" Command="{Binding KaraokeCommand}"
+                                ToolTip="{Binding KaraokeTip}" AutomationProperties.Name="{Binding KaraokeTip}">
+                            <Grid Width="20" Height="20">
+                                <TextBlock x:Name="KaraokeGlyph" Text="&#xE720;" FontFamily="{StaticResource IconFont}" FontSize="15"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                <!-- Backing vocals or a duet: a small mark. -->
+                                <Ellipse x:Name="KaraokeRichMark" Width="5" Height="5" Fill="#FF1ED760" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                         Visibility="{Binding KaraokeRich, Converter={StaticResource BoolToVisibility}}" />
+                            </Grid>
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding KaraokeState}" Value="Hidden">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding KaraokeState}" Value="Unavailable">
+                                            <Setter Property="Opacity" Value="0.35" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding KaraokeState}" Value="Search">
+                                            <Setter Property="Opacity" Value="0.6" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding KaraokeState}" Value="Active">
+                                            <Setter Property="Foreground" Value="#FF1ED760" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
                     </StackPanel>
                 </Grid>
 
@@ -116,7 +145,8 @@
                                         <DataTemplate>
                                             <!-- The emphasis (opacity, scale, weight) comes from the highlight style; scaling is a render
                                                  transform, so a growing line never moves the others or resizes the window. -->
-                                            <local:LyricMotionText Text="{Binding DisplayText}" TextWrapping="Wrap" Cursor="Hand"
+                                            <StackPanel>
+                                            <local:LyricMotionText x:Name="Main" Text="{Binding DisplayText}" TextWrapping="Wrap" Cursor="Hand"
                                                        Interlude="{Binding ShowsDots}" InterludeActive="{Binding IsCurrent}"
                                                        InterludeStart="{Binding Time}" InterludeEnd="{Binding End}"
                                                        PositionClock="{Binding DataContext.PositionClock, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
@@ -125,18 +155,30 @@
                                                        LineHeight="{Binding DataContext.MotionLineHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                        Expressive="{Binding DataContext.ExpressiveMotion, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                        TransitionMilliseconds="{Binding MotionMilliseconds}"
-                                                       TextAlignment="{Binding DataContext.LyricsTextAlignment, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       TextAlignment="{Binding Alignment}"
                                                        FontFamily="{Binding DataContext.LyricsFont, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                        FontSize="{Binding DataContext.LyricsFontSize, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                        Padding="{Binding DataContext.LyricsLinePadding, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                       RenderTransformOrigin="{Binding DataContext.LyricsScaleOrigin, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       RenderTransformOrigin="{Binding ScaleOrigin}"
                                                        Foreground="{DynamicResource TextPrimaryBrush}" TargetOpacity="{Binding Emphasis}"
                                                        FontWeight="{Binding Weight}" Effect="{Binding Soften}" TargetScale="{Binding Scale}"
                                                        MouseLeftButtonUp="OnLyricLineClicked" />
+                                            <!-- Backing vocals (karaoke): smaller, a little fainter, under the line, filled on their own timing. -->
+                                            <local:LyricMotionText x:Name="Backing" Text="{Binding BackgroundText}" TextWrapping="Wrap"
+                                                       Visibility="{Binding BackgroundText, Converter={StaticResource NullToCollapsed}}"
+                                                       TextAlignment="{Binding Alignment}" Margin="0,-6,0,2"
+                                                       FontFamily="{Binding DataContext.LyricsFont, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       FontSize="{Binding DataContext.BackingFontSize, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       Padding="{Binding DataContext.LyricsLinePadding, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       RenderTransformOrigin="{Binding ScaleOrigin}" Opacity="0.75"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}" TargetOpacity="{Binding BackingEmphasis}"
+                                                       FontWeight="SemiBold" Effect="{Binding Soften}" TargetScale="{Binding Scale}"
+                                                       TransitionMilliseconds="{Binding MotionMilliseconds}" />
+                                            </StackPanel>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <TextBlock Text="{Binding Credit}" FontSize="14" FontWeight="SemiBold" Margin="4,16,4,4"
+                                <TextBlock x:Name="CreditText" Text="{Binding Credit}" FontSize="14" FontWeight="SemiBold" Margin="4,16,4,4"
                                            TextWrapping="Wrap" TextAlignment="{Binding LyricsTextAlignment}"
                                            Foreground="{DynamicResource TextPrimaryBrush}" Visibility="{Binding Credit, Converter={StaticResource NullToCollapsed}}" />
                             </StackPanel>

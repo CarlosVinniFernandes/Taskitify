@@ -14,4 +14,8 @@ public static class LyricsCredit
         result is { Source: "Spotify", Kind: LyricsKind.Synced or LyricsKind.PlainOnly }
             ? LocalizationService.Format("LyricsCredit", string.IsNullOrWhiteSpace(result.Credit) ? "Musixmatch" : result.Credit)
             : null;
+
+    /// <summary>"Lyrics via lrc.red" for karaoke lyrics from a source that asks to be credited (and linked).</summary>
+    public static string? For(KaraokeLyrics? karaoke) =>
+        karaoke is { Credit: { Length: > 0 } credit } && karaoke.Source != "Spotify" ? LocalizationService.Format("LyricsVia", credit) : null;
 }

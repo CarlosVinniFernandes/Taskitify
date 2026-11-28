@@ -26,6 +26,20 @@ public sealed class LyricLineViewModel : ObservableObject
 
     public string Text { get; }
 
+    /// <summary>The line's backing vocals, as one smaller line under it (null: none).</summary>
+    public string? BackgroundText { get; init; }
+
+    /// <summary>Sung by the other singer of a duet: drawn on the opposite side.</summary>
+    public bool Opposite { get; init; }
+
+    private System.Windows.TextAlignment _alignment = System.Windows.TextAlignment.Center;
+    private System.Windows.Point _scaleOrigin = new(0.5, 0.5);
+
+    /// <summary>The look's alignment, mirrored for the other singer of a duet.</summary>
+    public System.Windows.TextAlignment Alignment { get => _alignment; set => Set(ref _alignment, value); }
+
+    public System.Windows.Point ScaleOrigin { get => _scaleOrigin; set => Set(ref _scaleOrigin, value); }
+
     /// <summary>An instrumental break: an empty line, or only music notes.</summary>
     public bool IsInterlude => Text.All(c => c is '♪' or '♫' or '♬' or '♩' || char.IsWhiteSpace(c));
 
@@ -63,7 +77,18 @@ public sealed class LyricLineViewModel : ObservableObject
     private System.Windows.FontWeight _weight = System.Windows.FontWeights.Normal;
 
     /// <summary>The line's opacity under the chosen highlight style.</summary>
-    public double Emphasis { get => _emphasis; set => Set(ref _emphasis, value); }
+    public double Emphasis
+    {
+        get => _emphasis;
+        set
+        {
+            if (Set(ref _emphasis, value))
+                OnPropertyChanged(nameof(BackingEmphasis));
+        }
+    }
+
+    /// <summary>Backing vocals: a step below the line's own emphasis.</summary>
+    public double BackingEmphasis => Math.Max(0.12, Emphasis * 0.78);
 
     /// <summary>Drawn larger (render transform: the layout does not move).</summary>
     public double Scale { get => _scale; set => Set(ref _scale, value); }
@@ -379,8 +404,9 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
             if (Math.Abs(value - _presentationHeight) < 0.5)
                 return;
             _presentationHeight = value;
-            foreach (var name in new[] { nameof(LyricsFontSize), nameof(MotionLineHeight), nameof(TitleFontSize), nameof(LyricsTextAlignment), nameof(LyricsScaleOrigin) })
+            foreach (var name in new[] { nameof(LyricsFontSize), nameof(MotionLineHeight), nameof(BackingFontSize), nameof(TitleFontSize), nameof(LyricsTextAlignment), nameof(LyricsScaleOrigin) })
                 OnPropertyChanged(name);
+            ApplyLineSides();
         }
     }
 
@@ -406,6 +432,9 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     /// (lit line by line) cannot reach its tail.
     /// </summary>
     public double MotionLineHeight => LyricsFontSize * LineFactor(LyricsFont);
+
+    /// <summary>Backing vocals' type: clearly secondary, still readable.</summary>
+    public double BackingFontSize => Math.Round(LyricsFontSize * 0.62, 1);
 
     private static readonly Dictionary<FontFamily, double> LineFactors = [];
 
@@ -440,6 +469,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
             _fitScale = value;
             OnPropertyChanged(nameof(LyricsFontSize));
             OnPropertyChanged(nameof(MotionLineHeight));
+            OnPropertyChanged(nameof(BackingFontSize));
         }
     }
 
@@ -509,6 +539,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
                 _monitor.ThumbnailChanged += OnThumbnailChanged;
                 _sync.LyricsChanged += OnLyricsChanged;
                 _sync.CurrentLineChanged += OnCurrentLineChanged;
+                _sync.KaraokeChanged += OnKaraokeChanged;
                 _settings.Changed += OnSettingsChanged;
                 RefreshAll();
                 OnSettingsChanged(this, EventArgs.Empty);
@@ -565,6 +596,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         _monitor.ThumbnailChanged -= OnThumbnailChanged;
         _sync.LyricsChanged -= OnLyricsChanged;
         _sync.CurrentLineChanged -= OnCurrentLineChanged;
+        _sync.KaraokeChanged -= OnKaraokeChanged;
         _settings.Changed -= OnSettingsChanged;
     }
 
@@ -578,7 +610,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
             nameof(ShowCover), nameof(ShowTitle), nameof(ShowArtist), nameof(ShowHeader), nameof(ShowShuffle), nameof(ShowPrevious),
             nameof(ShowPlayPause), nameof(ShowNext), nameof(ShowRepeat), nameof(ShowVolume), nameof(ShowLike), nameof(ShowControls), nameof(ShowProgress),
             nameof(ShowTransport), nameof(Look), nameof(IsCinema), nameof(LyricsTextAlignment), nameof(LyricsScaleOrigin), nameof(LyricsLinePadding),
-            nameof(LyricsFont), nameof(LyricsFontSize), nameof(MotionLineHeight), nameof(ExpressiveMotion), nameof(TitleFont), nameof(TitleFontSize), nameof(TitleWeight),
+            nameof(LyricsFont), nameof(LyricsFontSize), nameof(MotionLineHeight), nameof(BackingFontSize), nameof(ExpressiveMotion), nameof(TitleFont), nameof(TitleFontSize), nameof(TitleWeight),
             nameof(WindowWidth), nameof(IsShuffleActive), nameof(IsRepeatActive), nameof(RepeatGlyph),
         })
             OnPropertyChanged(name);
@@ -586,6 +618,8 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
             Volume.Refresh();
         foreach (var line in Lines)
             line.ShowsDots = Look.InterludeDots;
+        ApplyLineSides();
+        OnKaraokeChanged(this, EventArgs.Empty);
         UpdateCurrentLine();
         LyricPositionChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -611,6 +645,81 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     {
         UpdateProgress();
         LyricPositionChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// A duet's other singer on the opposite side: lyrics set to the left put that singer's lines
+    /// on the right (centred lyrics stay centred, both singers there).
+    /// </summary>
+    private void ApplyLineSides()
+    {
+        var left = LyricsTextAlignment == System.Windows.TextAlignment.Left;
+        foreach (var line in Lines)
+        {
+            var mirrored = line.Opposite && left;
+            line.Alignment = mirrored ? System.Windows.TextAlignment.Right : LyricsTextAlignment;
+            line.ScaleOrigin = mirrored ? new System.Windows.Point(1, 0.5) : LyricsScaleOrigin;
+        }
+    }
+
+    // ---- karaoke button
+
+    /// <summary>The karaoke button's state: Hidden, Searching, Unavailable, Search (on request), Available, Active.</summary>
+    public string KaraokeState => _sync.KaraokeAvailability switch
+    {
+        KaraokeAvailability.Off => "Hidden",
+        KaraokeAvailability.Searching => "Searching",
+        KaraokeAvailability.Unavailable => "Unavailable",
+        KaraokeAvailability.NotSearched => "Search",
+        _ => _sync.KaraokeActive ? "Active" : "Available",
+    };
+
+    /// <summary>Backing vocals or a duet: the button says so with a small mark.</summary>
+    public bool KaraokeRich => _sync.Karaoke is { } k && (k.HasBackground || k.HasDuet) && _sync.KaraokeAvailability == KaraokeAvailability.Available;
+
+    public string KaraokeTip
+    {
+        get
+        {
+            var tip = LocalizationService.Get(KaraokeState switch
+            {
+                "Searching" => "KaraokeSearching",
+                "Unavailable" => "KaraokeUnavailable",
+                "Search" => "KaraokeSearch",
+                "Active" => "KaraokeTurnOff",
+                _ => "KaraokeTurnOn",
+            });
+            if (_sync.Karaoke is { } k && _sync.KaraokeAvailability == KaraokeAvailability.Available)
+            {
+                var extras = new List<string>();
+                if (k.HasBackground)
+                    extras.Add(LocalizationService.Get("KaraokeWithBacking"));
+                if (k.HasDuet)
+                    extras.Add(LocalizationService.Get("KaraokeWithDuet"));
+                tip += extras.Count > 0 ? $" ({string.Join(", ", extras)})" : "";
+                if (!string.IsNullOrEmpty(k.Credit ?? k.Source))
+                    tip += "\n" + LocalizationService.Format("KaraokeSource", k.Credit ?? k.Source);
+            }
+            return tip;
+        }
+    }
+
+    public ICommand KaraokeCommand => _karaokeCommand ??= new RelayCommand(() => _sync.ToggleKaraoke());
+    private ICommand? _karaokeCommand;
+
+    private string? _creditUrl;
+
+    /// <summary>Where the credit links to (a karaoke source that asks for a link), or null.</summary>
+    public string? CreditUrl { get => _creditUrl; private set => Set(ref _creditUrl, value); }
+
+    /// <summary>How much of the current line's backing vocals is sung (karaoke).</summary>
+    public LyricFill BackingFill => _sync.BackgroundFill(CurrentIndex);
+
+    private void OnKaraokeChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(KaraokeState));
+        OnPropertyChanged(nameof(KaraokeRich));
+        OnPropertyChanged(nameof(KaraokeTip));
     }
 
     /// <summary>Where the lyrics are now (the projected clock), for what animates between line changes.</summary>
@@ -667,15 +776,22 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         {
             for (var i = 0; i < timeline.Count; i++)
             {
-                Lines.Add(new LyricLineViewModel(i, timeline.Lines[i].Time, timeline.Lines[i].Text)
+                var source = timeline.Lines[i];
+                Lines.Add(new LyricLineViewModel(i, source.Time, source.Text)
                 {
                     End = i + 1 < timeline.Count ? timeline.Lines[i + 1].Time : TimeSpan.Zero,
                     ShowsDots = Look.InterludeDots,
+                    BackgroundText = LyricsVocal.Combine(source.Background)?.Text,
+                    Opposite = source.Singer != 0,
                 });
             }
+            ApplyLineSides();
         }
 
-        Credit = Lines.Count > 0 ? LyricsCredit.For(_sync.Result) : null;
+        // Karaoke lyrics shown: their source is credited (and linked) instead.
+        var karaokeCredit = _sync.KaraokeActive ? LyricsCredit.For(_sync.Karaoke) : null;
+        Credit = Lines.Count == 0 ? null : karaokeCredit ?? LyricsCredit.For(_sync.Result);
+        CreditUrl = karaokeCredit is not null ? _sync.Karaoke?.CreditUrl : null;
         StatusMessage = _monitor.Track is null ? null : _sync.State switch
         {
             LyricsState.Synced => null,

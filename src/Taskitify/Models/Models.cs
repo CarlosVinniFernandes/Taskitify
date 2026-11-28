@@ -241,6 +241,9 @@ public sealed class AppSettings
 
     public bool SpotifyLyricsEnabled { get; set; }
 
+    /// <summary>Where lyrics come from and the karaoke (word- and syllable-timed) lyrics.</summary>
+    public LyricsSourcesSettings LyricsSources { get; set; } = new();
+
     /// <summary>The like button was added to the layouts saved by older versions (once).</summary>
     public bool LikeButtonAdded { get; set; }
 
@@ -961,6 +964,60 @@ public static class PlayerToolIds
         {
             if (!result.Contains(id))
                 result.Insert(Math.Min(DefaultOrder.ToList().IndexOf(id), result.Count), id);
+        }
+        return result;
+    }
+}
+
+/// <summary>The karaoke sources (lyrics timed word by word or syllable by syllable) and how they are used.</summary>
+public sealed class LyricsSourcesSettings
+{
+    /// <summary>Look for karaoke lyrics at all.</summary>
+    public bool KaraokeSearch { get; set; } = true;
+
+    /// <summary>Look as soon as a song starts (off: only when the karaoke button is clicked).</summary>
+    public bool KaraokeAutoSearch { get; set; } = true;
+
+    /// <summary>Show karaoke lyrics whenever a song has them (the karaoke button turns it on and off).</summary>
+    public bool KaraokeOn { get; set; } = true;
+
+    /// <summary>Without real timing, estimate the fill from the line's timing (the usual Lyric Flow).</summary>
+    public bool AllowEstimatedFill { get; set; } = true;
+
+    /// <summary>The karaoke sources in the user's order; unknown ids are dropped, missing ones added.</summary>
+    public List<LyricsSourceChoice> Karaoke { get; set; } = [.. KaraokeSourceIds.Default.Select(id => new LyricsSourceChoice { Id = id })];
+
+    /// <summary>The enabled sources' ids, in order.</summary>
+    public IReadOnlyList<string> EnabledKaraoke() => [.. KaraokeSourceIds.Normalize(Karaoke).Where(c => c.Enabled).Select(c => c.Id)];
+}
+
+public sealed class LyricsSourceChoice
+{
+    public string Id { get; set; } = "";
+
+    public bool Enabled { get; set; } = true;
+}
+
+/// <summary>The karaoke sources the app knows, best first (measured: see docs/lyrics-sources.md).</summary>
+public static class KaraokeSourceIds
+{
+    public const string LrcRed = "lrcred";
+    public const string Lrclib = "lrclib";
+
+    public static readonly IReadOnlyList<string> Default = [LrcRed, Lrclib];
+
+    public static List<LyricsSourceChoice> Normalize(IEnumerable<LyricsSourceChoice>? saved)
+    {
+        var result = new List<LyricsSourceChoice>();
+        foreach (var choice in saved ?? [])
+        {
+            if (Default.Contains(choice.Id) && result.All(c => c.Id != choice.Id))
+                result.Add(new LyricsSourceChoice { Id = choice.Id, Enabled = choice.Enabled });
+        }
+        foreach (var id in Default)
+        {
+            if (result.All(c => c.Id != id))
+                result.Add(new LyricsSourceChoice { Id = id });
         }
         return result;
     }

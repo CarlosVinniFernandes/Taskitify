@@ -5,6 +5,22 @@ using Taskitify.Models;
 
 namespace Taskitify.Services;
 
+/// <summary>Whether the song playing has karaoke (word- or syllable-timed) lyrics, as far as we know.</summary>
+public enum KaraokeAvailability
+{
+    /// <summary>Not looked for: karaoke search is off, or nothing plays.</summary>
+    Off,
+
+    /// <summary>Looked for only on request (automatic search is off): the button asks.</summary>
+    NotSearched,
+
+    Searching,
+
+    Unavailable,
+
+    Available,
+}
+
 /// <summary>
 /// Fetches lyrics for the current track and tracks the active line. Instead of polling at a
 /// fixed rate, a single timer is armed for the exact moment the next line starts and re-armed
@@ -31,12 +47,20 @@ public sealed class LyricsSyncService : IDisposable
     private int _retryCount;
     private LyricFlow? _flow;
     private TimeSpan? _flowDuration;
+    private readonly KaraokeService? _karaoke;
+    private CancellationTokenSource? _karaokeCts;
+    // The song's usual (line-timed) lyrics, kept while karaoke lyrics are shown instead.
+    private LyricsTimeline? _lineTimeline;
+    private LyricsState _lineState;
+    private (bool Search, bool On, string Sources) _karaokePrefs;
 
-    public LyricsSyncService(ISpotifyMonitor monitor, ILyricsService lyrics, SettingsService settings)
+    public LyricsSyncService(ISpotifyMonitor monitor, ILyricsService lyrics, SettingsService settings, KaraokeService? karaoke = null)
     {
         _monitor = monitor;
         _lyrics = lyrics;
         _settings = settings;
+        _karaoke = karaoke;
+        _karaokePrefs = KaraokePrefs();
         _lineTimer = new DispatcherTimer(DispatcherPriority.Render);
         _lineTimer.Tick += (_, _) => Reschedule(fromBoundaryTimer: true);
         _retryTimer = new DispatcherTimer();
@@ -51,7 +75,40 @@ public sealed class LyricsSyncService : IDisposable
         _monitor.PlaybackChanged += OnPositionBaseChanged;
         _monitor.TimelineChanged += OnTimelineChanged;
         _settings.Changed += OnPositionBaseChanged;
+        _settings.Changed += OnKaraokeSettingsChanged;
     }
+
+    /// <summary>Whether the song has karaoke lyrics (looked for after the usual lyrics are shown).</summary>
+    public KaraokeAvailability KaraokeAvailability { get; private set; }
+
+    /// <summary>The song's karaoke lyrics when found (whether shown or not).</summary>
+    public KaraokeLyrics? Karaoke { get; private set; }
+
+    /// <summary>Karaoke lyrics are what is shown now: available, and wanted (or the only lyrics there are).</summary>
+    public bool KaraokeActive { get; private set; }
+
+    /// <summary>The karaoke availability, the lyrics found or whether they are shown changed.</summary>
+    public event EventHandler? KaraokeChanged;
+
+    /// <summary>The karaoke button: turns karaoke on or off for every song (a saved preference); looks for it if not yet.</summary>
+    public void ToggleKaraoke()
+    {
+        if (KaraokeAvailability == KaraokeAvailability.NotSearched)
+        {
+            _settings.Update(s => s.LyricsSources.KaraokeOn = true);
+            StartKaraokeSearch(force: true);
+            return;
+        }
+        if (KaraokeAvailability != KaraokeAvailability.Available)
+            return;
+        _settings.Update(s => s.LyricsSources.KaraokeOn = !s.LyricsSources.KaraokeOn);
+    }
+
+    /// <summary>How much of the line's backing vocals (as one) is sung.</summary>
+    public LyricFill BackgroundFill(int index) =>
+        KaraokeActive && Timeline is { } t && (uint)index < (uint)t.Count && LyricsVocal.Combine(t.Lines[index].Background) is { } vocal
+            ? LyricFlow.ForVocal(vocal, LyricsPosition)
+            : LyricFill.Full;
 
     public LyricsState State { get; private set; } = LyricsState.None;
 
@@ -80,6 +137,13 @@ public sealed class LyricsSyncService : IDisposable
 
     public LyricFill Fill(int index, LyricFlowMode mode)
     {
+        // Karaoke shows its real timing even with the usual (estimated) fill off: that is what it is for.
+        var estimate = _settings.Current.LyricsSources.AllowEstimatedFill;
+        if (KaraokeActive)
+        {
+            estimate &= mode != LyricFlowMode.Off;
+            mode = LyricFlowMode.Automatic;
+        }
         if (mode == LyricFlowMode.Off || Timeline is not { } timeline)
             return LyricFill.Full;
         if (_flow is null || _flowDuration != _monitor.Duration)
@@ -87,7 +151,7 @@ public sealed class LyricsSyncService : IDisposable
             _flowDuration = _monitor.Duration;
             _flow = new LyricFlow(timeline, _flowDuration);
         }
-        return _flow.At(index, LyricsPosition, mode);
+        return _flow.At(index, LyricsPosition, mode, estimate);
     }
 
     public TimeSpan? NextChangeAfterCurrent => CurrentLine is { } line ? Timeline?.NextChangeAfter(line.Time) : null;
@@ -103,9 +167,11 @@ public sealed class LyricsSyncService : IDisposable
         _monitor.PlaybackChanged -= OnPositionBaseChanged;
         _monitor.TimelineChanged -= OnTimelineChanged;
         _settings.Changed -= OnPositionBaseChanged;
+        _settings.Changed -= OnKaraokeSettingsChanged;
         _lineTimer.Stop();
         _retryTimer.Stop();
         _loadCts?.Cancel();
+        _karaokeCts?.Cancel();
     }
 
     /// <summary>Re-fetch the current track (after clearing the cache, for instance).</summary>
@@ -130,8 +196,12 @@ public sealed class LyricsSyncService : IDisposable
         if (_monitor.Track is { } track)
         {
             await _lyrics.ForgetAsync(new TrackQuery(track.Title, track.Artist, track.Album, _monitor.Duration));
+            _karaoke?.Forget(new TrackQuery(track.Title, track.Artist, track.Album, _monitor.Duration));
             if (_query is { } q)
+            {
                 await _lyrics.ForgetAsync(q);
+                _karaoke?.Forget(q);
+            }
         }
         _retryCount = 0;
         Reload();
@@ -178,9 +248,11 @@ public sealed class LyricsSyncService : IDisposable
 
         Result = null;
         Timeline = null;
+        _lineTimeline = null;
         _flow = null;
         ChangedAtLineBoundary = false;
         _query = null;
+        ResetKaraoke();
         SetIndex(-1, force: true);
 
         if (_monitor.Track is not { } track)
@@ -235,7 +307,11 @@ public sealed class LyricsSyncService : IDisposable
                 ScheduleRetry();
             else
                 _retryCount = 0;
+            _lineTimeline = Timeline;
+            _lineState = State;
             Reschedule();
+            if (State != LyricsState.Error)
+                StartKaraokeSearch(force: false);
         }
         catch (OperationCanceledException)
         {
@@ -298,5 +374,141 @@ public sealed class LyricsSyncService : IDisposable
     {
         State = state;
         LyricsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    // ------------------------------------------------------------------ karaoke
+
+    private (bool Search, bool On, string Sources) KaraokePrefs()
+    {
+        var k = _settings.Current.LyricsSources;
+        return (k.KaraokeSearch, k.KaraokeOn, string.Join(',', k.EnabledKaraoke()));
+    }
+
+    private void ResetKaraoke()
+    {
+        _karaokeCts?.Cancel();
+        _karaokeCts = null;
+        Karaoke = null;
+        KaraokeActive = false;
+        KaraokeAvailability = KaraokeAvailability.Off;
+        KaraokeChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// After the usual lyrics are shown: the song's own syllable timing if its lyrics have it (no
+    /// request), else a lookup in the karaoke sources, which never delays the lyrics.
+    /// </summary>
+    private void StartKaraokeSearch(bool force)
+    {
+        var settings = _settings.Current.LyricsSources;
+        if (_monitor.Track is not { } track || _query is not { } query || (!settings.KaraokeSearch && !force))
+        {
+            SetKaraoke(KaraokeAvailability.Off, null);
+            return;
+        }
+        if (Result is { Kind: LyricsKind.Synced, Lines: var lines } result && lines.Any(l => l.Anchors is { Count: > 0 }))
+        {
+            SetKaraoke(KaraokeAvailability.Available, new KaraokeLyrics(lines, LyricsSyncLevel.Word, result.Source ?? "") { Credit = result.Credit });
+            return;
+        }
+        if (State == LyricsState.Instrumental || _karaoke is null)
+        {
+            SetKaraoke(KaraokeAvailability.Unavailable, null);
+            return;
+        }
+        if (!settings.KaraokeAutoSearch && !force)
+        {
+            SetKaraoke(KaraokeAvailability.NotSearched, null);
+            return;
+        }
+        _karaokeCts?.Cancel();
+        var cts = new CancellationTokenSource();
+        _karaokeCts = cts;
+        SetKaraoke(KaraokeAvailability.Searching, null);
+        _ = LookUpKaraokeAsync(track, query, cts);
+    }
+
+    private async Task LookUpKaraokeAsync(TrackInfo track, TrackQuery query, CancellationTokenSource cts)
+    {
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            var found = await _karaoke!.FindAsync(new KaraokeQuery(query), cts.Token);
+            // A late answer for a song no longer playing, or a lookup replaced by a newer one.
+            if (cts.IsCancellationRequested || _monitor.Track != track || !ReferenceEquals(_karaokeCts, cts))
+                return;
+            Log.Info($"Karaoke for '{track.Title}': {(found is null ? "none" : $"{found.Sync} from {found.Source}{(found.HasBackground ? ", backing vocals" : "")}{(found.HasDuet ? ", duet" : "")}")} in {clock.Elapsed.TotalSeconds:0.00} s");
+            SetKaraoke(found is null ? KaraokeAvailability.Unavailable : KaraokeAvailability.Available, found);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Karaoke lookup failed", ex);
+            if (!cts.IsCancellationRequested && ReferenceEquals(_karaokeCts, cts))
+                SetKaraoke(KaraokeAvailability.Unavailable, null);
+        }
+    }
+
+    private void SetKaraoke(KaraokeAvailability availability, KaraokeLyrics? lyrics)
+    {
+        KaraokeAvailability = availability;
+        Karaoke = lyrics;
+        ApplyKaraoke();
+        KaraokeChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Shows the karaoke lyrics or the usual ones, as wanted. Switching keeps the position: the
+    /// line for the position now is current at once. Karaoke lyrics also fill in for a song
+    /// with no synced lyrics at all, whatever the preference.
+    /// </summary>
+    private void ApplyKaraoke()
+    {
+        var wanted = _settings.Current.LyricsSources.KaraokeOn;
+        var use = Karaoke is not null && (wanted || _lineTimeline is null);
+        var timeline = use ? new LyricsTimeline(KaraokeLyrics.WithInterludes(Karaoke!.Lines)) : _lineTimeline;
+        var active = use && wanted;
+        if (ReferenceEquals(timeline, Timeline) && active == KaraokeActive)
+            return;
+        var changedLines = !ReferenceEquals(timeline, Timeline);
+        KaraokeActive = active;
+        if (!changedLines)
+            return;
+        Timeline = timeline;
+        _flow = null;
+        ChangedAtLineBoundary = false;
+        if (use && State != LyricsState.Synced)
+            State = LyricsState.Synced;
+        else if (!use)
+            State = _lineState;
+        SetIndex(-1, force: true);
+        LyricsChanged?.Invoke(this, EventArgs.Empty);
+        Reschedule();
+    }
+
+    private void OnKaraokeSettingsChanged(object? sender, EventArgs e)
+    {
+        var prefs = KaraokePrefs();
+        if (prefs == _karaokePrefs)
+            return;
+        var before = _karaokePrefs;
+        _karaokePrefs = prefs;
+        if (_query is null)
+            return;
+        // Search turned on, or the sources changed while none was found: look again.
+        if ((prefs.Search && !before.Search) || (prefs.Sources != before.Sources && KaraokeAvailability is KaraokeAvailability.Unavailable or KaraokeAvailability.Off))
+            StartKaraokeSearch(force: false);
+        else if (!prefs.Search && before.Search)
+        {
+            _karaokeCts?.Cancel();
+            SetKaraoke(KaraokeAvailability.Off, null);
+        }
+        else
+        {
+            ApplyKaraoke();
+            KaraokeChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 }

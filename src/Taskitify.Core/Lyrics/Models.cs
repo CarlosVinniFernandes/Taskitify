@@ -17,7 +17,31 @@ public sealed record LyricsLine(TimeSpan Time, string Text)
 }
 
 /// <summary>A secondary vocal part: its text, when it is sung and (optionally) word or syllable anchors.</summary>
-public sealed record LyricsVocal(string Text, TimeSpan Start, TimeSpan End, IReadOnlyList<LyricAnchor>? Anchors);
+public sealed record LyricsVocal(string Text, TimeSpan Start, TimeSpan End, IReadOnlyList<LyricAnchor>? Anchors)
+{
+    /// <summary>A line's backing vocals as one (shown as one smaller line), their anchors kept in place.</summary>
+    public static LyricsVocal? Combine(IReadOnlyList<LyricsVocal>? vocals)
+    {
+        if (vocals is not { Count: > 0 })
+            return null;
+        if (vocals.Count == 1)
+            return vocals[0];
+        var text = new System.Text.StringBuilder();
+        var anchors = new List<LyricAnchor>();
+        var ordered = vocals.OrderBy(v => v.Start).ToList();
+        foreach (var vocal in ordered)
+        {
+            if (text.Length > 0)
+                text.Append(' ');
+            var offset = text.Length;
+            anchors.AddRange((vocal.Anchors ?? [new LyricAnchor(vocal.Start, 0)])
+                .Select(a => a with { TextOffset = a.TextOffset + offset })
+                .Where(a => anchors.Count == 0 || a.Time > anchors[^1].Time));
+            text.Append(vocal.Text);
+        }
+        return new LyricsVocal(text.ToString(), ordered[0].Start, ordered.Max(v => v.End), anchors);
+    }
+}
 
 /// <summary>How finely lyrics are timed. Ordered: a higher value is finer.</summary>
 public enum LyricsSyncLevel
@@ -49,6 +73,29 @@ public sealed record KaraokeLyrics(IReadOnlyList<LyricsLine> Lines, LyricsSyncLe
     public string? MatchedTitle { get; init; }
 
     public string? MatchedArtist { get; init; }
+
+    // A break of at least this long between two lines (or before the first) is shown as one.
+    private static readonly TimeSpan InterludeGap = TimeSpan.FromSeconds(3);
+
+    /// <summary>
+    /// Karaoke sources say when each line ends, so the instrumental breaks are known: an empty
+    /// line (drawn as the break's dots) where the voice rests long enough, and before the first line.
+    /// </summary>
+    public static IReadOnlyList<LyricsLine> WithInterludes(IReadOnlyList<LyricsLine> lines)
+    {
+        var result = new List<LyricsLine>(lines.Count + 8);
+        if (lines.Count > 0 && lines[0].Time >= InterludeGap)
+            result.Add(new LyricsLine(TimeSpan.Zero, ""));
+        for (var i = 0; i < lines.Count; i++)
+        {
+            result.Add(lines[i]);
+            if (i + 1 < lines.Count && lines[i].End is { } end && !string.IsNullOrWhiteSpace(lines[i].Text)
+                && !string.IsNullOrWhiteSpace(lines[i + 1].Text) && lines[i + 1].Time - end >= InterludeGap)
+                result.Add(new LyricsLine(end, ""));
+        }
+        return result;
+    }
+
 
     /// <summary>A score to pick the best of several: finer timing first, then backing vocals, then duets.</summary>
     public int Quality => ((int)Sync * 4) + (HasBackground ? 2 : 0) + (HasDuet ? 1 : 0);

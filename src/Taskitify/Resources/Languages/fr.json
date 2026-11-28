@@ -769,5 +769,14 @@
   "LookDepthHint": "Le flou augmente avec la distance au vers actuel et avec la taille du texte.",
   "FloatingKeepTaskbarHint": "Activé : le lecteur flottant et celui de la barre ensemble ; un clic sur la barre met le lecteur flottant au premier plan.",
   "LookInterludeDots": "Pauses instrumentales en points",
-  "LookInterludeDotsHint": "Trois points s’allument l’un après l’autre pendant que la musique joue sans voix, montrant combien de temps avant son retour. Désactivé : une note."
+  "LookInterludeDotsHint": "Trois points s’allument l’un après l’autre pendant que la musique joue sans voix, montrant combien de temps avant son retour. Désactivé : une note.",
+  "KaraokeSearching": "Recherche du karaoké synchronisé…",
+  "KaraokeUnavailable": "Karaoké synchronisé indisponible pour ce titre",
+  "KaraokeSearch": "Chercher le karaoké",
+  "KaraokeTurnOn": "Activer le karaoké",
+  "KaraokeTurnOff": "Désactiver le karaoké",
+  "KaraokeWithBacking": "avec chœurs",
+  "KaraokeWithDuet": "duo",
+  "KaraokeSource": "Source : {0}",
+  "LyricsVia": "Paroles via {0}"
 }

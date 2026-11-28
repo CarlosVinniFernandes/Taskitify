@@ -380,3 +380,31 @@ public class KaraokeServiceTests
         }
     }
 }
+
+public class KaraokeInterludeTests
+{
+    [Fact]
+    public void Long_rests_and_the_intro_become_instrumental_breaks()
+    {
+        LyricsLine Line(double start, double end, string text) => new(TimeSpan.FromSeconds(start), text) { End = TimeSpan.FromSeconds(end) };
+        var lines = KaraokeLyrics.WithInterludes([Line(12, 15, "one"), Line(15.5, 18, "two"), Line(30, 33, "three")]);
+        Assert.Equal(["", "one", "two", "", "three"], lines.Select(l => l.Text));
+        Assert.Equal(TimeSpan.Zero, lines[0].Time);              // the intro
+        Assert.Equal(TimeSpan.FromSeconds(18), lines[3].Time);   // from the end of "two"
+        Assert.Equal(3, KaraokeLyrics.WithInterludes([Line(1, 2, "a"), Line(2.5, 3, "b"), Line(4, 5, "c")]).Count); // short rests: none
+    }
+
+    [Fact]
+    public void Several_backing_vocals_combine_with_their_anchors_in_place()
+    {
+        var a = new LyricsVocal("(oh", TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), [new(TimeSpan.FromSeconds(1), 0)]);
+        var b = new LyricsVocal("yeah)", TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(4), [new(TimeSpan.FromSeconds(3), 0)]);
+        var both = LyricsVocal.Combine([b, a])!;
+        Assert.Equal("(oh yeah)", both.Text);
+        Assert.Equal(TimeSpan.FromSeconds(1), both.Start);
+        Assert.Equal(TimeSpan.FromSeconds(4), both.End);
+        Assert.Equal([0, 4], both.Anchors!.Select(x => x.TextOffset));
+        Assert.True(LyricFlow.ForVocal(both, TimeSpan.FromSeconds(10)).IsComplete);
+        Assert.False(LyricFlow.ForVocal(both, TimeSpan.FromSeconds(3.5)).IsComplete);
+    }
+}
