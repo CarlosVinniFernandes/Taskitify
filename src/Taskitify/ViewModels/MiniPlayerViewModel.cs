@@ -463,8 +463,11 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     }
 
     public double LyricsFontSize => IsPresenting
-        ? _presentationHeight * 0.046 * Math.Clamp(Look.LyricsScale, .7, 2.2) * (DisplayType ? 1 : .86)
+        ? PresentationLyricsSize(_presentationHeight, Look)
         : (IsCinema ? 28 : 23) * Math.Clamp(Look.LyricsScale, .7, 2.2) * (DisplayType ? 1 : .86) * _fitScale;
+
+    internal static double PresentationLyricsSize(double height, MiniPlayerStyle look) =>
+        height * 0.046 * Math.Clamp(look.LyricsScale, .7, 2.2) * (look.Typeface == LyricsTypeface.System ? .86 : 1);
 
     private double _fitScale = 1;
 
@@ -850,6 +853,6 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         DurationText = duration > TimeSpan.Zero ? Format(duration) : "--:--";
     }
 
-    private static string Format(TimeSpan t) =>
+    internal static string Format(TimeSpan t) =>
         t.TotalHours >= 1 ? t.ToString(@"h\:mm\:ss") : $"{(int)t.TotalMinutes}:{t.Seconds:00}";
 }

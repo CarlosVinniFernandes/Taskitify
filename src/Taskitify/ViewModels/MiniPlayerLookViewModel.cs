@@ -40,6 +40,9 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     private Color? _diagramColor;
     private Brush? _pickerBackground;
     private object? _presetsKey;
+    private object? _presentationBackgroundKey;
+    private object? _presentationLyricsKey;
+    private Brush? _presentationPreviewBackground;
 
     public MiniPlayerLookViewModel(SettingsService settings, ISpotifyMonitor monitor, LyricsSyncService lyrics, ThemeService theme, PlayerSurface surface = PlayerSurface.Mini)
     {
@@ -48,7 +51,7 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
         _lyrics = lyrics;
         _theme = theme;
         _surface = surface;
-        Elements = new BarLayoutViewModel(settings, s => s.PlayerElements(surface), "SongTitle", "Artist", 310, 640,
+        Elements = new BarLayoutViewModel(settings, s => s.PlayerElements(s.EffectivePlayerSurface(surface)), "SongTitle", "Artist", 310, 640,
             taskbar: false, observeSettings: false);
         Elements.Edited += (_, _) => PreviewRequested?.Invoke(this, EventArgs.Empty);
         Layouts =
@@ -98,6 +101,32 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     public string BarPreviewText => BarText.Main;
     public string BarPreviewCaption => BarText.Caption;
     public Brush? PickerBackground { get => _pickerBackground; private set => Set(ref _pickerBackground, value); }
+
+    private MiniPlayerStyle PreviewLook => _settings.Current.PlayerLook(_settings.Current.EffectivePlayerSurface(_surface));
+    public Brush? PresentationPreviewBackground { get => _presentationPreviewBackground; private set => Set(ref _presentationPreviewBackground, value); }
+    public Brush PresentationPreviewInk => PreviewLook.Background == MiniPlayerBackground.Theme
+        ? (Brush)Application.Current.FindResource("TextPrimaryBrush") : Brushes.White;
+    public Brush PresentationPreviewPlayInk => PreviewLook.Background == MiniPlayerBackground.Theme
+        ? (Brush)Application.Current.FindResource("WindowBackgroundBrush") : Brushes.Black;
+    public ImageSource? PresentationPreviewCover => _monitor.LargeThumbnail ?? PreviewCover;
+    public FontFamily PresentationPreviewFont => MiniPlayerViewModel.FontFor(PreviewLook.Typeface);
+    public FontFamily PresentationPreviewTitleFont => PreviewLook.Typeface == LyricsTypeface.System
+        ? (FontFamily)Application.Current.FindResource("UiDisplayFont") : PresentationPreviewFont;
+    public double PresentationPreviewLyricsSize => MiniPlayerViewModel.PresentationLyricsSize(360, PreviewLook);
+    public TextAlignment PresentationPreviewAlignment => PreviewLook.Alignment == LyricsAlignment.Left ? TextAlignment.Left : TextAlignment.Center;
+    public Point PresentationPreviewOrigin => new(PreviewLook.Alignment == LyricsAlignment.Left ? 0 : 0.5, 0.5);
+    public bool PresentationPreviewKaraoke => PreviewLook.ShowKaraokeButton;
+    public bool PresentationPreviewSolidControls => PreviewLook.Controls == ControlsLook.Solid;
+    public LyricLineViewModel? PresentationPreviewLyric { get; private set; }
+    public LyricLineViewModel? PresentationPreviewPrevious { get; private set; }
+    public LyricLineViewModel? PresentationPreviewNext { get; private set; }
+    public string PresentationPreviewPosition => MiniPlayerViewModel.Format(_monitor.Position);
+    public string PresentationPreviewDuration => _monitor.Duration is { TotalSeconds: > 0 } duration ? MiniPlayerViewModel.Format(duration) : "--:--";
+    public double PresentationPreviewProgress => _monitor.Duration is { TotalSeconds: > 0 } duration
+        ? Math.Clamp(_monitor.Position.TotalSeconds / duration.TotalSeconds, 0, 1) : 0;
+
+    private string? VerseAt(int index) => _lyrics.Timeline is { } timeline && index >= 0 && index < timeline.Count
+        ? timeline.Lines[index].Text : null;
 
     private (string Main, string Caption) BarText
     {
@@ -336,7 +365,7 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     // ---- The background's intensity: only what the chosen background has is enabled ----
 
     private (bool Effect, bool Dim, bool Blur) Tunable =>
-        MiniPlayerStyle.Tunable(Look.Background, _settings.Current.Background == OverlayBackground.AlbumGradient);
+        MiniPlayerStyle.Tunable(MiniPlayerBackdrop.ResolveStyle(Look.Background, _surface), _settings.Current.Background == OverlayBackground.AlbumGradient);
 
     public bool HasEffect => Tunable.Effect;
     public bool HasDim => Tunable.Dim;
@@ -406,6 +435,8 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
         OnPropertyChanged(nameof(PreviewPlayGlyph));
         OnPropertyChanged(nameof(BarPreviewText));
         OnPropertyChanged(nameof(BarPreviewCaption));
+        if (_surface == PlayerSurface.Player)
+            UpdatePresentationPreview();
         if (!_showLooks)
             return;
 
@@ -437,10 +468,8 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
                 option.Thumbnail = MiniPlayerLookThumbnails.Controls(option.Value, themeText);
         }
 
-        var timeline = _lyrics.Timeline;
         var index = _lyrics.CurrentIndex;
-        string? LineAt(int i) => timeline is not null && i >= 0 && i < timeline.Count ? timeline.Lines[i].Text : null;
-        var sample = new MiniPlayerLookSample(PreviewTitle, PreviewArtist, cover, LineAt(index - 1), LineAt(index), LineAt(index + 1),
+        var sample = new MiniPlayerLookSample(PreviewTitle, PreviewArtist, cover, VerseAt(index - 1), VerseAt(index), VerseAt(index + 1),
             _monitor.IsPlaying, _monitor.Duration is { TotalSeconds: > 0 } duration
                 ? Math.Clamp(_monitor.Position.TotalSeconds / duration.TotalSeconds, 0, 1) : 0);
         ImageSource Backdrop(MiniPlayerBackground background) => Backgrounds.First(option => option.Value == background).Thumbnail!;
@@ -466,6 +495,56 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
             option.Thumbnail = MiniPlayerLookThumbnails.Player(SupportsLayoutChoice ? Look.Layout : MiniPlayerLayout.Cinema, look, sample, backdrop, Ink(look.Background));
         }
 
+    }
+
+    private void UpdatePresentationPreview()
+    {
+        var cover = PresentationPreviewCover as BitmapSource;
+        var style = MiniPlayerBackdrop.ResolveStyle(PreviewLook.Background, PlayerSurface.Player);
+        var tuning = BackdropTuning.From(PreviewLook);
+        var theme = ResourceColor("PopupBackgroundBrush");
+        var palette = _monitor.Palette;
+        var key = (cover, style, tuning, theme, palette);
+        if (!Equals(_presentationBackgroundKey, key))
+        {
+            _presentationBackgroundKey = key;
+            PresentationPreviewBackground = style == MiniPlayerBackground.Theme
+                ? (Brush)Application.Current.FindResource("PopupBackgroundBrush")
+                : MiniPlayerBackdrop.AlbumBrush(cover, style, palette, tuning, 192, 108);
+        }
+        foreach (var name in new[] { nameof(PresentationPreviewInk), nameof(PresentationPreviewPlayInk), nameof(PresentationPreviewCover),
+                     nameof(PresentationPreviewLyricsSize), nameof(PresentationPreviewFont),
+                     nameof(PresentationPreviewTitleFont), nameof(PresentationPreviewAlignment), nameof(PresentationPreviewOrigin),
+                     nameof(PresentationPreviewKaraoke), nameof(PresentationPreviewSolidControls), nameof(PresentationPreviewPosition), nameof(PresentationPreviewDuration),
+                     nameof(PresentationPreviewProgress) })
+            OnPropertyChanged(name);
+
+        var look = PreviewLook;
+        var index = _lyrics.CurrentIndex;
+        var previous = VerseAt(index - 1);
+        var current = _lyrics.CurrentLine?.Text ?? LocalizationService.Get("MinimalSample");
+        var next = VerseAt(index + 1);
+        var scale = PresentationPreviewLyricsSize / 23;
+        var lyricsKey = (previous, current, next, look.Highlight, look.Motion, look.Typeface, look.LyricsGlow, look.LyricsDepth, scale);
+        if (Equals(_presentationLyricsKey, lyricsKey))
+            return;
+        _presentationLyricsKey = lyricsKey;
+
+        LyricLineViewModel? PreviewLine(string? text, int distance)
+        {
+            if (text is null)
+                return null;
+            var line = new LyricLineViewModel(0, TimeSpan.Zero, text);
+            line.Emphasize(look.Highlight, distance, started: true, heavy: look.Typeface != LyricsTypeface.System,
+                motion: look.Motion, size: scale, glow: look.LyricsGlow, depth: look.LyricsDepth);
+            return line;
+        }
+        PresentationPreviewPrevious = PreviewLine(previous, -1);
+        PresentationPreviewLyric = PreviewLine(current, 0);
+        PresentationPreviewNext = PreviewLine(next, 1);
+        OnPropertyChanged(nameof(PresentationPreviewPrevious));
+        OnPropertyChanged(nameof(PresentationPreviewLyric));
+        OnPropertyChanged(nameof(PresentationPreviewNext));
     }
 
     private static Color ResourceColor(string key) => ((SolidColorBrush)Application.Current.FindResource(key)).Color;

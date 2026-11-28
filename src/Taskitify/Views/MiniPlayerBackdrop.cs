@@ -37,6 +37,28 @@ public static class MiniPlayerBackdrop
     public static bool IsAtmospheric(MiniPlayerBackground style) =>
         style is MiniPlayerBackground.Aurora or MiniPlayerBackground.Atmosphere or MiniPlayerBackground.Velvet or MiniPlayerBackground.BlurredCover;
 
+    internal static MiniPlayerBackground ResolveStyle(MiniPlayerBackground style, PlayerSurface surface) =>
+        surface == PlayerSurface.Player && style == MiniPlayerBackground.Default ? MiniPlayerBackground.Aurora : style;
+
+    internal static Brush AlbumBrush(BitmapSource? cover, MiniPlayerBackground style, (Color Start, Color End) palette,
+        BackdropTuning tuning, int width, int height)
+    {
+        Brush brush;
+        if (IsAtmospheric(style))
+        {
+            var image = Render(cover, style, width, height, tuning);
+            brush = new ImageBrush(image) { Stretch = Stretch.Fill };
+            RenderOptions.SetBitmapScalingMode(brush, BitmapScalingMode.HighQuality);
+        }
+        else
+        {
+            brush = new LinearGradientBrush(Dimmed(palette.End, tuning.Dim), Dimmed(palette.Start, tuning.Dim),
+                new Point(0, 0), new Point(1, 1));
+        }
+        brush.Freeze();
+        return brush;
+    }
+
     /// <summary>The background for this cover, <paramref name="width"/> × <paramref name="height"/> pixels (small: it is stretched).</summary>
     public static BitmapSource Render(BitmapSource? cover, MiniPlayerBackground style, int width, int height, BackdropTuning? tuning = null)
     {

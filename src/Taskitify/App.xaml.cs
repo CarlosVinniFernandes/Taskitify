@@ -329,7 +329,6 @@ public partial class App : Application
         // Customizing the mini player shows it, live, beside the settings.
         _settingsVm.MiniLook!.PreviewRequested += (_, _) => PreviewMiniPlayer();
         _settingsVm.FloatingLook!.PreviewRequested += (_, _) => PreviewMiniPlayer(PlayerSurface.Floating);
-        _settingsVm.PresentationLook!.PreviewRequested += (_, _) => PreviewMiniPlayer(PlayerSurface.Player);
         _settingsVm.MinimalLook!.PreviewRequested += (_, _) =>
         {
             if (_settingsWindow?.ActivePage == SettingsPage.Floating)
@@ -603,7 +602,6 @@ public partial class App : Application
         {
             var page = surface switch
             {
-                PlayerSurface.Player => SettingsPage.Player,
                 PlayerSurface.Floating => SettingsPage.Floating,
                 _ => SettingsPage.MiniPlayer,
             };

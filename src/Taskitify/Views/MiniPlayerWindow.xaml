@@ -164,34 +164,21 @@
                             VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,2" Padding="12,4" FontSize="12"
                             Background="{DynamicResource WindowBackgroundBrush}" Content="{DynamicResource Loc.LyricsResync}" />
                     <Grid x:Name="KaraokeHover" Visibility="Collapsed" HorizontalAlignment="Right"
-                          VerticalAlignment="Bottom" Margin="0,0,0,2">
+                          VerticalAlignment="Bottom" Margin="0,0,3,6">
                         <!-- Karaoke: whether the song has real word/syllable timing, and showing it or not. -->
-                        <Button x:Name="KaraokeButton" Width="30" Height="30" Command="{Binding KaraokeCommand}"
+                        <Button x:Name="KaraokeButton" Command="{Binding KaraokeCommand}"
                                 ToolTip="{Binding KaraokeTip}" AutomationProperties.Name="{Binding KaraokeTip}">
-                            <Grid Width="20" Height="20">
-                                <TextBlock x:Name="KaraokeGlyph" Text="&#xE720;" FontFamily="{StaticResource IconFont}" FontSize="15"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                            <Grid Width="18" Height="21">
+                                <Path x:Name="KaraokeGlyph" Data="{StaticResource KaraokeMicrophone}"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.7"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
                                 <!-- Backing vocals or a duet: a small mark. -->
-                                <Ellipse x:Name="KaraokeRichMark" Width="5" Height="5" Fill="#FF1ED760" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                <Ellipse x:Name="KaraokeRichMark" Width="4" Height="4" Fill="#D9FFFFFF" HorizontalAlignment="Right" VerticalAlignment="Top"
                                          Visibility="{Binding KaraokeRich, Converter={StaticResource BoolToVisibility}}" />
                             </Grid>
                             <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource IconButton}">
-                                    <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}" />
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate TargetType="Button">
-                                                <Border CornerRadius="6" Background="{TemplateBinding Background}"
-                                                        BorderBrush="{DynamicResource TrackBrush}" BorderThickness="1">
-                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                </Border>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
+                                <Style TargetType="Button" BasedOn="{StaticResource KaraokeCircle}">
                                     <Style.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="{DynamicResource PopupBackgroundBrush}" />
-                                        </Trigger>
                                         <DataTrigger Binding="{Binding KaraokeState}" Value="Hidden">
                                             <Setter Property="Visibility" Value="Collapsed" />
                                         </DataTrigger>
@@ -202,7 +189,8 @@
                                             <Setter Property="Opacity" Value="0.6" />
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding KaraokeState}" Value="Active">
-                                            <Setter Property="Foreground" Value="#FF1ED760" />
+                                            <Setter Property="Background" Value="#59FFFFFF" />
+                                            <Setter Property="BorderBrush" Value="#A6FFFFFF" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>

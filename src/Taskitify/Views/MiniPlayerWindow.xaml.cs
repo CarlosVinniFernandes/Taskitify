@@ -1213,11 +1213,8 @@ public partial class MiniPlayerWindow : Window
     private void ApplyBackground()
     {
         var keys = new[] { "TextPrimaryBrush", "TextSecondaryBrush", "TextTertiaryBrush", "TrackBrush", "SubtleFillBrush", "SubtleFillHoverBrush", "WindowBackgroundBrush" };
-        var look = _vm.Look.Background;
-        // Full screen: always a backdrop from the cover (the player's own, if it is one).
-        if (_presenting && !MiniPlayerBackdrop.IsAtmospheric(look))
-            look = MiniPlayerBackground.Aurora;
-        var useGradient = _presenting || look switch
+        var look = MiniPlayerBackdrop.ResolveStyle(_vm.Look.Background, Surface);
+        var useGradient = look switch
         {
             MiniPlayerBackground.Theme => false,
             MiniPlayerBackground.AlbumGradient => true,
@@ -1232,31 +1229,15 @@ public partial class MiniPlayerWindow : Window
             return;
         }
 
-        var (start, end) = _vm.Palette;
-        if (MiniPlayerBackdrop.IsAtmospheric(look))
-        {
-            // A small image made once per cover and style, stretched: it is all soft gradients.
-            var (w, h) = _presenting ? (192, 108) : _vm.IsCinema ? (192, 112) : (128, 176);
-            var image = MiniPlayerBackdrop.Render(_vm.Cover as BitmapSource, look, w, h, BackdropTuning.From(_vm.Look));
-            var brush = new ImageBrush(image) { Stretch = Stretch.Fill };
-            RenderOptions.SetBitmapScalingMode(brush, BitmapScalingMode.HighQuality);
-            brush.Freeze();
-            ContentCard.Background = brush;
-        }
-        else
-        {
-            var dim = MiniPlayerStyle.ClampDim(_vm.Look.BackgroundDim);
-            var gradient = new LinearGradientBrush(MiniPlayerBackdrop.Dimmed(end, dim), MiniPlayerBackdrop.Dimmed(start, dim), new Point(0, 0), new Point(1, 1));
-            gradient.Freeze();
-            ContentCard.Background = gradient;
-        }
+        var (w, h) = Surface == PlayerSurface.Player ? (192, 108) : _vm.IsCinema ? (192, 112) : (128, 176);
+        ContentCard.Background = MiniPlayerBackdrop.AlbumBrush(_vm.Cover as BitmapSource, look, _vm.Palette, BackdropTuning.From(_vm.Look), w, h);
         Resources["TextPrimaryBrush"] = Frozen(Colors.White);
         Resources["TextSecondaryBrush"] = Frozen(Color.FromArgb(0xB3, 0xFF, 0xFF, 0xFF));
         Resources["TextTertiaryBrush"] = Frozen(Color.FromArgb(0x73, 0xFF, 0xFF, 0xFF));
         Resources["TrackBrush"] = Frozen(Color.FromArgb(0x4D, 0xFF, 0xFF, 0xFF));
         Resources["SubtleFillBrush"] = Frozen(Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
         Resources["SubtleFillHoverBrush"] = Frozen(Color.FromArgb(0x24, 0xFF, 0xFF, 0xFF));
-        Resources["WindowBackgroundBrush"] = Frozen(start);
+        Resources["WindowBackgroundBrush"] = Frozen(_vm.Palette.Start);
     }
 
     private static SolidColorBrush Frozen(Color c)

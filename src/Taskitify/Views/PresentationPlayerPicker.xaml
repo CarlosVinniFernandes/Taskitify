@@ -1,0 +1,203 @@
+<UserControl x:Class="Taskitify.Views.PresentationPlayerPicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="PreviewElement" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="{Binding PresentationPreviewInk}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Frame" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="3">
+                            <ContentPresenter x:Name="Face" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="False">
+                                <Setter TargetName="Face" Property="Opacity" Value="0.26" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Frame" Property="BorderBrush" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Frame" Property="BorderBrush" Value="{Binding Foreground, RelativeSource={RelativeSource TemplatedParent}}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="PreviewGlyph" TargetType="ToggleButton" BasedOn="{StaticResource PreviewElement}">
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+            <Setter Property="FontSize" Value="10" />
+        </Style>
+        <DataTemplate x:Key="PreviewVerse">
+            <TextBlock Text="{Binding Text}" TextWrapping="Wrap" Margin="4,5"
+                       FontFamily="{Binding DataContext.PresentationPreviewFont, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                       FontSize="{Binding DataContext.PresentationPreviewLyricsSize, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                       Foreground="{Binding DataContext.PresentationPreviewInk, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                       TextAlignment="{Binding DataContext.PresentationPreviewAlignment, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                       RenderTransformOrigin="{Binding DataContext.PresentationPreviewOrigin, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                       FontWeight="{Binding Weight}" Opacity="{Binding Emphasis}" Effect="{Binding Soften}">
+                <TextBlock.RenderTransform>
+                    <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}" />
+                </TextBlock.RenderTransform>
+            </TextBlock>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Center">
+        <Grid x:Name="PreviewFrame" Width="640" Height="360" Background="{Binding PresentationPreviewBackground, TargetNullValue=#242427}"
+              TextOptions.TextFormattingMode="Ideal">
+            <Grid.Clip>
+                <RectangleGeometry Rect="0,0,640,360" RadiusX="9" RadiusY="9" />
+            </Grid.Clip>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" IsHitTestVisible="False">
+                <TextBlock Text="&#xE921;" FontFamily="{StaticResource IconFont}" Foreground="{Binding PresentationPreviewInk}" FontSize="8" Margin="7,5" />
+                <TextBlock Text="&#xE923;" FontFamily="{StaticResource IconFont}" Foreground="{Binding PresentationPreviewInk}" FontSize="8" Margin="7,5" />
+                <TextBlock Text="&#xE8BB;" FontFamily="{StaticResource IconFont}" Foreground="{Binding PresentationPreviewInk}" FontSize="8" Margin="7,5" />
+            </StackPanel>
+
+            <!-- Same 44/56 split and centred song column as the screen-sized Player. -->
+            <Grid Margin="38,29">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="44*" />
+                    <ColumnDefinition Width="56*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel x:Name="PreviewSong" Width="158" VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <ToggleButton Style="{StaticResource PreviewElement}" Width="152" Height="152" Margin="0,0,0,10"
+                                  HorizontalAlignment="Left" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                                  IsChecked="{Binding Elements.ShowCover}" ToolTip="{DynamicResource Loc.Cover}" AutomationProperties.Name="{DynamicResource Loc.Cover}">
+                        <Grid>
+                            <Border CornerRadius="4" Background="{Binding PresentationPreviewInk}" Opacity="0.12" />
+                            <TextBlock Text="&#xE8D6;" FontFamily="{StaticResource IconFont}" Foreground="{Binding PresentationPreviewInk}"
+                                       Opacity="0.64" FontSize="28" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Border CornerRadius="4">
+                                <Border.Background>
+                                    <ImageBrush ImageSource="{Binding PresentationPreviewCover}" Stretch="UniformToFill" />
+                                </Border.Background>
+                            </Border>
+                        </Grid>
+                    </ToggleButton>
+
+                    <ToggleButton Style="{StaticResource PreviewElement}" IsChecked="{Binding Elements.ShowText}" HorizontalContentAlignment="Left"
+                                  ToolTip="{Binding Elements.TextLabel}" AutomationProperties.Name="{Binding Elements.TextLabel}">
+                        <TextBlock Text="{Binding PreviewTitle}" FontFamily="{Binding PresentationPreviewTitleFont}"
+                                   FontSize="13" FontWeight="Bold" TextWrapping="Wrap" MaxHeight="33" TextTrimming="CharacterEllipsis" />
+                    </ToggleButton>
+                    <ToggleButton Style="{StaticResource PreviewElement}" IsChecked="{Binding Elements.ShowCaption}" HorizontalContentAlignment="Left"
+                                  ToolTip="{Binding Elements.CaptionLabel}" AutomationProperties.Name="{Binding Elements.CaptionLabel}">
+                        <TextBlock Text="{Binding PreviewArtist}" FontFamily="{Binding PresentationPreviewTitleFont}"
+                                   FontSize="9" Opacity="0.7" TextTrimming="CharacterEllipsis" />
+                    </ToggleButton>
+                    <StackPanel Orientation="Horizontal">
+                        <ToggleButton Style="{StaticResource PreviewGlyph}" Content="&#xEB51;" IsChecked="{Binding Elements.ShowLike}"
+                                      ToolTip="{DynamicResource Loc.LikeButton}" AutomationProperties.Name="{DynamicResource Loc.LikeButton}" />
+                        <TextBlock Text="&#xE72D;" FontFamily="{StaticResource IconFont}" Foreground="{Binding PresentationPreviewInk}"
+                                   FontSize="9" Margin="5,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" />
+                    </StackPanel>
+
+                    <ToggleButton Style="{StaticResource PreviewElement}" IsChecked="{Binding Elements.ShowProgress}"
+                                  HorizontalContentAlignment="Stretch" Margin="0,4,0,2"
+                                  ToolTip="{DynamicResource Loc.Progress}" AutomationProperties.Name="{DynamicResource Loc.Progress}">
+                        <StackPanel IsHitTestVisible="False">
+                            <ProgressBar Height="3" Maximum="1" Value="{Binding PresentationPreviewProgress, Mode=OneWay}">
+                                <ProgressBar.Template>
+                                    <ControlTemplate TargetType="ProgressBar">
+                                        <Grid>
+                                            <Border x:Name="PART_Track" Background="{Binding PresentationPreviewInk}" Opacity="0.28" CornerRadius="1.5" />
+                                            <Border x:Name="PART_Indicator" HorizontalAlignment="Left" Background="{Binding PresentationPreviewInk}" CornerRadius="1.5" />
+                                        </Grid>
+                                    </ControlTemplate>
+                                </ProgressBar.Template>
+                            </ProgressBar>
+                            <Grid Margin="0,2,0,0" Opacity="0.7">
+                                <TextBlock Text="{Binding PresentationPreviewPosition}" FontSize="7" />
+                                <TextBlock Text="{Binding PresentationPreviewDuration}" HorizontalAlignment="Right" FontSize="7" />
+                            </Grid>
+                        </StackPanel>
+                    </ToggleButton>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <ToggleButton Style="{StaticResource PreviewGlyph}" IsChecked="{Binding Elements.ShowShuffle}" Content="&#xE8B1;"
+                                          ToolTip="{DynamicResource Loc.Shuffle}" AutomationProperties.Name="{DynamicResource Loc.Shuffle}" />
+                            <ToggleButton Style="{StaticResource PreviewGlyph}" IsChecked="{Binding Elements.ShowPrevious}" Content="&#xE892;"
+                                          ToolTip="{DynamicResource Loc.Previous}" AutomationProperties.Name="{DynamicResource Loc.Previous}" />
+                        </StackPanel>
+                        <ToggleButton Grid.Column="1" Style="{StaticResource PreviewElement}" IsChecked="{Binding Elements.ShowPlayPause}" Margin="5,0"
+                                      ToolTip="{DynamicResource Loc.PlayPause}" AutomationProperties.Name="{DynamicResource Loc.PlayPause}">
+                            <Border Width="25" Height="25" CornerRadius="12.5">
+                                <TextBlock Text="{Binding PreviewPlayGlyph}" FontFamily="{StaticResource IconFont}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{Binding PresentationPreviewPlayInk}" />
+                                            <Setter Property="FontSize" Value="10" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding PresentationPreviewSolidControls}" Value="True">
+                                                    <Setter Property="Foreground" Value="{Binding PresentationPreviewInk}" />
+                                                    <Setter Property="FontSize" Value="13" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{Binding PresentationPreviewInk}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding PresentationPreviewSolidControls}" Value="True">
+                                                <Setter Property="Background" Value="Transparent" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
+                        </ToggleButton>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                            <ToggleButton Style="{StaticResource PreviewGlyph}" IsChecked="{Binding Elements.ShowNext}" Content="&#xE893;"
+                                          ToolTip="{DynamicResource Loc.Next}" AutomationProperties.Name="{DynamicResource Loc.Next}" />
+                            <ToggleButton Style="{StaticResource PreviewGlyph}" IsChecked="{Binding Elements.ShowRepeat}" Content="&#xE8EE;"
+                                          ToolTip="{DynamicResource Loc.Repeat}" AutomationProperties.Name="{DynamicResource Loc.Repeat}" />
+                            <ToggleButton Style="{StaticResource PreviewGlyph}" IsChecked="{Binding Elements.ShowVolume}" Content="&#xE995;"
+                                          ToolTip="{DynamicResource Loc.Volume}" AutomationProperties.Name="{DynamicResource Loc.Volume}" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+
+                <Grid x:Name="PreviewLyrics" Grid.Column="1" Margin="19,0,0,0" IsHitTestVisible="False" ClipToBounds="True">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <ContentControl ContentTemplate="{StaticResource PreviewVerse}" Content="{Binding PresentationPreviewPrevious}"
+                                    VerticalAlignment="Bottom" HorizontalContentAlignment="Stretch" />
+                    <ContentControl Grid.Row="1" ContentTemplate="{StaticResource PreviewVerse}" Content="{Binding PresentationPreviewLyric}"
+                                    HorizontalContentAlignment="Stretch" />
+                    <ContentControl Grid.Row="2" ContentTemplate="{StaticResource PreviewVerse}" Content="{Binding PresentationPreviewNext}"
+                                    VerticalAlignment="Top" HorizontalContentAlignment="Stretch" />
+                    <Button Grid.RowSpan="3" Style="{StaticResource KaraokeCircle}" Width="22" Height="22" HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom" IsTabStop="False"
+                            Visibility="{Binding PresentationPreviewKaraoke, Converter={StaticResource BoolToVisibility}}">
+                        <Viewbox Width="11" Height="13">
+                            <Path Width="18" Height="21" Data="{StaticResource KaraokeMicrophone}" Stroke="White"
+                                  StrokeThickness="1.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        </Viewbox>
+                    </Button>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Viewbox>
+</UserControl>

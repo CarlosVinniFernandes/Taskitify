@@ -197,8 +197,10 @@
         </Style>
         <DataTemplate x:Key="PlayerAppearance">
             <StackPanel>
-                <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.Elements}" />
-                <Border Style="{StaticResource Group}" Padding="18,14,18,18">
+                <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.Elements}"
+                           Visibility="{Binding SupportsLayoutChoice, Converter={StaticResource BoolToVisibility}}" />
+                <Border Style="{StaticResource Group}" Padding="18,14,18,18"
+                        Visibility="{Binding SupportsLayoutChoice, Converter={StaticResource BoolToVisibility}}">
                     <StackPanel>
                         <Border Style="{StaticResource Stage}">
                             <StackPanel>
@@ -805,7 +807,12 @@
                     <TextBlock Style="{StaticResource PageTitle}" Text="{DynamicResource Loc.NavPlayer}" />
                     <TextBlock Style="{StaticResource PageHint}" Text="{DynamicResource Loc.PagePlayerHint}" />
 
-                    <Border Style="{StaticResource Group}" Margin="0,24,0,0">
+                    <local:PresentationPlayerPicker x:Name="PlayerPreview" Margin="0,16,0,0" DataContext="{Binding PresentationLook}"
+                                                    IsEnabled="{Binding DataContext.HasIndependentPlayerLook, RelativeSource={RelativeSource AncestorType=Window}}" />
+                    <TextBlock Style="{StaticResource SettingHint}" Margin="0,8,0,0" Text="{DynamicResource Loc.ElementsHint}"
+                               Visibility="{Binding HasIndependentPlayerLook, Converter={StaticResource BoolToVisibility}}" />
+
+                    <Border Style="{StaticResource Group}" Margin="0,16,0,0">
                         <StackPanel>
                             <Border Style="{StaticResource FirstRow}">
                                 <DockPanel>
