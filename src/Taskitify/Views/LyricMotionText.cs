@@ -34,6 +34,8 @@ public sealed class LyricMotionText : TextBlock
 
     private readonly ScaleTransform _zoom = new(1, 1);
     private DrawingGroup? _dots;
+    private double _dotsFont;
+    private TextAlignment _dotsAlignment;
     private bool _ticking;
 
     public LyricMotionText()
@@ -58,18 +60,6 @@ public sealed class LyricMotionText : TextBlock
 
     private static void OnInterludeChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e) => ((LyricMotionText)sender).UpdateInterlude();
 
-    protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
-    {
-        base.OnPropertyChanged(e);
-        // The dots' box follows the type and the alignment.
-        if (_dots is not null && (e.Property == TextAlignmentProperty || e.Property == FontSizeProperty))
-        {
-            ClearValue(BackgroundProperty);
-            _dots = null;
-            UpdateInterlude();
-        }
-    }
-
     private void UpdateInterlude()
     {
         if (!Interlude)
@@ -82,8 +72,13 @@ public sealed class LyricMotionText : TextBlock
             }
             return;
         }
+        // The dots' box follows the type and the alignment (a look can change either).
+        if (_dots is not null && (FontSize != _dotsFont || TextAlignment != _dotsAlignment))
+            _dots = null;
         if (_dots is null)
         {
+            _dotsFont = FontSize;
+            _dotsAlignment = TextAlignment;
             _dots = new DrawingGroup();
             var box = InterludeDots.BoxFor(FontSize);
             Background = new DrawingBrush(_dots)
@@ -124,6 +119,11 @@ public sealed class LyricMotionText : TextBlock
 
     private void DrawDots()
     {
+        if (_dots is not null && (FontSize != _dotsFont || TextAlignment != _dotsAlignment))
+        {
+            UpdateInterlude();
+            return;
+        }
         if (_dots is null)
             return;
         var color = Foreground is SolidColorBrush brush ? brush.Color : Colors.White;
