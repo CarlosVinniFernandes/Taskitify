@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 namespace Taskitify.Infrastructure;
 
 // Minimal Core Audio (WASAPI session) COM interop: just enough to find an app's audio
-// session on the default output device and read/change its mixer volume.
+// session on an output device, read/change its mixer volume and read its peak level.
 
 [ComImport]
 [Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
@@ -17,10 +17,22 @@ internal class MMDeviceEnumeratorComObject
 internal interface IMMDeviceEnumerator
 {
     [PreserveSig]
-    int EnumAudioEndpoints(int dataFlow, int stateMask, out IntPtr devices);
+    int EnumAudioEndpoints(int dataFlow, int stateMask, out IMMDeviceCollection devices);
 
     [PreserveSig]
     int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice endpoint);
+}
+
+[ComImport]
+[Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E")]
+[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IMMDeviceCollection
+{
+    [PreserveSig]
+    int GetCount(out int count);
+
+    [PreserveSig]
+    int Item(int index, out IMMDevice device);
 }
 
 [ComImport]
@@ -99,4 +111,13 @@ internal interface ISimpleAudioVolume
 
     [PreserveSig]
     int GetMute([MarshalAs(UnmanagedType.Bool)] out bool mute);
+}
+
+[ComImport]
+[Guid("C02216F6-8C67-4B5B-9D00-D008E73E0064")] // endpointvolume.h
+[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+internal interface IAudioMeterInformation
+{
+    [PreserveSig]
+    int GetPeakValue(out float peak);
 }
