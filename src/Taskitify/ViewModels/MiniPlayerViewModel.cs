@@ -73,15 +73,18 @@ public sealed class LyricLineViewModel : ObservableObject
     }
 
     /// <summary>The current line's soft light, sized to the type.</summary>
-    private static System.Windows.Media.Effects.Effect GlowFor(double size)
+    private static System.Windows.Media.Effects.Effect? GlowFor(double size, double strength)
     {
-        var radius = (int)Math.Round(Math.Clamp(12 * size, 8, 40));
-        var key = -radius;
+        if (strength <= 0.01)
+            return null;
+        var radius = (int)Math.Round(Math.Clamp(12 * size * (0.6 + (0.8 * strength)), 6, 56));
+        var opacity = Math.Round(Math.Clamp(0.62 * strength, 0, 0.62) * 20) / 20;
+        var key = -((radius * 100) + (int)(opacity * 20));
         if (!SizedEffects.TryGetValue(key, out var effect))
         {
             var glow = new System.Windows.Media.Effects.DropShadowEffect
             {
-                Color = System.Windows.Media.Colors.White, ShadowDepth = 0, BlurRadius = radius, Opacity = 0.38,
+                Color = System.Windows.Media.Colors.White, ShadowDepth = 0, BlurRadius = radius, Opacity = opacity,
                 RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance,
             };
             glow.Freeze();
@@ -102,7 +105,8 @@ public sealed class LyricLineViewModel : ObservableObject
     /// negative = past). With a display typeface (<paramref name="heavy"/>) every line is bold, as
     /// music apps set lyrics, and the current one stands out by brightness and size.
     /// </summary>
-    public void Emphasize(LyricsHighlight highlight, int distance, bool started, bool heavy, LyricMotionMode motion = LyricMotionMode.Off, double size = 1)
+    public void Emphasize(LyricsHighlight highlight, int distance, bool started, bool heavy, LyricMotionMode motion = LyricMotionMode.Off, double size = 1,
+        double glow = MiniPlayerStyle.DefaultGlow, double depth = MiniPlayerStyle.DefaultDepth)
     {
         var current = started && distance == 0;
         var away = Math.Abs(distance);
@@ -115,7 +119,9 @@ public sealed class LyricLineViewModel : ObservableObject
                 : heavy ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.SemiBold;
             Scale = !started ? .86 : current ? 1 : steps switch { 1 => .84, 2 => .79, 3 => .75, _ => .72 };
             Emphasis = !started ? .5 : current ? 1 : steps switch { 1 => .36, 2 => .24, 3 => .15, _ => .1 };
-            Soften = !started ? null : current ? GlowFor(size) : BlurFor(size * steps switch { 1 => 1.1, 2 => 2.3, 3 => 3.5, _ => 4.6 });
+            Soften = !started ? null
+                : current ? GlowFor(size, glow)
+                : depth <= 0.01 ? null : BlurFor(size * depth * steps switch { 1 => 1.1, 2 => 2.3, 3 => 3.5, _ => 4.6 });
             return;
         }
         if (motion != LyricMotionMode.Off)
@@ -350,7 +356,27 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     /// <summary>Display typefaces read as lyrics should: larger, heavier; the system font stays as it was.</summary>
     private bool DisplayType => Look.Typeface != LyricsTypeface.System;
 
-    public double MotionLineHeight => LyricsFontSize * 1.12;
+    /// <summary>
+    /// Tight, like music apps set lyrics, but never shorter than the typeface's own ascent and
+    /// descent: a shorter line lets a "y" or "g" hang into the next one, where the sung-part fill
+    /// (lit line by line) cannot reach its tail.
+    /// </summary>
+    public double MotionLineHeight => LyricsFontSize * LineFactor(LyricsFont);
+
+    private static readonly Dictionary<FontFamily, double> LineFactors = [];
+
+    internal static double LineFactor(FontFamily family)
+    {
+        if (LineFactors.TryGetValue(family, out var factor))
+            return factor;
+        factor = 1.12;
+        foreach (var weight in new[] { System.Windows.FontWeights.Bold, System.Windows.FontWeights.Normal })
+        {
+            if (new Typeface(family, System.Windows.FontStyles.Normal, weight, System.Windows.FontStretches.Normal).TryGetGlyphTypeface(out var glyphs))
+                factor = Math.Max(factor, glyphs.Height + 0.04);
+        }
+        return LineFactors[family] = Math.Min(factor, 1.45);
+    }
 
     public double LyricsFontSize => IsPresenting
         ? _presentationHeight * 0.046 * Math.Clamp(Look.LyricsScale, .7, 2.2) * (DisplayType ? 1 : .86)
@@ -541,9 +567,30 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         LyricPositionChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    private bool _wantsLargeCover;
+
+    /// <summary>Maximized and full screen: the cover is drawn large, so the 640 px one is fetched and used.</summary>
+    public bool WantsLargeCover
+    {
+        get => _wantsLargeCover;
+        set
+        {
+            if (_wantsLargeCover == value)
+                return;
+            _wantsLargeCover = value;
+            Cover = PickCover();
+            if (value)
+                _ = _monitor.EnsureLargeCoverAsync();
+        }
+    }
+
+    private ImageSource? PickCover() => _wantsLargeCover && _monitor.LargeThumbnail is { } large ? large : _monitor.Thumbnail;
+
     private void OnThumbnailChanged(object? sender, EventArgs e)
     {
-        Cover = _monitor.Thumbnail;
+        Cover = PickCover();
+        if (_wantsLargeCover && _monitor.LargeThumbnail is null)
+            _ = _monitor.EnsureLargeCoverAsync();
         OnPropertyChanged(nameof(Palette));
     }
 
@@ -556,7 +603,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         var track = _monitor.Track;
         Title = track?.Title ?? LocalizationService.Get("NothingPlaying");
         Artist = track?.Artist ?? LocalizationService.Get("OpenSpotify");
-        Cover = _monitor.Thumbnail;
+        Cover = PickCover();
         IsPlaying = _monitor.IsPlaying;
         OnPropertyChanged(nameof(CanSeek));
         RebuildLines();
@@ -602,7 +649,8 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
             Lines[i].MotionMilliseconds = animateLine ? ScrollMilliseconds : 0;
             Lines[i].IsCurrent = i == index;
             Lines[i].IsPast = i < index;
-            Lines[i].Emphasize(highlight, i - Math.Max(index, 0), started: index >= 0, heavy: DisplayType, motion: LayoutMotion, size: LyricsFontSize / 23);
+            Lines[i].Emphasize(highlight, i - Math.Max(index, 0), started: index >= 0, heavy: DisplayType, motion: LayoutMotion, size: LyricsFontSize / 23,
+                glow: Look.LyricsGlow, depth: Look.LyricsDepth);
         }
         CurrentIndex = index;
         CurrentLineChanged?.Invoke(this, EventArgs.Empty);

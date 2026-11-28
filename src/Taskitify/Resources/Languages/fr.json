@@ -754,7 +754,7 @@
   "ExitFullScreen": "Quitter le plein écran (Échap)",
   "PlayerToolSize": "Taille des paroles (A- et A+)",
   "PlayerToolsTitle": "Boutons au survol",
-  "PlayerToolsHint": "Les boutons qui apparaissent sur le lecteur flottant, de gauche à droite. Faites glisser une ligne (ou utilisez les flèches) pour changer l’ordre ; désactivez ceux que vous n’utilisez pas.",
+  "PlayerToolsHint": "Les boutons tels qu’ils sont sur le lecteur flottant. Cliquez sur l’un pour l’afficher ou le masquer ; maintenez et faites glisser pour le déplacer.",
   "PlayerToolsReset": "Rétablir l’ordre par défaut",
   "MoveLeft": "Déplacer vers la gauche",
   "MoveRight": "Déplacer vers la droite",
@@ -763,5 +763,9 @@
   "PlayerVersesHint": "Les paroles font cette hauteur en vers ; la poignée ne change plus que la largeur. Libre : la poignée règle la hauteur. Un vers long est réduit plutôt que coupé.",
   "PlayerVersesFree": "Libre (poignée)",
   "PlayerVersesOne": "1 vers",
-  "PlayerVersesMany": "{0} vers"
+  "PlayerVersesMany": "{0} vers",
+  "LookGlow": "Éclat du vers actuel",
+  "LookDepthBlur": "Flou des autres vers",
+  "LookDepthHint": "Le flou augmente avec la distance au vers actuel et avec la taille du texte.",
+  "FloatingKeepTaskbarHint": "Activé : le lecteur flottant et celui de la barre ensemble ; un clic sur la barre met le lecteur flottant au premier plan."
 }

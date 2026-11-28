@@ -154,6 +154,9 @@ public partial class App : Application
             CoverFallback = (track, duration) => _settings.Current.SpotifyLyricsEnabled
                 ? spotifyProvider.FindCoverAsync(new TrackQuery(track.Title, track.Artist, track.Album, duration), CancellationToken.None)
                 : Task.FromResult<byte[]?>(null),
+            LargeCoverSource = (track, duration) => _settings.Current.SpotifyLyricsEnabled
+                ? spotifyProvider.FindCoverAsync(new TrackQuery(track.Title, track.Artist, track.Album, duration), CancellationToken.None, large: true)
+                : Task.FromResult<byte[]?>(null),
         };
         _sync = new LyricsSyncService(_monitor, lyrics, _settings);
         var spotifyStatus = _spotifyLyrics.StatusKey;
@@ -502,6 +505,12 @@ public partial class App : Application
     {
         if (_miniPlayer is null || _overlay is null)
             return;
+        // Floating with the taskbar player kept: the bar's click brings the floating player forward.
+        if (_miniPlayer.IsPinned)
+        {
+            OpenMiniPlayer(_overlay.Bounds);
+            return;
+        }
         if (_miniPlayer.IsVisible)
         {
             _miniPlayer.HidePopup();

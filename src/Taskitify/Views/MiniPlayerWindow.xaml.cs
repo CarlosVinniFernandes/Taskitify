@@ -431,6 +431,7 @@ public partial class MiniPlayerWindow : Window
         }
         _presenting = false;
         StopPresentIdle();
+        _vm.WantsLargeCover = false;
         _beforeFill = null;
         IsPinned = false;
         _pinned = null;
@@ -474,7 +475,7 @@ public partial class MiniPlayerWindow : Window
         if (o.Topmost && _pinnedForeground is null)
             _pinnedForeground = new ForegroundWatcher(h =>
             {
-                if (h != _hwnd && IsPinned && _pinned?.Topmost == true && !IsOwnWindow(h))
+                if (h != _hwnd && IsPinned && !_presenting && _pinned?.Topmost == true && !IsOwnWindow(h))
                     WindowInterop.BringToTopmost(_hwnd);
             });
         else if (!o.Topmost && _pinnedForeground is not null)
@@ -535,6 +536,10 @@ public partial class MiniPlayerWindow : Window
         _presentMonitor = fullScreen ? monitor.Bounds : monitor.WorkArea;
         _presenting = true;
         SetAppWindow(true);
+        // An app like any other while it fills the screen: not above the rest, in Alt+Tab, with the focus.
+        Topmost = false;
+        NativeMethods.SetWindowPos(_hwnd, new IntPtr(-2), 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
+        _vm.WantsLargeCover = true;
         ApplyLayout();
         ApplyBackground();
         UpdateLayout();
@@ -559,22 +564,15 @@ public partial class MiniPlayerWindow : Window
         QueueLyrics(animate: false);
     }
 
-    /// <summary>Over its area: full screen in front of everything; maximized, on top only when the floating player is set so.</summary>
+    /// <summary>Over its area, in front and with the focus, as an app window (Alt+Tab leaves and comes back).</summary>
     private void PlacePresentation()
     {
         if (!_presenting || _hwnd == IntPtr.Zero)
             return;
         var margin = (int)Math.Round(ShadowRoom / 2 * WindowInterop.GetScale(_hwnd));
-        int x = _presentMonitor.X - margin, y = _presentMonitor.Y - margin;
-        if (_fullScreen || _pinned is { Topmost: true })
-        {
-            WindowInterop.SetPosition(_hwnd, x, y);
-            WindowInterop.BringToTopmost(_hwnd);
-        }
-        else
-        {
-            NativeMethods.SetWindowPos(_hwnd, IntPtr.Zero, x, y, 0, 0, NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE);
-        }
+        NativeMethods.SetWindowPos(_hwnd, IntPtr.Zero, _presentMonitor.X - margin, _presentMonitor.Y - margin, 0, 0,
+            NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE);
+        Activate();
     }
 
     /// <summary>
@@ -651,9 +649,17 @@ public partial class MiniPlayerWindow : Window
         _beforeFill = null;
         _presenting = false;
         StopPresentIdle();
+        _vm.WantsLargeCover = false;
         if (WindowState != WindowState.Normal)
             WindowState = WindowState.Normal;
         SetAppWindow(false);
+        // Floating again: above the others if it is set so.
+        if (_pinned is { } back)
+        {
+            Topmost = back.Topmost;
+            if (back.Topmost)
+                WindowInterop.BringToTopmost(_hwnd);
+        }
         _vm.PresentationHeight = 0;
         ApplyLayout();
         SetBaseWidth(before.Width);

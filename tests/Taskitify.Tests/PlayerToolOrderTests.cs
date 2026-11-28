@@ -55,3 +55,24 @@ public class PlayerToolOrderTests
         Assert.Equal(new[] { "Close", "Settings" }, restored.PlayerToolOrder);
     }
 }
+
+public class LargeCoverTests
+{
+    [Theory]
+    [InlineData("https://i.scdn.co/image/ab67616d00001e02abc", "https://i.scdn.co/image/ab67616d0000b273abc")]
+    [InlineData("https://i.scdn.co/image/ab67616d00004851abc", "https://i.scdn.co/image/ab67616d0000b273abc")]
+    [InlineData("https://i.scdn.co/image/ab67616d0000b273abc", "https://i.scdn.co/image/ab67616d0000b273abc")]
+    public void Spotify_cover_urls_ask_for_the_640_px_image(string url, string expected) =>
+        Assert.Equal(expected, Taskitify.Core.Lyrics.SpotifyLyricsProvider.LargeCoverUrl(url));
+
+    [Fact]
+    public void Glow_and_depth_are_clamped_and_older_looks_get_the_defaults()
+    {
+        Assert.Equal(0, MiniPlayerStyle.ClampGlow(-1));
+        Assert.Equal(1, MiniPlayerStyle.ClampGlow(3));
+        Assert.Equal(1.6, MiniPlayerStyle.ClampDepth(9));
+        var look = System.Text.Json.JsonSerializer.Deserialize<MiniPlayerStyle>("{\"Highlight\":3}")!;
+        Assert.Equal(MiniPlayerStyle.DefaultGlow, look.LyricsGlow);
+        Assert.Equal(MiniPlayerStyle.DefaultDepth, look.LyricsDepth);
+    }
+}

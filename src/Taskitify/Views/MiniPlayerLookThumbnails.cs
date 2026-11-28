@@ -77,6 +77,11 @@ internal static class MiniPlayerLookThumbnails
     public static ImageSource Highlight(LyricsHighlight highlight, Color color) =>
         Diagram((dc, bounds) =>
         {
+            if (highlight == LyricsHighlight.Depth)
+            {
+                DepthDiagram(dc, bounds, color);
+                return;
+            }
             for (var row = -2; row <= 2; row++)
                 Line(dc, 12, bounds.Height / 2 + row * 7, bounds.Width - 24, row == 0 ? .88 : .62,
                     TextAlignment.Center, color, LineOpacity(highlight, row), row == 0 && highlight == LyricsHighlight.Expressive ? 5 : 3);
@@ -234,6 +239,29 @@ internal static class MiniPlayerLookThumbnails
         dc.PushTransform(new TranslateTransform(x, y));
         dc.DrawGeometry(outline ? null : brush, outline ? new Pen(brush, 1) : null, geometry);
         dc.Pop();
+    }
+
+    /// <summary>Depth, as it looks: the current line lit (a halo around it), the others narrower, fainter and soft.</summary>
+    private static void DepthDiagram(DrawingContext dc, Rect bounds, Color color)
+    {
+        var middle = bounds.Height / 2;
+        var width = bounds.Width - 24;
+        foreach (var (grow, alpha) in new[] { (5.0, (byte)0x12), (3.0, (byte)0x22), (1.5, (byte)0x38) })
+        {
+            var size = (width * .88) + (2 * grow);
+            dc.DrawRoundedRectangle(Ink(color, alpha), null, new Rect(12 + ((width - size) / 2), middle - 2.5 - grow, size, 5 + (2 * grow)), 2.5 + grow, 2.5 + grow);
+        }
+        Line(dc, 12, middle - 2.5, width, .88, TextAlignment.Center, color, 0xFF, 5);
+        foreach (var row in new[] { -2, -1, 1, 2 })
+        {
+            var away = Math.Abs(row);
+            var length = away == 1 ? .56 : .44;
+            var y = middle + (row * 8) - (away == 1 ? 0 : row * -0.5);
+            var alpha = away == 1 ? (byte)0x60 : (byte)0x28;
+            // Soft: the same line drawn a little wider and fainter around itself.
+            Line(dc, 12, y - 1, width, length + .04, TextAlignment.Center, color, (byte)(alpha / 3), 5);
+            Line(dc, 12, y, width, length, TextAlignment.Center, color, alpha, 3);
+        }
     }
 
     private static byte LineOpacity(LyricsHighlight highlight, int distance) => distance == 0 ? (byte)0xFF

@@ -594,6 +594,18 @@ public sealed class MiniPlayerStyle
     /// <summary>The blurred cover's blur: 0.4 to 1.8; 1 as it always was.</summary>
     public double BackgroundBlur { get; set; } = 1;
 
+    public const double DefaultGlow = 0.6;
+    public const double DefaultDepth = 1;
+
+    /// <summary>Depth highlight: the current line's light, 0 (none) to 1.</summary>
+    public double LyricsGlow { get; set; } = DefaultGlow;
+
+    /// <summary>Depth highlight: how much the other lines blur, 0 (sharp) to 1.6.</summary>
+    public double LyricsDepth { get; set; } = DefaultDepth;
+
+    public static double ClampGlow(double v) => Math.Clamp(Math.Round(v * 20) / 20, 0, 1);
+    public static double ClampDepth(double v) => Math.Clamp(Math.Round(v * 20) / 20, 0, 1.6);
+
     public static double ClampEffect(double v) => Math.Clamp(Math.Round(v * 20) / 20, 0.3, 1.5);
     public static double ClampDim(double v) => Math.Clamp(Math.Round(v * 20) / 20, 0, 0.6);
     public static double ClampBlur(double v) => Math.Clamp(Math.Round(v * 20) / 20, 0.4, 1.8);

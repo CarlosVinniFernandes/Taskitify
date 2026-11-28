@@ -754,7 +754,7 @@
   "ExitFullScreen": "Exit full screen (Esc)",
   "PlayerToolSize": "Lyrics size (A- and A+)",
   "PlayerToolsTitle": "Hover buttons",
-  "PlayerToolsHint": "The buttons that appear over the floating player, left to right. Drag a row (or use the arrows) to change the order; switch off the ones you do not use.",
+  "PlayerToolsHint": "The buttons as they sit on the floating player. Click one to show or hide it; press, hold and drag it to move it.",
   "PlayerToolsReset": "Restore the default order",
   "MoveLeft": "Move left",
   "MoveRight": "Move right",
@@ -763,5 +763,9 @@
   "PlayerVersesHint": "The lyrics are this many verses tall; the grip then changes only the width. Free: the grip sets the height. A long verse is set smaller rather than cut.",
   "PlayerVersesFree": "Free (grip)",
   "PlayerVersesOne": "1 verse",
-  "PlayerVersesMany": "{0} verses"
+  "PlayerVersesMany": "{0} verses",
+  "LookGlow": "Glow of the current line",
+  "LookDepthBlur": "Blur of the other lines",
+  "LookDepthHint": "The blur grows with the distance from the current line and with the size of the text.",
+  "FloatingKeepTaskbarHint": "On: the floating player and the taskbar player together; a click on the bar brings the floating player forward."
 }

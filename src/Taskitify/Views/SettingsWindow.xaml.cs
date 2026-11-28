@@ -55,50 +55,81 @@ public partial class SettingsWindow : Window
     }
 
     /// <summary>
-    /// The floating player's button list: a row dragged over another takes its place at once (the
-    /// player follows live), and the order is saved as it changes. The arrows and switches still click.
+    /// The floating player's simulated button bar: a click shows or hides a button; pressed, held
+    /// and dragged, it lifts and takes the place of the one it passes (the player follows live).
     /// </summary>
     private void WirePlayerToolDrag()
     {
         PlayerToolItem? pressed = null;
+        FrameworkElement? pressedFace = null;
         Point pressedAt = default;
+        var dragged = false;
         static PlayerToolItem? ItemAt(object source) =>
             (source as FrameworkElement ?? (source as FrameworkContentElement)?.Parent as FrameworkElement)?.DataContext as PlayerToolItem;
-        static bool OnControl(DependencyObject? d)
+        static FrameworkElement? FaceOf(DependencyObject? d)
         {
-            for (; d is not null and not ContentPresenter; d = d is System.Windows.Media.Visual or System.Windows.Media.Media3D.Visual3D ? System.Windows.Media.VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
+            for (; d is not null; d = d is System.Windows.Media.Visual or System.Windows.Media.Media3D.Visual3D
+                     ? System.Windows.Media.VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
             {
-                if (d is System.Windows.Controls.Primitives.ButtonBase)
-                    return true;
+                if (d is FrameworkElement { Name: "Tool" } face)
+                    return face;
             }
-            return false;
+            return null;
+        }
+        static void Lift(FrameworkElement? face, bool up)
+        {
+            if (face?.RenderTransform is not System.Windows.Media.ScaleTransform scale || scale.IsFrozen)
+                return;
+            scale.ScaleX = scale.ScaleY = up ? 1.18 : 1;
+            face.Opacity = up ? 0.85 : 1;
         }
 
         PlayerToolList.PreviewMouseLeftButtonDown += (_, e) =>
         {
-            pressed = OnControl(e.OriginalSource as DependencyObject) ? null : ItemAt(e.OriginalSource);
+            pressed = ItemAt(e.OriginalSource);
+            pressedFace = FaceOf(e.OriginalSource as DependencyObject);
             pressedAt = e.GetPosition(PlayerToolList);
+            dragged = false;
+            Lift(pressedFace, pressed is not null);
+            if (pressed is not null)
+                PlayerToolList.CaptureMouse();
         };
-        PlayerToolList.PreviewMouseLeftButtonUp += (_, _) => pressed = null;
+        PlayerToolList.PreviewMouseLeftButtonUp += (_, _) =>
+        {
+            if (PlayerToolList.IsMouseCaptured)
+                PlayerToolList.ReleaseMouseCapture();
+            Lift(pressedFace, false);
+            // A click (no drag): show or hide it.
+            if (pressed is { } item && !dragged)
+                item.IsShown = !item.IsShown;
+            pressed = null;
+            pressedFace = null;
+        };
         PlayerToolList.PreviewMouseMove += (_, e) =>
         {
             if (pressed is not { } item || e.LeftButton != System.Windows.Input.MouseButtonState.Pressed)
                 return;
             var moved = e.GetPosition(PlayerToolList) - pressedAt;
-            if (Math.Abs(moved.Y) < SystemParameters.MinimumVerticalDragDistance && Math.Abs(moved.X) < SystemParameters.MinimumHorizontalDragDistance)
+            if (Math.Abs(moved.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(moved.Y) < SystemParameters.MinimumVerticalDragDistance)
                 return;
+            dragged = true;
+            if (PlayerToolList.IsMouseCaptured)
+                PlayerToolList.ReleaseMouseCapture();
+            var face = pressedFace;
             pressed = null;
             DragDrop.DoDragDrop(PlayerToolList, new DataObject(typeof(PlayerToolItem), item), DragDropEffects.Move);
+            Lift(face, false);
+            pressedFace = null;
         };
         PlayerToolList.DragOver += (_, e) =>
         {
             e.Effects = DragDropEffects.None;
-            if (e.Data.GetData(typeof(PlayerToolItem)) is not PlayerToolItem dragged || _vm.MinimalLook is not { } look)
+            if (e.Data.GetData(typeof(PlayerToolItem)) is not PlayerToolItem item || _vm.MinimalLook is not { } look)
                 return;
             e.Effects = DragDropEffects.Move;
             e.Handled = true;
-            if (ItemAt(e.OriginalSource) is { } target && !ReferenceEquals(target, dragged))
-                look.MoveTool(dragged, look.PlayerTools.IndexOf(target));
+            if (ItemAt(e.OriginalSource) is { } target && !ReferenceEquals(target, item))
+                look.MoveTool(item, look.PlayerTools.IndexOf(target));
         };
         PlayerToolList.Drop += (_, e) => e.Handled = true;
     }

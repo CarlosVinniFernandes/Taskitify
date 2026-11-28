@@ -183,7 +183,8 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
     /// desktop app: the one a lookup of the song already saw, else the captured search sent again
     /// with a still valid token. Never opens the web player for a cover. Null when there is none.
     /// </summary>
-    public async Task<byte[]?> FindCoverAsync(TrackQuery query, CancellationToken ct)
+    /// <param name="large">The 640 px version (full screen): Spotify's CDN serves every size under the same image id.</param>
+    public async Task<byte[]?> FindCoverAsync(TrackQuery query, CancellationToken ct, bool large = false)
     {
         var key = LyricsCache.KeyFor(query);
         if (!_covers.TryGetValue(key, out var url))
@@ -198,6 +199,8 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
                 return null;
             RememberCover(key, url);
         }
+        if (large)
+            url = LargeCoverUrl(url);
         try
         {
             using var response = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
@@ -546,6 +549,11 @@ public sealed class SpotifyLyricsProvider(HttpClient http, ISpotifyLyricsSession
         var fits = covers.Where(c => c.Width >= 256).OrderBy(c => c.Width).ToList();
         return (fits.Count > 0 ? fits[0] : covers.MaxBy(c => c.Width)).Url;
     }
+
+    /// <summary>The same album image at 640 px: the CDN's size prefixes for 64 and 300 px swapped for 640's.</summary>
+    internal static string LargeCoverUrl(string url) =>
+        url.Replace("ab67616d00004851", "ab67616d0000b273", StringComparison.Ordinal)
+           .Replace("ab67616d00001e02", "ab67616d0000b273", StringComparison.Ordinal);
 
     internal static bool IsCoverUrl(string? url) => Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps
         && (uri.Host.EndsWith(".scdn.co", StringComparison.OrdinalIgnoreCase) || uri.Host.EndsWith(".spotifycdn.com", StringComparison.OrdinalIgnoreCase));

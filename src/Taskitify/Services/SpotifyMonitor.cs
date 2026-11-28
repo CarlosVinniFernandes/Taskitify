@@ -37,6 +37,12 @@ public interface ISpotifyMonitor : IDisposable
 
     ImageSource? Thumbnail { get; }
 
+    /// <summary>The cover at 640 px once <see cref="EnsureLargeCoverAsync"/> got it (full screen); else null.</summary>
+    ImageSource? LargeThumbnail => null;
+
+    /// <summary>Fetch the current song's large cover (raises ThumbnailChanged when it arrives).</summary>
+    Task EnsureLargeCoverAsync() => Task.CompletedTask;
+
     bool CanSeek { get; }
 
     bool CanGoNext { get; }
@@ -154,6 +160,40 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
     /// the retries found none. Runs on the UI thread.
     /// </summary>
     public Func<TrackInfo, TimeSpan?, Task<byte[]?>>? CoverFallback { get; set; }
+
+    /// <summary>The song's cover at 640 px (the encoded image, or null), asked for full screen. Runs on the UI thread.</summary>
+    public Func<TrackInfo, TimeSpan?, Task<byte[]?>>? LargeCoverSource { get; set; }
+
+    public ImageSource? LargeThumbnail { get; private set; }
+
+    private TrackInfo? _largeCoverFor;
+
+    public async Task EnsureLargeCoverAsync()
+    {
+        if (Track is not { } track || LargeCoverSource is not { } source || Equals(_largeCoverFor, track))
+            return;
+        _largeCoverFor = track;
+        try
+        {
+            if (await source(track, Duration) is not { } encoded || Track != track)
+                return;
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.DecodePixelWidth = 1024; // never more than the screen needs; a 640 px cover stays 640
+            image.StreamSource = new MemoryStream(encoded);
+            image.EndInit();
+            image.Freeze();
+            if (Track != track)
+                return;
+            LargeThumbnail = image;
+            ThumbnailChanged?.Invoke(this, EventArgs.Empty);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Could not get the large album art", ex);
+        }
+    }
 
     public event EventHandler? TrackChanged;
     public event EventHandler? PlaybackChanged;
@@ -507,6 +547,8 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
             _coverRetries = 0;
             _coverRetry.Stop();
             Thumbnail = null;
+            LargeThumbnail = null;
+            _largeCoverFor = null;
             CoverData = null;
             TrackChanged?.Invoke(this, EventArgs.Empty);
             ThumbnailChanged?.Invoke(this, EventArgs.Empty);

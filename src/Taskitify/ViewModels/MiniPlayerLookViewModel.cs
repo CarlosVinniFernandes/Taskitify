@@ -341,6 +341,21 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
         set { var v = MiniPlayerStyle.ClampDim(value / 100); if (v != Look.BackgroundDim) Change(s => s.MiniPlayerLook.BackgroundDim = v); }
     }
 
+    /// <summary>The depth highlight is chosen: its light and blur can be tuned.</summary>
+    public bool IsDepth => Look.Highlight == LyricsHighlight.Depth;
+
+    public double GlowPercent
+    {
+        get => Math.Round(MiniPlayerStyle.ClampGlow(Look.LyricsGlow) * 100);
+        set { var v = MiniPlayerStyle.ClampGlow(value / 100); if (v != Look.LyricsGlow) Change(s => s.MiniPlayerLook.LyricsGlow = v); }
+    }
+
+    public double DepthPercent
+    {
+        get => Math.Round(MiniPlayerStyle.ClampDepth(Look.LyricsDepth) * 100);
+        set { var v = MiniPlayerStyle.ClampDepth(value / 100); if (v != Look.LyricsDepth) Change(s => s.MiniPlayerLook.LyricsDepth = v); }
+    }
+
     public double BlurPercent
     {
         get => Math.Round(MiniPlayerStyle.ClampBlur(Look.BackgroundBlur) * 100);

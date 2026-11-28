@@ -754,7 +754,7 @@
   "ExitFullScreen": "Esci dallo schermo intero (Esc)",
   "PlayerToolSize": "Dimensione del testo (A- e A+)",
   "PlayerToolsTitle": "Pulsanti al passaggio del mouse",
-  "PlayerToolsHint": "I pulsanti che compaiono sul player flottante, da sinistra a destra. Trascina una riga (o usa le frecce) per cambiare l’ordine; disattiva quelli che non usi.",
+  "PlayerToolsHint": "I pulsanti come stanno sul player flottante. Fai clic su uno per mostrarlo o nasconderlo; tieni premuto e trascina per spostarlo.",
   "PlayerToolsReset": "Ripristina l’ordine predefinito",
   "MoveLeft": "Sposta a sinistra",
   "MoveRight": "Sposta a destra",
@@ -763,5 +763,9 @@
   "PlayerVersesHint": "Il testo è alto questo numero di versi; la maniglia cambia solo la larghezza. Libero: la maniglia decide l’altezza. Un verso lungo viene rimpicciolito invece di essere tagliato.",
   "PlayerVersesFree": "Libero (maniglia)",
   "PlayerVersesOne": "1 verso",
-  "PlayerVersesMany": "{0} versi"
+  "PlayerVersesMany": "{0} versi",
+  "LookGlow": "Bagliore del verso attuale",
+  "LookDepthBlur": "Sfocatura degli altri versi",
+  "LookDepthHint": "La sfocatura cresce con la distanza dal verso attuale e con la dimensione del testo.",
+  "FloatingKeepTaskbarHint": "Attivo: il player flottante e quello della barra insieme; un clic sulla barra porta in primo piano il player flottante."
 }

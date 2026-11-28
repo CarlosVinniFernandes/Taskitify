@@ -754,7 +754,7 @@
   "ExitFullScreen": "Vollbild beenden (Esc)",
   "PlayerToolSize": "Songtextgröße (A- und A+)",
   "PlayerToolsTitle": "Schaltflächen beim Überfahren",
-  "PlayerToolsHint": "Die Schaltflächen über dem schwebenden Player, von links nach rechts. Ziehe eine Zeile (oder nutze die Pfeile), um die Reihenfolge zu ändern; schalte aus, was du nicht brauchst.",
+  "PlayerToolsHint": "Die Schaltflächen so, wie sie auf dem schwebenden Player sitzen. Klicke eine an, um sie ein- oder auszublenden; halten und ziehen, um sie zu verschieben.",
   "PlayerToolsReset": "Standardreihenfolge wiederherstellen",
   "MoveLeft": "Nach links",
   "MoveRight": "Nach rechts",
@@ -763,5 +763,9 @@
   "PlayerVersesHint": "Der Songtext ist so viele Zeilen hoch; der Griff ändert dann nur die Breite. Frei: Der Griff bestimmt die Höhe. Eine lange Zeile wird verkleinert statt abgeschnitten.",
   "PlayerVersesFree": "Frei (Griff)",
   "PlayerVersesOne": "1 Zeile",
-  "PlayerVersesMany": "{0} Zeilen"
+  "PlayerVersesMany": "{0} Zeilen",
+  "LookGlow": "Leuchten der aktuellen Zeile",
+  "LookDepthBlur": "Unschärfe der anderen Zeilen",
+  "LookDepthHint": "Die Unschärfe wächst mit dem Abstand zur aktuellen Zeile und mit der Schriftgröße.",
+  "FloatingKeepTaskbarHint": "Ein: schwebender Player und Taskleisten-Player zusammen; ein Klick auf die Leiste holt den schwebenden Player nach vorn."
 }

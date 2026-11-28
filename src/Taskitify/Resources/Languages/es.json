@@ -754,7 +754,7 @@
   "ExitFullScreen": "Salir de pantalla completa (Esc)",
   "PlayerToolSize": "Tamaño de la letra (A- y A+)",
   "PlayerToolsTitle": "Botones al pasar el ratón",
-  "PlayerToolsHint": "Los botones que aparecen sobre el reproductor flotante, de izquierda a derecha. Arrastra una fila (o usa las flechas) para cambiar el orden; desactiva los que no uses.",
+  "PlayerToolsHint": "Los botones tal como están en el reproductor flotante. Haz clic en uno para mostrarlo u ocultarlo; mantén pulsado y arrastra para moverlo.",
   "PlayerToolsReset": "Restaurar el orden predeterminado",
   "MoveLeft": "Mover a la izquierda",
   "MoveRight": "Mover a la derecha",
@@ -763,5 +763,9 @@
   "PlayerVersesHint": "La letra mide esta cantidad de versos; el tirador solo cambia el ancho. Libre: el tirador define la altura. Un verso largo se reduce en lugar de cortarse.",
   "PlayerVersesFree": "Libre (tirador)",
   "PlayerVersesOne": "1 verso",
-  "PlayerVersesMany": "{0} versos"
+  "PlayerVersesMany": "{0} versos",
+  "LookGlow": "Brillo del verso actual",
+  "LookDepthBlur": "Desenfoque de los otros versos",
+  "LookDepthHint": "El desenfoque crece con la distancia al verso actual y con el tamaño de la letra.",
+  "FloatingKeepTaskbarHint": "Activado: el reproductor flotante y el de la barra juntos; un clic en la barra trae el flotante al frente."
 }
