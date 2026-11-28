@@ -501,6 +501,23 @@ public partial class MiniPlayerWindow : Window
         UpdateFit();
         UpdateHoverChrome();
         UpdatePinnedToolbar();
+        KeepOwnWindowAbove();
+    }
+
+    /// <summary>
+    /// Re-applying the options (a settings change) moves and re-raises the player; a window of
+    /// this app in use (Settings) goes back above it once the layout has settled.
+    /// </summary>
+    private void KeepOwnWindowAbove()
+    {
+        var foreground = NativeMethods.GetForegroundWindow();
+        if (foreground == IntPtr.Zero || foreground == _hwnd || !IsOwnWindow(foreground))
+            return;
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (NativeMethods.GetForegroundWindow() == foreground)
+                WindowInterop.BringToTopmost(foreground);
+        }, DispatcherPriority.ContextIdle);
     }
 
     /// <summary>Floating with controls on hover: only the cover, the song and the lyrics until the pointer comes.</summary>
@@ -965,10 +982,12 @@ public partial class MiniPlayerWindow : Window
 
     public void ShowAt(PixelRect anchor, PixelRect workArea, double scale, bool preview = false)
     {
-        // Floating (not that minimal): it is already where the user put it.
+        // Floating (not that minimal): it is already where the user put it. A preview (a look
+        // changed in Settings) must not activate it: that took the focus and raised it over Settings.
         if (IsPinned)
         {
-            Activate();
+            if (!preview)
+                Activate();
             return;
         }
         // Opened by the user (a click): a regular popup again, even if it was a preview.
