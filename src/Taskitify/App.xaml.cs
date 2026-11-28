@@ -691,7 +691,9 @@ public partial class App : Application
                         = (r.X, r.Y, r.Width, width, lyrics, zoom)),
                     locked => _settings.Update(s => s.Minimal.Locked = locked),
                     () => _settings.Update(s => s.Minimal.Enabled = false),
-                    () => _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, false))));
+                    () => _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, false)),
+                    new PlayerTools(m.PlayerShowSwitchButton, m.PlayerShowSizeButtons, m.PlayerShowFillButton, m.PlayerShowSettingsButton,
+                        m.PlayerShowClickThroughButton, m.PlayerShowLockButton, m.PlayerShowCloseButton)));
             return;
         }
         _miniPlayer?.Unpin();

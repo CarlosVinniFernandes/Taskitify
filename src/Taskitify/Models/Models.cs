@@ -843,6 +843,15 @@ public sealed class MinimalModeSettings
     /// </summary>
     public bool PlayerButtonsOnHover { get; set; } = true;
 
+    // The floating player's own buttons (the ones that appear on hover), each optional.
+    public bool PlayerShowSwitchButton { get; set; } = true;
+    public bool PlayerShowSizeButtons { get; set; } = true;
+    public bool PlayerShowFillButton { get; set; } = true;
+    public bool PlayerShowSettingsButton { get; set; } = true;
+    public bool PlayerShowClickThroughButton { get; set; } = true;
+    public bool PlayerShowLockButton { get; set; } = true;
+    public bool PlayerShowCloseButton { get; set; } = true;
+
     public int X { get; set; }
 
     public int Y { get; set; }

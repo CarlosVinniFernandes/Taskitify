@@ -246,6 +246,13 @@ public sealed class MinimalLookViewModel : ObservableObject
     public bool ControlsOnHover { get => S.ControlsOnHover; set => Change(s => s.ControlsOnHover = value); }
     public bool ButtonsOnHover { get => S.ButtonsOnHover; set => Change(s => s.ButtonsOnHover = value); }
     public bool PlayerButtonsOnHover { get => S.PlayerButtonsOnHover; set => Change(s => s.PlayerButtonsOnHover = value); }
+    public bool PlayerShowSwitchButton { get => S.PlayerShowSwitchButton; set => Change(s => s.PlayerShowSwitchButton = value); }
+    public bool PlayerShowSizeButtons { get => S.PlayerShowSizeButtons; set => Change(s => s.PlayerShowSizeButtons = value); }
+    public bool PlayerShowFillButton { get => S.PlayerShowFillButton; set => Change(s => s.PlayerShowFillButton = value); }
+    public bool PlayerShowSettingsButton { get => S.PlayerShowSettingsButton; set => Change(s => s.PlayerShowSettingsButton = value); }
+    public bool PlayerShowClickThroughButton { get => S.PlayerShowClickThroughButton; set => Change(s => s.PlayerShowClickThroughButton = value); }
+    public bool PlayerShowLockButton { get => S.PlayerShowLockButton; set => Change(s => s.PlayerShowLockButton = value); }
+    public bool PlayerShowCloseButton { get => S.PlayerShowCloseButton; set => Change(s => s.PlayerShowCloseButton = value); }
 
     // ---- Lyrics ----
 

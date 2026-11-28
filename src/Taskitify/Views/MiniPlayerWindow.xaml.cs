@@ -1316,6 +1316,19 @@ public partial class MiniPlayerWindow : Window
             PopupKeepOpen.ClearValue(ForegroundProperty);
         PinnedClickThrough.Visibility = PinnedLock.Visibility = PinnedClose.Visibility = PinnedMaximize.Visibility = pinnedOnly;
         PinnedMaximize.Content = _beforeFill is null ? "\uE740" : "\uE73F";
+        // The floating player's buttons the user chose to hide (the popup keeps all of its own).
+        var tools = IsPinned ? o?.Tools : null;
+        static Visibility Vis(bool on) => on ? Visibility.Visible : Visibility.Collapsed;
+        PinnedSwitch.Visibility = Vis(tools?.Switch ?? true);
+        LyricsSmaller.Visibility = LyricsBigger.Visibility = Vis(tools?.Size ?? true);
+        PinnedSettings.Visibility = Vis(tools?.Settings ?? true);
+        if (tools is not null)
+        {
+            PinnedMaximize.Visibility = Vis(tools.Fill);
+            PinnedClickThrough.Visibility = Vis(tools.ClickThrough);
+            PinnedLock.Visibility = Vis(tools.Lock);
+            PinnedClose.Visibility = Vis(tools.Close);
+        }
         if (_presenting)
             PinnedMaximize.Visibility = PinnedClose.Visibility = PinnedLock.Visibility = PinnedClickThrough.Visibility = Visibility.Collapsed;
         ApplyToolbarLook();
@@ -1507,4 +1520,7 @@ public partial class MiniPlayerWindow : Window
 
 /// <summary>How the floating player behaves (Minimal Mode's settings) and where its changes go.</summary>
 public sealed record PinnedOptions(bool ClickThrough, bool Locked, bool Topmost, bool ShowMark, bool AutoFit, bool ControlsOnHover, bool PlayerButtonsOnHover,
-    int Width, int LyricsHeight, double Zoom, Action<bool> SetClickThrough, Action<PixelRect, int, int, double> Saved, Action<bool> SetLocked, Action TurnOff, Action SwitchMode);
+    int Width, int LyricsHeight, double Zoom, Action<bool> SetClickThrough, Action<PixelRect, int, int, double> Saved, Action<bool> SetLocked, Action TurnOff, Action SwitchMode, PlayerTools? Tools = null);
+
+/// <summary>Which of the floating player's own buttons are shown.</summary>
+public sealed record PlayerTools(bool Switch, bool Size, bool Fill, bool Settings, bool ClickThrough, bool Lock, bool Close);
