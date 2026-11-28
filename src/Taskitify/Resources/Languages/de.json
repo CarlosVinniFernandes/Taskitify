@@ -1,4 +1,6 @@
 {
+  "SettingsSearch": "Einstellungen suchen",
+  "SettingsSearchEmpty": "Keine Einstellungen gefunden.",
   "SpotifyLyricsTitle": "Spotify-Songtexte (experimentell)",
   "SpotifyLyricsHint": "Verbinde dein Konto, um Spotify als Hauptquelle für Songtexte zu nutzen. LRCLIB wird verwendet, wenn Spotify keinen synchronisierten Songtext hat. Diese inoffizielle Verbindung kann nach Spotify-Änderungen ausfallen.",
   "SpotifyLyricsConnect": "Spotify verbinden",

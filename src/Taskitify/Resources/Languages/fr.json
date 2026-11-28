@@ -1,4 +1,6 @@
 {
+  "SettingsSearch": "Rechercher un paramètre",
+  "SettingsSearchEmpty": "Aucun paramètre trouvé.",
   "SpotifyLyricsTitle": "Paroles Spotify (expérimental)",
   "SpotifyLyricsHint": "Connectez votre compte pour utiliser Spotify comme source principale de paroles. LRCLIB est utilisé quand Spotify n’a pas de paroles synchronisées. Cette connexion non officielle peut cesser de fonctionner si Spotify change.",
   "SpotifyLyricsConnect": "Connecter Spotify",

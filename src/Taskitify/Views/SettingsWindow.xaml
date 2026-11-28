@@ -12,6 +12,7 @@
         TextOptions.TextFormattingMode="Display"
         UseLayoutRounding="True">
     <Window.Resources>
+        <GridLength x:Key="SettingsSidebarWidth">236</GridLength>
         <Style TargetType="ComboBox" BasedOn="{StaticResource SettingsComboBox}" />
         <Style TargetType="Slider" BasedOn="{StaticResource SettingsSlider}" />
         <Style TargetType="ScrollBar" BasedOn="{StaticResource ThinScrollBar}" />
@@ -143,7 +144,7 @@
                     <ControlTemplate TargetType="TabControl">
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="236" />
+                                <ColumnDefinition Width="{StaticResource SettingsSidebarWidth}" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <DockPanel Margin="12,18,8,16">
@@ -153,7 +154,30 @@
                                     <TextBlock Text="Taskitify" FontFamily="{StaticResource UiDisplayFont}" FontSize="16" FontWeight="SemiBold"
                                                VerticalAlignment="Center" Margin="10,0,0,0" />
                                 </StackPanel>
-                                <TabPanel IsItemsHost="True" KeyboardNavigation.TabIndex="1" />
+                                <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+                                    <TextBox x:Name="SearchBox" Height="34" Padding="32,0,8,0" VerticalContentAlignment="Center"
+                                             Background="{DynamicResource ControlBackgroundBrush}" Foreground="{DynamicResource TextPrimaryBrush}"
+                                             CaretBrush="{DynamicResource TextPrimaryBrush}" BorderBrush="{DynamicResource PopupBorderBrush}"
+                                             AutomationProperties.Name="{DynamicResource Loc.SettingsSearch}" />
+                                    <TextBlock IsHitTestVisible="False" Text="&#xE721;" FontFamily="{StaticResource IconFont}"
+                                               Foreground="{DynamicResource TextSecondaryBrush}" Margin="10,0,0,0" VerticalAlignment="Center" />
+                                    <TextBlock IsHitTestVisible="False" Text="{DynamicResource Loc.SettingsSearch}" VerticalAlignment="Center"
+                                               Margin="33,0,8,0" Foreground="{DynamicResource TextSecondaryBrush}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Grid>
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                                    <TabPanel IsItemsHost="True" KeyboardNavigation.TabIndex="1" />
+                                </ScrollViewer>
                             </DockPanel>
                             <ContentPresenter Grid.Column="1" ContentSource="SelectedContent" KeyboardNavigation.TabIndex="2" />
                         </Grid>
@@ -173,7 +197,12 @@
         </Style>
     </Window.Resources>
 
-    <TabControl x:Name="Pages">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="{StaticResource SettingsSidebarWidth}" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+    <TabControl x:Name="Pages" Grid.ColumnSpan="2">
         <!-- ───────────── General ───────────── -->
         <TabItem Style="{StaticResource NavItem}" Header="{DynamicResource Loc.General}" Tag="&#xE713;">
             <ScrollViewer Style="{StaticResource Page}">
@@ -1822,4 +1851,27 @@
             </ScrollViewer>
         </TabItem>
     </TabControl>
+        <ScrollViewer x:Name="SearchResults" Grid.Column="1" Style="{StaticResource Page}"
+                      Background="{DynamicResource WindowBackgroundBrush}" Visibility="Collapsed">
+            <StackPanel Style="{StaticResource PageBody}">
+                <TextBlock Style="{StaticResource PageTitle}" Text="{DynamicResource Loc.SettingsSearch}" Margin="0,0,0,16" />
+                <TextBlock x:Name="NoSearchResults" Style="{StaticResource PageHint}" Text="{DynamicResource Loc.SettingsSearchEmpty}" />
+                <ItemsControl x:Name="SearchMatches">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource FlatButton}" HorizontalContentAlignment="Stretch"
+                                    Padding="14,10" Margin="0,0,0,6" Click="OnSearchResultClick"
+                                    AutomationProperties.Name="{Binding Title}">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Margin="12,0,0,0" VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextSecondaryBrush}" Text="{Binding PageTitle}" />
+                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
+                                </DockPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
 </Window>

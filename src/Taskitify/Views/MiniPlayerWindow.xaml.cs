@@ -115,6 +115,10 @@ public partial class MiniPlayerWindow : Window
         // The pointer's own state: IsMouseOver can still be true while MouseLeave is raised.
         MouseEnter += (_, _) => { _pointerOver = true; UpdateHoverChrome(); UpdatePinnedToolbar(); };
         MouseLeave += (_, _) => { _pointerOver = false; UpdateHoverChrome(); UpdatePinnedToolbar(); };
+        ContentCard.PreviewMouseMove += OnKaraokePointerMoved;
+        ContentCard.MouseLeave += (_, _) => HideKaraokeButton();
+        IsVisibleChanged += (_, _) => HideKaraokeButton();
+        _karaokeIdleTimer.Tick += (_, _) => HideKaraokeButton(clearPointer: false);
         MouseMove += (_, e) => OnPresentPointerMoved(e.GetPosition(this));
         IsVisibleChanged += (_, _) => { if (!IsVisible) _pointerOver = false; };
         PinnedSwitch.Click += (_, _) =>
@@ -486,6 +490,8 @@ public partial class MiniPlayerWindow : Window
             NativeMethods.SetWindowPos(_hwnd, new IntPtr(-2), 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOACTIVATE);
         // Games keep the focus: the player never takes it while floating.
         SetExStyle(o.ClickThrough, noActivate: true);
+        if (o.ClickThrough)
+            HideKaraokeButton();
         PinnedMark.Visibility = o.ClickThrough && o.ShowMark ? Visibility.Visible : Visibility.Collapsed;
         PinnedGrip.Visibility = o.ClickThrough || o.Locked || _presenting ? Visibility.Collapsed : Visibility.Visible;
         _unpinClicks ??= new ModifierClickWatcher(
@@ -1694,6 +1700,30 @@ public partial class MiniPlayerWindow : Window
     }
 
     /// <summary>Looking for karaoke lyrics: the icon breathes, quietly (no spinner, nothing in the way).</summary>
+    private readonly DispatcherTimer _karaokeIdleTimer = new() { Interval = PresentIdleAfter };
+    private Point? _lastKaraokePointer;
+
+    private void OnKaraokePointerMoved(object sender, MouseEventArgs e)
+    {
+        if (IsPreview || _pinned is { ClickThrough: true })
+            return;
+        var pointer = PointToScreen(e.GetPosition(this));
+        if (_lastKaraokePointer == pointer)
+            return;
+        _lastKaraokePointer = pointer;
+        KaraokeHover.Visibility = Visibility.Visible;
+        _karaokeIdleTimer.Stop();
+        _karaokeIdleTimer.Start();
+    }
+
+    private void HideKaraokeButton(bool clearPointer = true)
+    {
+        _karaokeIdleTimer.Stop();
+        KaraokeHover.Visibility = Visibility.Collapsed;
+        if (clearPointer)
+            _lastKaraokePointer = null;
+    }
+
     private void UpdateKaraokeButton()
     {
         if (_vm.KaraokeState == "Searching" && _animationsEnabled() && SystemParameters.ClientAreaAnimation)
