@@ -15,7 +15,7 @@ public sealed class BarLayoutViewModel : ObservableObject
 
     /// <param name="taskbar">A taskbar player, whose picker mirrors the progress placement (the mini player's is always below).</param>
     public BarLayoutViewModel(SettingsService settings, Func<AppSettings, BarLayout> select, string textLabel, string captionLabel, int minWidth, int maxWidth,
-        bool taskbar = true)
+        bool taskbar = true, bool observeSettings = true)
     {
         _settings = settings;
         _select = select;
@@ -24,7 +24,8 @@ public sealed class BarLayoutViewModel : ObservableObject
         _captionKey = captionLabel;
         MinWidth = minWidth;
         MaxWidth = maxWidth;
-        _settings.Changed += (_, _) => OnPropertyChanged(string.Empty);
+        if (observeSettings)
+            _settings.Changed += (_, _) => Refresh();
     }
 
     private readonly string _textKey;
@@ -70,5 +71,13 @@ public sealed class BarLayoutViewModel : ObservableObject
 
     private BarLayout L => _select(_settings.Current);
 
-    private void Update(Action<BarLayout> change) => _settings.Update(s => change(_select(s)));
+    public event EventHandler? Edited;
+
+    internal void Refresh() => OnPropertyChanged(string.Empty);
+
+    private void Update(Action<BarLayout> change)
+    {
+        _settings.Update(s => change(_select(s)));
+        Edited?.Invoke(this, EventArgs.Empty);
+    }
 }

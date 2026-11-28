@@ -271,6 +271,23 @@ public sealed class AppSettings
     /// <summary>Mini player looks the user saved under a name (shown with the ready-made templates).</summary>
     public List<MiniPlayerPreset> MiniPlayerPresets { get; set; } = [];
 
+    private PlayerAppearance? _floatingPlayerAppearance;
+
+    public PlayerAppearance FloatingPlayerAppearance
+    {
+        get => _floatingPlayerAppearance ??= new PlayerAppearance
+        {
+            Elements = MiniPlayer.Clone(),
+            Look = MiniPlayerLook.Clone(),
+            Presets = MiniPlayerPresets.Select(p => p.Clone()).ToList(),
+        };
+        set => _floatingPlayerAppearance = value;
+    }
+
+    public BarLayout PlayerElements(bool floating) => floating ? FloatingPlayerAppearance.Elements : MiniPlayer;
+    public MiniPlayerStyle PlayerLook(bool floating) => floating ? FloatingPlayerAppearance.Look : MiniPlayerLook;
+    public List<MiniPlayerPreset> PlayerPresets(bool floating) => floating ? FloatingPlayerAppearance.Presets : MiniPlayerPresets;
+
     /// <summary>Card settings the user saved under a name.</summary>
     public List<LyricCardPreset> LyricCardPresets { get; set; } = [];
 
@@ -600,6 +617,8 @@ public sealed class MiniPlayerStyle
     /// <summary>Instrumental breaks as three animated dots that fill across the break (off: a note).</summary>
     public bool InterludeDots { get; set; } = true;
 
+    public bool ShowKaraokeButton { get; set; } = true;
+
     public const double DefaultGlow = 0.6;
     public const double DefaultDepth = 1;
 
@@ -646,7 +665,14 @@ public sealed class MiniPlayerStyle
         .All(p => Equals(p.GetValue(this), p.GetValue(other)));
 }
 
-/// <summary>A mini player look saved by the user: everything but the layout and the width.</summary>
+public sealed class PlayerAppearance
+{
+    public BarLayout Elements { get; set; } = BarLayout.DefaultMiniPlayer();
+    public MiniPlayerStyle Look { get; set; } = new();
+    public List<MiniPlayerPreset> Presets { get; set; } = [];
+}
+
+/// <summary>A player look saved by the user: everything but the layout and the width.</summary>
 public sealed class MiniPlayerPreset
 {
     public string Name { get; set; } = "";
@@ -656,19 +682,22 @@ public sealed class MiniPlayerPreset
     /// <summary>The elements shown (cover, title, buttons, progress); the width stays the user's.</summary>
     public BarLayout Elements { get; set; } = BarLayout.DefaultMiniPlayer();
 
-    public static MiniPlayerPreset From(string name, AppSettings settings) => new()
+    public static MiniPlayerPreset From(string name, AppSettings settings, bool floating = false) => new()
     {
         Name = name,
-        Look = settings.MiniPlayerLook.Clone(),
-        Elements = settings.MiniPlayer.Clone(),
+        Look = settings.PlayerLook(floating).Clone(),
+        Elements = settings.PlayerElements(floating).Clone(),
     };
 
-    public bool Matches(AppSettings settings) => Look.SameLook(settings.MiniPlayerLook) && Elements.SameElements(settings.MiniPlayer);
+    public MiniPlayerPreset Clone() => new() { Name = Name, Look = Look.Clone(), Elements = Elements.Clone() };
 
-    public void ApplyTo(AppSettings settings)
+    public bool Matches(AppSettings settings, bool floating = false) =>
+        Look.SameLook(settings.PlayerLook(floating)) && Elements.SameElements(settings.PlayerElements(floating));
+
+    public void ApplyTo(AppSettings settings, bool floating = false)
     {
-        Look.CopyLookTo(settings.MiniPlayerLook);
-        Elements.CopyElementsTo(settings.MiniPlayer);
+        Look.CopyLookTo(settings.PlayerLook(floating));
+        Elements.CopyElementsTo(settings.PlayerElements(floating));
     }
 }
 

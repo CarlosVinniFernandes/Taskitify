@@ -59,4 +59,32 @@ public sealed class PersonalPresetTests
         Assert.Equal("Calm evening", preset.Name);
         Assert.True(preset.Matches(restored));
     }
+
+    [Fact]
+    public void FloatingPlayerStartsWithACopyOfTheLegacyLookAndSavesItsOwnChanges()
+    {
+        var settings = JsonSerializer.Deserialize<AppSettings>("""
+            {
+              "MiniPlayer": { "ShowVolume": false },
+              "MiniPlayerLook": { "Background": "Velvet" },
+              "MiniPlayerPresets": [{ "Name": "Late night" }]
+            }
+            """, Json)!;
+        var floating = settings.FloatingPlayerAppearance;
+        Assert.Equal(MiniPlayerBackground.Velvet, floating.Look.Background);
+        Assert.False(floating.Elements.ShowVolume);
+        Assert.Equal("Late night", Assert.Single(floating.Presets).Name);
+
+        floating.Look.ShowKaraokeButton = false;
+        floating.Elements.ShowVolume = true;
+        floating.Presets[0].Name = "Full screen";
+
+        var restored = JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(settings, Json), Json)!;
+        Assert.True(restored.MiniPlayerLook.ShowKaraokeButton);
+        Assert.False(restored.MiniPlayer.ShowVolume);
+        Assert.Equal("Late night", Assert.Single(restored.MiniPlayerPresets).Name);
+        Assert.False(restored.FloatingPlayerAppearance.Look.ShowKaraokeButton);
+        Assert.True(restored.FloatingPlayerAppearance.Elements.ShowVolume);
+        Assert.Equal("Full screen", Assert.Single(restored.FloatingPlayerAppearance.Presets).Name);
+    }
 }

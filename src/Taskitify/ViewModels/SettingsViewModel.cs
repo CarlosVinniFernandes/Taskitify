@@ -54,7 +54,6 @@ public sealed class SettingsViewModel : ObservableObject
         var (minimizedMin, minimizedMax) = BarLayout.WidthRange(minimized: true);
         Bar = new BarLayoutViewModel(settings, x => x.Bar, "SongLyrics", "SongArtist", barMin, barMax);
         MinimizedBar = new BarLayoutViewModel(settings, x => x.MinimizedBar, "SongTitle", "Artist", minimizedMin, minimizedMax);
-        MiniPlayer = new BarLayoutViewModel(settings, x => x.MiniPlayer, "SongTitle", "Artist", 310, 640, taskbar: false);
         ResetPlacementCommand = new RelayCommand(() => Update(s => s.ManualPlacement = false), () => S.ManualPlacement);
         LoadKaraokeSources();
         MoveSourceUpCommand = new RelayCommand(p => { if (p is LyricsSourceItem i) MoveSource(i, KaraokeSources.IndexOf(i) - 1); });
@@ -99,10 +98,10 @@ public sealed class SettingsViewModel : ObservableObject
     public BarLayoutViewModel MinimizedBar { get; }
 
     /// <summary>The popup with the lyrics.</summary>
-    public BarLayoutViewModel MiniPlayer { get; }
 
     /// <summary>The mini player's appearance (set by the app, which knows the cover playing).</summary>
     public MiniPlayerLookViewModel? MiniLook { get; set; }
+    public MiniPlayerLookViewModel? FloatingLook { get; set; }
 
     /// <summary>Minimal Mode's settings and pictures.</summary>
     public MinimalLookViewModel? MinimalLook { get; set; }

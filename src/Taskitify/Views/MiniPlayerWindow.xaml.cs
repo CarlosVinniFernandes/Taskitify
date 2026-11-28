@@ -128,7 +128,7 @@ public partial class MiniPlayerWindow : Window
             else
                 MinimalRequested?.Invoke(this, EventArgs.Empty);
         };
-        PinnedSettings.Click += (_, _) => (Application.Current as App)?.ShowSettings(IsPinned ? SettingsPage.NotMinimal : SettingsPage.MiniPlayer);
+        PinnedSettings.Click += (_, _) => (Application.Current as App)?.ShowSettings(IsPinned ? SettingsPage.Player : SettingsPage.MiniPlayer);
         PopupFloat.Click += (_, _) => FloatRequested?.Invoke(this, EventArgs.Empty);
         LyricsSmaller.Click += (_, _) => LyricsSizeRequested?.Invoke(this, -1);
         LyricsBigger.Click += (_, _) => LyricsSizeRequested?.Invoke(this, 1);
@@ -400,6 +400,7 @@ public partial class MiniPlayerWindow : Window
             HidePopup(force: true);
         IsPinned = true;
         IsPreview = false;
+        _vm.UseFloatingAppearance(true);
         _zoom = 1; // an earlier version scaled the whole player; it now adapts instead
         if (IsVisible)
         {
@@ -464,6 +465,7 @@ public partial class MiniPlayerWindow : Window
         foreach (UIElement part in new UIElement[] { ActionsPart, ProgressPart, ControlsPart })
             LyricMotionText.Tween(part, OpacityProperty, 1, 0, expressive: false);
         HidePopup(force: true);
+        _vm.UseFloatingAppearance(false);
         ApplyLayout();
     }
 
@@ -756,7 +758,6 @@ public partial class MiniPlayerWindow : Window
     }
 
     /// <summary>The hover buttons' choices (which, in which order): the popup follows them too.</summary>
-    public PlayerTools? Tools { get; set; }
 
     /// <summary>The full screen arrangement, after ApplyLayout has placed the usual one.</summary>
     private void ApplyPresentation()
@@ -995,7 +996,7 @@ public partial class MiniPlayerWindow : Window
         SavePinned();
     }
 
-    public void ShowAt(PixelRect anchor, PixelRect workArea, double scale, bool preview = false)
+    public void ShowAt(PixelRect anchor, PixelRect workArea, double scale, bool preview = false, bool floatingPreview = false)
     {
         // Floating (not that minimal): it is already where the user put it. A preview (a look
         // changed in Settings) must not activate it: that took the focus and raised it over Settings.
@@ -1008,6 +1009,7 @@ public partial class MiniPlayerWindow : Window
         // Opened by the user (a click): a regular popup again, even if it was a preview.
         var wasVisible = IsVisible;
         IsPreview = preview && (IsPreview || !wasVisible);
+        _vm.UseFloatingAppearance(IsPreview && floatingPreview);
         _vm.IsActive = true;
         ApplyLayout();
         ApplyControlsStyle();
@@ -1155,6 +1157,8 @@ public partial class MiniPlayerWindow : Window
                 ApplyBackground();
                 break;
             case nameof(MiniPlayerViewModel.Look):
+                if (!_vm.Look.ShowKaraokeButton)
+                    HideKaraokeButton();
                 if (!IsVisible)
                     break;
                 ApplyLayout();
@@ -1560,9 +1564,7 @@ public partial class MiniPlayerWindow : Window
             PopupKeepOpen.SetResourceReference(ForegroundProperty, "AccentBrush");
         else
             PopupKeepOpen.ClearValue(ForegroundProperty);
-        // The floating player's buttons the user chose to show, in the user's order (the popup keeps all of its own).
-        // The popup has the same choices; click-through, lock and close only mean something floating.
-        var tools = (IsPinned ? o?.Tools : null) ?? Tools ?? PlayerTools.Default;
+        var tools = (IsPinned ? o?.Tools : null) ?? PlayerTools.Default;
         static Visibility Vis(bool on) => on ? Visibility.Visible : Visibility.Collapsed;
         PinnedSwitch.Visibility = Vis(tools.Switch);
         LyricsSmaller.Visibility = LyricsBigger.Visibility = Vis(tools.Size);
@@ -1705,7 +1707,7 @@ public partial class MiniPlayerWindow : Window
 
     private void OnKaraokePointerMoved(object sender, MouseEventArgs e)
     {
-        if (IsPreview || _pinned is { ClickThrough: true })
+        if (IsPreview || !_vm.Look.ShowKaraokeButton || _pinned is { ClickThrough: true })
             return;
         var pointer = PointToScreen(e.GetPosition(this));
         if (_lastKaraokePointer == pointer)

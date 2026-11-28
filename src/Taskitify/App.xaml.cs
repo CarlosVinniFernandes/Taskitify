@@ -210,7 +210,10 @@ public partial class App : Application
             () => _settings.Current.Background == Models.OverlayBackground.AlbumGradient);
         // The popup's hover buttons.
         _miniPlayer.LyricsSizeRequested += (_, step) => _settings.Update(s =>
-            s.MiniPlayerLook.LyricsScale = Math.Clamp(Math.Round((s.MiniPlayerLook.LyricsScale + (step * 0.1)) * 10) / 10, 0.7, 2.2));
+        {
+            var look = s.PlayerLook(_miniPlayer.IsPinned);
+            look.LyricsScale = Math.Clamp(Math.Round((look.LyricsScale + (step * 0.1)) * 10) / 10, 0.7, 2.2);
+        });
         _miniPlayer.FloatRequested += (_, _) => _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, true));
         // The popup's maximize and full screen: float the player (it shows synchronously), then fill the screen.
         _miniPlayer.PresentRequested += (_, fullScreen) =>
@@ -318,12 +321,21 @@ public partial class App : Application
         _settingsVm = new SettingsViewModel(_settings, _cache, _sync, _overlay.IsCalibrating, _overlay.SetCalibrating)
         {
             MiniLook = new MiniPlayerLookViewModel(_settings, _monitor, _sync, _theme),
+            FloatingLook = new MiniPlayerLookViewModel(_settings, _monitor, _sync, _theme, floating: true),
             MinimalLook = new MinimalLookViewModel(_settings, _monitor, _theme),
         };
         // Customizing the mini player shows it, live, beside the settings.
         _settingsVm.MiniLook!.PreviewRequested += (_, _) => PreviewMiniPlayer();
+        _settingsVm.FloatingLook!.PreviewRequested += (_, _) => PreviewMiniPlayer(floating: true);
         _settingsVm.MinimalLook!.PreviewRequested += (_, _) =>
         {
+            if (_settingsWindow?.ActivePage == SettingsPage.Player)
+            {
+                PreviewMiniPlayer(floating: true);
+                return;
+            }
+            if (_settingsWindow?.ActivePage != SettingsPage.Minimal)
+                return;
             _minimalPreview = true;
             UpdateMinimal();
         };
@@ -343,6 +355,14 @@ public partial class App : Application
             ApplyHotkey();
         };
         _settingsWindow = new SettingsWindow(_settingsVm, _spotifyLyrics!);
+        _settingsWindow.ActivePageChanged += (_, _) =>
+        {
+            _miniPlayer?.EndPreview();
+            if (!_minimalPreview)
+                return;
+            _minimalPreview = false;
+            UpdateMinimal();
+        };
         _settingsVm.SetCurrentTrack(_monitor.Track);
         EventHandler followTrack = (_, _) => _settingsVm?.SetCurrentTrack(_monitor.Track);
         _monitor.TrackChanged += followTrack;
@@ -571,22 +591,24 @@ public partial class App : Application
     }
 
     /// <summary>Show the mini player without taking focus after an appearance change.</summary>
-    private void PreviewMiniPlayer()
+    private void PreviewMiniPlayer(bool floating = false)
     {
         if (_miniPlayer is null || _overlay is null)
             return;
         // After the change is applied and the player has its new size.
         Dispatcher.InvokeAsync(() =>
         {
-            if (_settingsWindow is not { IsVisible: true })
+            var page = floating ? SettingsPage.Player : SettingsPage.MiniPlayer;
+            if (_settingsWindow is not { IsVisible: true } || _settingsWindow.ActivePage != page ||
+                _miniPlayer.IsPinned || (_miniPlayer.IsVisible && !_miniPlayer.IsPreview))
                 return;
             var anchor = _overlay.IsShown ? _overlay.Bounds
                 : _overlay.Placement is { } p ? TaskbarPositionService.ComputeOverlayRect(p, _settings!.Current) : default;
-            OpenMiniPlayer(anchor, preview: true);
+            OpenMiniPlayer(anchor, preview: true, floatingPreview: floating);
         }, DispatcherPriority.Loaded);
     }
 
-    private void OpenMiniPlayer(Core.Layout.PixelRect anchor, bool preview = false)
+    private void OpenMiniPlayer(Core.Layout.PixelRect anchor, bool preview = false, bool floatingPreview = false)
     {
         if (_miniPlayer is null || _overlay is null)
             return;
@@ -597,7 +619,7 @@ public partial class App : Application
         if (anchor.IsEmpty)
             anchor = new Core.Layout.PixelRect(monitor.WorkArea.Right - 200, monitor.WorkArea.Bottom, 200, 0);
         var scale = _overlay.Placement?.Scale ?? WindowInterop.GetScale(_overlay.Handle);
-        _miniPlayer.ShowAt(anchor, monitor.WorkArea, scale, preview);
+        _miniPlayer.ShowAt(anchor, monitor.WorkArea, scale, preview, floatingPreview);
     }
 
     private void ApplySettings()
@@ -720,13 +742,6 @@ public partial class App : Application
         if (_minimal is null || _settings is null || IsShuttingDown)
             return;
         var on = MinimalShown;
-        if (_miniPlayer is not null)
-        {
-            var t = _settings.Current.Minimal;
-            _miniPlayer.Tools = new PlayerTools(t.PlayerShowSwitchButton, t.PlayerShowSizeButtons, t.PlayerShowFillButton, t.PlayerShowFullScreenButton,
-                t.PlayerShowSettingsButton, t.PlayerShowClickThroughButton, t.PlayerShowLockButton, t.PlayerShowCloseButton,
-                Models.PlayerToolIds.Normalize(t.PlayerToolOrder));
-        }
         // Not that minimal: the mini player floats instead of the lyrics alone.
         if (on && _settings.Current.Minimal.NotThatMinimal && _miniPlayer is not null)
         {

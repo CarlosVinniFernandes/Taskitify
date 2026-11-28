@@ -14,6 +14,9 @@ public partial class SettingsWindow : Window
     private readonly SpotifyLyricsSession _spotify;
     private TextBox? _searchBox;
 
+    public SettingsPage? ActivePage { get; private set; }
+    public event EventHandler? ActivePageChanged;
+
     private sealed record SearchMatch(TabItem Page, FrameworkElement Target, string Title, string PageTitle, string SearchText);
 
     /// <summary>Opens the given page (the mini player's menu goes straight to its own).</summary>
@@ -28,6 +31,8 @@ public partial class SettingsWindow : Window
         InitializeComponent();
         _vm = vm;
         DataContext = vm;
+        LoadAppearance(MiniAppearance, vm.MiniLook);
+        LoadAppearance(FloatingAppearance, vm.FloatingLook);
         _spotify = spotify;
         _spotify.StatusChanged += OnSpotifyStatus;
         Loaded += (_, _) =>
@@ -59,6 +64,7 @@ public partial class SettingsWindow : Window
             _spotify.StatusChanged -= OnSpotifyStatus;
             LocalizationService.Changed -= OnSearchLanguageChanged;
             _vm.MiniLook?.SetPreviewActive(false);
+            _vm.FloatingLook?.SetPreviewActive(false);
             _vm.MinimalLook?.SetActive(false);
         };
         OnSpotifyStatus(this, EventArgs.Empty);
@@ -74,13 +80,19 @@ public partial class SettingsWindow : Window
         Activated += (_, _) => Topmost = Application.Current.Windows.OfType<MiniPlayerWindow>().Any(w => w.IsVisible && w.IsPinned);
         Deactivated += (_, _) => Topmost = false;
         WirePlayerToolDrag(PlayerToolList);
-        // A saved look gets its name right away: the cursor waits in it, the default name selected.
-        if (vm.MiniLook is { } look)
+    }
+
+    private void LoadAppearance(ContentControl host, MiniPlayerLookViewModel? look)
+    {
+        var appearance = (StackPanel)((DataTemplate)Resources["PlayerAppearance"]).LoadContent();
+        appearance.DataContext = look;
+        host.Content = appearance;
+        if (look is not null && appearance.FindName("LookNameBox") is TextBox nameBox)
             look.LookSaved += (_, _) => Dispatcher.InvokeAsync(() =>
             {
-                LookNameBox.Focus();
-                LookNameBox.SelectAll();
-            }, System.Windows.Threading.DispatcherPriority.Input);
+                nameBox.Focus();
+                nameBox.SelectAll();
+            }, DispatcherPriority.Input);
     }
 
     private void OnSearchLanguageChanged(object? sender, EventArgs e) =>
@@ -111,6 +123,7 @@ public partial class SettingsWindow : Window
         var matches = GetSearchEntries()
             .Where(entry => terms.All(term => compare.IndexOf(entry.SearchText, term, options) >= 0))
             .DistinctBy(entry => (entry.Page, entry.Title))
+            .OrderByDescending(entry => terms.All(term => compare.IndexOf(entry.Title, term, options) >= 0))
             .ToList();
         SearchMatches.ItemsSource = matches;
         NoSearchResults.Visibility = matches.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -137,7 +150,12 @@ public partial class SettingsWindow : Window
 
             TextBlock? groupHeader = null;
             string? groupHint = null;
-            foreach (FrameworkElement section in body.Children)
+            var sections = body.Children.OfType<FrameworkElement>().SelectMany(section =>
+                (ReferenceEquals(section, MiniAppearance) || ReferenceEquals(section, FloatingAppearance))
+                    && ((ContentControl)section).Content is StackPanel appearance
+                    ? appearance.Children.OfType<FrameworkElement>()
+                    : new[] { section });
+            foreach (var section in sections)
             {
                 if (section is TextBlock text)
                 {
@@ -159,11 +177,10 @@ public partial class SettingsWindow : Window
                 foreach (var row in rows.Count > 0 ? rows.Cast<FrameworkElement>() : new[] { section })
                 {
                     var texts = Descendants(row).OfType<TextBlock>().ToList();
-                    var label = texts.FirstOrDefault(text => text.Style == labelStyle);
-                    if (label is null)
-                        continue;
+                    var labels = texts.Where(text => text.Style == labelStyle).ToList();
                     var hints = string.Join(" ", texts.Where(text => text.Style == hintStyle).Select(text => text.Text));
-                    yield return new SearchMatch(page, row, label.Text, pageTitle.Text, $"{label.Text} {hints} {context}");
+                    foreach (var label in labels)
+                        yield return new SearchMatch(page, labels.Count == 1 ? row : label, label.Text, pageTitle.Text, $"{label.Text} {hints} {context}");
                 }
                 groupHeader = null;
                 groupHint = null;
@@ -296,17 +313,20 @@ public partial class SettingsWindow : Window
         PlayerToolList.Drop += (_, e) => e.Handled = true;
     }
 
-    /// <summary>The mini player's and floating player's pages: their look is on the Player page.</summary>
-    private void OnOpenPlayerPage(object sender, RoutedEventArgs e) => ShowPage(SettingsPage.Player);
-
     private void UpdatePlayerPreviews()
     {
         var page = SearchResults.Visibility == Visibility.Visible ? (SettingsPage?)null : (SettingsPage)Pages.SelectedIndex;
-        _vm.MiniLook?.SetPreviewActive(page is SettingsPage.Bar or SettingsPage.MinimizedBar or SettingsPage.Player or SettingsPage.MiniPlayer or SettingsPage.NotMinimal,
-            showLooks: page is SettingsPage.Player or SettingsPage.MiniPlayer or SettingsPage.NotMinimal);
+        _vm.MiniLook?.SetPreviewActive(page is SettingsPage.Bar or SettingsPage.MinimizedBar or SettingsPage.MiniPlayer,
+            showLooks: page == SettingsPage.MiniPlayer);
+        _vm.FloatingLook?.SetPreviewActive(page == SettingsPage.Player);
         if (page == SettingsPage.LyricsSources)
             _vm.RefreshCacheSummary();
         _vm.MinimalLook?.SetActive(page == SettingsPage.Minimal);
+        if (ActivePage != page)
+        {
+            ActivePage = page;
+            ActivePageChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private void OnSpotifyStatus(object? sender, EventArgs e) =>
@@ -347,9 +367,8 @@ public enum SettingsPage
     General,
     Bar,
     MinimizedBar,
-    Player,
     MiniPlayer,
-    NotMinimal,
+    Player,
     Minimal,
     Lyrics,
     LyricsSources,

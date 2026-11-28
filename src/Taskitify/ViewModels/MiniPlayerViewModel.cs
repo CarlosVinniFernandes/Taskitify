@@ -320,7 +320,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     public LikeControl Like { get; }
 
     // What the popup shows, chosen in Settings like the taskbar players (the lyrics always).
-    private BarLayout L => _settings.Current.MiniPlayer;
+    private BarLayout L => _settings.Current.PlayerElements(_floating);
 
     public bool ShowCover => L.ShowCover;
 
@@ -355,7 +355,17 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     // ---- Appearance (Settings > Mini player), each part independent of the others ----
 
-    public MiniPlayerStyle Look => _settings.Current.MiniPlayerLook;
+    private bool _floating;
+    public MiniPlayerStyle Look => _settings.Current.PlayerLook(_floating);
+
+    public void UseFloatingAppearance(bool floating)
+    {
+        if (_floating == floating)
+            return;
+        _floating = floating;
+        if (IsActive)
+            OnSettingsChanged(this, EventArgs.Empty);
+    }
 
     /// <summary>One Lyric Flow setting (Lyrics tab) for the taskbar and the mini player alike.</summary>
     public LyricFlowMode FlowMode => _settings.Current.TaskbarLyricFlow;
@@ -379,9 +389,9 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     public bool IsCinema => Look.Layout == MiniPlayerLayout.Cinema;
 
     /// <summary>From the right-click menus: vertical or cinema wide.</summary>
-    public void SetLayout(MiniPlayerLayout layout) => _settings.Update(s => s.MiniPlayerLook.Layout = layout);
+    public void SetLayout(MiniPlayerLayout layout) => _settings.Update(s => s.PlayerLook(_floating).Layout = layout);
 
-    public void SetBackground(MiniPlayerBackground background) => _settings.Update(s => s.MiniPlayerLook.Background = background);
+    public void SetBackground(MiniPlayerBackground background) => _settings.Update(s => s.PlayerLook(_floating).Background = background);
 
     public System.Windows.TextAlignment LyricsTextAlignment =>
         IsPresenting || Look.Alignment == LyricsAlignment.Left ? System.Windows.TextAlignment.Left : System.Windows.TextAlignment.Center;
