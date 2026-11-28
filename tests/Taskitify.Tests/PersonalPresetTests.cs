@@ -87,4 +87,33 @@ public sealed class PersonalPresetTests
         Assert.True(restored.FloatingPlayerAppearance.Elements.ShowVolume);
         Assert.Equal("Full screen", Assert.Single(restored.FloatingPlayerAppearance.Presets).Name);
     }
+
+    [Fact]
+    public void SharingTheFloatingLookPreservesThePlayersOwnLookAndToolbar()
+    {
+        var settings = JsonSerializer.Deserialize<AppSettings>("""
+            {
+              "FloatingPlayerAppearance": { "Look": { "Background": "Velvet" } },
+              "Minimal": { "PlayerShowSizeButtons": false, "ControlsOnHover": true }
+            }
+            """, Json)!;
+        Assert.Equal(MiniPlayerBackground.Velvet, settings.PresentationAppearance.Look.Background);
+        Assert.False(settings.PresentationToolbar.Shows(PlayerToolIds.Size));
+        Assert.True(settings.PlayerControlsOnHover);
+
+        settings.PresentationAppearance.Look.Background = MiniPlayerBackground.Theme;
+        settings.PresentationToolbar.Hidden.Clear();
+        settings.PlayerControlsOnHover = false;
+        settings.PlayerUsesFloatingLook = true;
+        var restored = JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(settings, Json), Json)!;
+
+        Assert.Equal(MiniPlayerBackground.Velvet, restored.PlayerLook(restored.EffectivePlayerSurface(PlayerSurface.Player)).Background);
+        Assert.True(restored.PresentationToolbar.Shows(PlayerToolIds.Size));
+        Assert.False(restored.PlayerControlsOnHover);
+        Assert.False(restored.Minimal.PlayerShowSizeButtons);
+        Assert.True(restored.Minimal.ControlsOnHover);
+        restored.PlayerUsesFloatingLook = false;
+        Assert.Equal(MiniPlayerBackground.Theme, restored.PlayerLook(restored.EffectivePlayerSurface(PlayerSurface.Player)).Background);
+        Assert.Equal(MiniPlayerBackground.Velvet, restored.PlayerLook(PlayerSurface.Floating).Background);
+    }
 }

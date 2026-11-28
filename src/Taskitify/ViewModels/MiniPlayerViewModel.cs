@@ -320,7 +320,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
     public LikeControl Like { get; }
 
     // What the popup shows, chosen in Settings like the taskbar players (the lyrics always).
-    private BarLayout L => _settings.Current.PlayerElements(_floating);
+    private BarLayout L => _settings.Current.PlayerElements(LookSurface);
 
     public bool ShowCover => L.ShowCover;
 
@@ -355,14 +355,15 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     // ---- Appearance (Settings > Mini player), each part independent of the others ----
 
-    private bool _floating;
-    public MiniPlayerStyle Look => _settings.Current.PlayerLook(_floating);
+    public PlayerSurface Surface { get; private set; }
+    private PlayerSurface LookSurface => _settings.Current.EffectivePlayerSurface(Surface);
+    public MiniPlayerStyle Look => _settings.Current.PlayerLook(LookSurface);
 
-    public void UseFloatingAppearance(bool floating)
+    public void UseAppearance(PlayerSurface surface)
     {
-        if (_floating == floating)
+        if (Surface == surface)
             return;
-        _floating = floating;
+        Surface = surface;
         if (IsActive)
             OnSettingsChanged(this, EventArgs.Empty);
     }
@@ -386,12 +387,12 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
 
     private int _checkTicks;
 
-    public bool IsCinema => Look.Layout == MiniPlayerLayout.Cinema;
+    public bool IsCinema => Surface == PlayerSurface.Player || Look.Layout == MiniPlayerLayout.Cinema;
 
     /// <summary>From the right-click menus: vertical or cinema wide.</summary>
-    public void SetLayout(MiniPlayerLayout layout) => _settings.Update(s => s.PlayerLook(_floating).Layout = layout);
+    public void SetLayout(MiniPlayerLayout layout) => _settings.Update(s => s.PlayerLook(LookSurface).Layout = layout);
 
-    public void SetBackground(MiniPlayerBackground background) => _settings.Update(s => s.PlayerLook(_floating).Background = background);
+    public void SetBackground(MiniPlayerBackground background) => _settings.Update(s => s.PlayerLook(LookSurface).Background = background);
 
     public System.Windows.TextAlignment LyricsTextAlignment =>
         IsPresenting || Look.Alignment == LyricsAlignment.Left ? System.Windows.TextAlignment.Left : System.Windows.TextAlignment.Center;

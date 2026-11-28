@@ -128,7 +128,7 @@ public partial class MiniPlayerWindow : Window
             else
                 MinimalRequested?.Invoke(this, EventArgs.Empty);
         };
-        PinnedSettings.Click += (_, _) => (Application.Current as App)?.ShowSettings(IsPinned ? SettingsPage.Player : SettingsPage.MiniPlayer);
+        PinnedSettings.Click += (_, _) => (Application.Current as App)?.ShowSettings(CurrentSettingsPage);
         PopupFloat.Click += (_, _) => FloatRequested?.Invoke(this, EventArgs.Empty);
         LyricsSmaller.Click += (_, _) => LyricsSizeRequested?.Invoke(this, -1);
         LyricsBigger.Click += (_, _) => LyricsSizeRequested?.Invoke(this, 1);
@@ -230,7 +230,7 @@ public partial class MiniPlayerWindow : Window
         var spotify = new MenuItem { Icon = MenuGlyph("\uE8A7") };
         spotify.Click += (_, _) => OpenSpotify();
         var settings = new MenuItem { Icon = MenuGlyph("\uE713") };
-        settings.Click += (_, _) => (Application.Current as App)?.ShowSettings(SettingsPage.MiniPlayer);
+        settings.Click += (_, _) => (Application.Current as App)?.ShowSettings(CurrentSettingsPage);
         menu.Items.Add(vertical);
         menu.Items.Add(wide);
         menu.Items.Add(background);
@@ -244,6 +244,7 @@ public partial class MiniPlayerWindow : Window
             _vm.Volume.IsOpen = false;
             vertical.Header = LocalizationService.Get("ModeVertical");
             wide.Header = LocalizationService.Get("ModeWide");
+            vertical.Visibility = wide.Visibility = _presenting ? Visibility.Collapsed : Visibility.Visible;
             vertical.IsChecked = !_vm.IsCinema;
             wide.IsChecked = _vm.IsCinema;
             background.Header = LocalizationService.Get("LookBackground");
@@ -255,7 +256,7 @@ public partial class MiniPlayerWindow : Window
             }
             share.Header = LocalizationService.Get("LyricCardOpen");
             spotify.Header = LocalizationService.Get("OpenInSpotify");
-            settings.Header = LocalizationService.Get("MiniPlayerSettings");
+            settings.Header = SettingsTip;
             WindowInterop.RaisePopup(menu);
         };
         return menu;
@@ -341,6 +342,14 @@ public partial class MiniPlayerWindow : Window
 
     /// <summary>"Not that minimal": the player floats, pinned (it does not close on a click outside or Esc).</summary>
     public bool IsPinned { get; private set; }
+    public PlayerSurface Surface => _vm.Surface;
+    private string SettingsTip => LocalizationService.Get(_presenting ? "PlayerSettings" : IsPinned ? "FloatingPlayerSettings" : "MiniPlayerSettings");
+    private SettingsPage CurrentSettingsPage => Surface switch
+    {
+        PlayerSurface.Player => SettingsPage.Player,
+        PlayerSurface.Floating => SettingsPage.Floating,
+        _ => SettingsPage.MiniPlayer,
+    };
 
     private PinnedOptions? _pinned;
     private ModifierClickWatcher? _unpinClicks;
@@ -400,7 +409,7 @@ public partial class MiniPlayerWindow : Window
             HidePopup(force: true);
         IsPinned = true;
         IsPreview = false;
-        _vm.UseFloatingAppearance(true);
+        _vm.UseAppearance(_presenting ? PlayerSurface.Player : PlayerSurface.Floating);
         _zoom = 1; // an earlier version scaled the whole player; it now adapts instead
         if (IsVisible)
         {
@@ -465,7 +474,7 @@ public partial class MiniPlayerWindow : Window
         foreach (UIElement part in new UIElement[] { ActionsPart, ProgressPart, ControlsPart })
             LyricMotionText.Tween(part, OpacityProperty, 1, 0, expressive: false);
         HidePopup(force: true);
-        _vm.UseFloatingAppearance(false);
+        _vm.UseAppearance(PlayerSurface.Mini);
         ApplyLayout();
     }
 
@@ -540,7 +549,8 @@ public partial class MiniPlayerWindow : Window
     /// <summary>Floating with controls on hover: only the cover, the song and the lyrics until the pointer comes.</summary>
     private void UpdateHoverChrome()
     {
-        var hide = IsPinned && _pinned is { ControlsOnHover: true } && !_pointerOver && !_gripping;
+        var controlsOnHover = _presenting ? _pinned?.PresentationControlsOnHover : _pinned?.ControlsOnHover;
+        var hide = IsPinned && controlsOnHover == true && !_pointerOver && !_gripping;
         var target = hide ? 0.0 : 1.0;
         var duration = _animationsEnabled() && SystemParameters.ClientAreaAnimation ? 160 : 0;
         foreach (UIElement part in new UIElement[] { ActionsPart, ProgressPart, ControlsPart })
@@ -583,6 +593,7 @@ public partial class MiniPlayerWindow : Window
         _fullScreen = fullScreen;
         _presentMonitor = fullScreen ? monitor.Bounds : monitor.WorkArea;
         _presenting = true;
+        _vm.UseAppearance(PlayerSurface.Player);
         SetAppWindow(true);
         // An app like any other while it fills the screen: not above the rest, in Alt+Tab, with the focus.
         Topmost = false;
@@ -633,7 +644,7 @@ public partial class MiniPlayerWindow : Window
             return;
         var ex = NativeMethods.GetWindowLong(_hwnd, NativeMethods.GWL_EXSTYLE);
         ex = app
-            ? (ex | NativeMethods.WS_EX_APPWINDOW) & ~NativeMethods.WS_EX_TOOLWINDOW & ~NativeMethods.WS_EX_NOACTIVATE
+            ? (ex | NativeMethods.WS_EX_APPWINDOW) & ~NativeMethods.WS_EX_TOOLWINDOW & ~NativeMethods.WS_EX_NOACTIVATE & ~NativeMethods.WS_EX_TRANSPARENT
             : (ex | NativeMethods.WS_EX_TOOLWINDOW | NativeMethods.WS_EX_NOACTIVATE) & ~NativeMethods.WS_EX_APPWINDOW;
         NativeMethods.SetWindowLong(_hwnd, NativeMethods.GWL_EXSTYLE, ex);
         ShowInTaskbar = app;
@@ -696,6 +707,7 @@ public partial class MiniPlayerWindow : Window
             return;
         _beforeFill = null;
         _presenting = false;
+        _vm.UseAppearance(PlayerSurface.Floating);
         StopPresentIdle();
         _vm.WantsLargeCover = false;
         if (WindowState != WindowState.Normal)
@@ -888,7 +900,7 @@ public partial class MiniPlayerWindow : Window
     private void UpdateFit()
     {
         var usual = _vm.IsCinema ? (_vm.ShowCover ? 268 : 200) : 176;
-        _vm.FitScale = IsPinned && _pinned is { AutoFit: true } && Verses == 0 ? _lyricsBase / usual : 1;
+        _vm.FitScale = IsPinned && !_presenting && _pinned is { AutoFit: true } && Verses == 0 ? _lyricsBase / usual : 1;
     }
 
     /// <summary>One click from Settings: the floating player moved to a spot of its screen.</summary>
@@ -996,7 +1008,7 @@ public partial class MiniPlayerWindow : Window
         SavePinned();
     }
 
-    public void ShowAt(PixelRect anchor, PixelRect workArea, double scale, bool preview = false, bool floatingPreview = false)
+    public void ShowAt(PixelRect anchor, PixelRect workArea, double scale, bool preview = false, PlayerSurface previewSurface = PlayerSurface.Mini)
     {
         // Floating (not that minimal): it is already where the user put it. A preview (a look
         // changed in Settings) must not activate it: that took the focus and raised it over Settings.
@@ -1009,7 +1021,7 @@ public partial class MiniPlayerWindow : Window
         // Opened by the user (a click): a regular popup again, even if it was a preview.
         var wasVisible = IsVisible;
         IsPreview = preview && (IsPreview || !wasVisible);
-        _vm.UseFloatingAppearance(IsPreview && floatingPreview);
+        _vm.UseAppearance(IsPreview ? previewSurface : PlayerSurface.Mini);
         _vm.IsActive = true;
         ApplyLayout();
         ApplyControlsStyle();
@@ -1554,7 +1566,7 @@ public partial class MiniPlayerWindow : Window
     {
         var o = _pinned;
         // Popup: on hover only; floating: unless clicks go through, on hover or always (its setting).
-        var available = IsPinned ? o is { ClickThrough: false } : !IsPreview;
+        var available = _presenting || (IsPinned ? o is { ClickThrough: false } : !IsPreview);
         PinnedToolbar.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
         var popupOnly = IsPinned ? Visibility.Collapsed : Visibility.Visible;
         PopupFloat.Visibility = PopupKeepOpen.Visibility = popupOnly;
@@ -1564,7 +1576,7 @@ public partial class MiniPlayerWindow : Window
             PopupKeepOpen.SetResourceReference(ForegroundProperty, "AccentBrush");
         else
             PopupKeepOpen.ClearValue(ForegroundProperty);
-        var tools = (IsPinned ? o?.Tools : null) ?? PlayerTools.Default;
+        var tools = (_presenting ? o?.PresentationTools : IsPinned ? o?.Tools : null) ?? PlayerTools.Default;
         static Visibility Vis(bool on) => on ? Visibility.Visible : Visibility.Collapsed;
         PinnedSwitch.Visibility = Vis(tools.Switch);
         LyricsSmaller.Visibility = LyricsBigger.Visibility = Vis(tools.Size);
@@ -1588,7 +1600,7 @@ public partial class MiniPlayerWindow : Window
         System.Windows.Automation.AutomationProperties.SetName(PinnedMaximize, (string)PinnedMaximize.ToolTip);
         System.Windows.Automation.AutomationProperties.SetName(PinnedFullScreen, (string)PinnedFullScreen.ToolTip);
         System.Windows.Automation.AutomationProperties.SetName(PopupKeepOpen, (string)PopupKeepOpen.ToolTip);
-        PinnedSettings.ToolTip = LocalizationService.Get(IsPinned ? "FloatingPlayerSettings" : "MiniPlayerSettings");
+        PinnedSettings.ToolTip = SettingsTip;
         System.Windows.Automation.AutomationProperties.SetName(PinnedSettings, (string)PinnedSettings.ToolTip);
         // Maximized and full screen: like a video player, the buttons come with the pointer and leave when it rests.
         var hover = _presenting ? !_presentIdle : _pointerOver || _gripping || (IsPinned && o is { PlayerButtonsOnHover: false });
@@ -1707,7 +1719,7 @@ public partial class MiniPlayerWindow : Window
 
     private void OnKaraokePointerMoved(object sender, MouseEventArgs e)
     {
-        if (IsPreview || !_vm.Look.ShowKaraokeButton || _pinned is { ClickThrough: true })
+        if (IsPreview || !_vm.Look.ShowKaraokeButton || (!_presenting && _pinned is { ClickThrough: true }))
             return;
         var pointer = PointToScreen(e.GetPosition(this));
         if (_lastKaraokePointer == pointer)
@@ -1911,10 +1923,15 @@ public partial class MiniPlayerWindow : Window
 
 /// <summary>How the floating player behaves (Minimal Mode's settings) and where its changes go.</summary>
 public sealed record PinnedOptions(bool ClickThrough, bool Locked, bool Topmost, bool ShowMark, bool AutoFit, bool ControlsOnHover, bool PlayerButtonsOnHover,
-    int Width, int LyricsHeight, double Zoom, Action<bool> SetClickThrough, Action<PixelRect, int, int, double> Saved, Action<bool> SetLocked, Action TurnOff, Action SwitchMode, PlayerTools? Tools = null, int Verses = 0);
+    int Width, int LyricsHeight, double Zoom, Action<bool> SetClickThrough, Action<PixelRect, int, int, double> Saved, Action<bool> SetLocked, Action TurnOff, Action SwitchMode,
+    PlayerTools? Tools = null, int Verses = 0, PlayerTools? PresentationTools = null, bool PresentationControlsOnHover = false);
 
 /// <summary>Which of the floating player's own buttons are shown.</summary>
 public sealed record PlayerTools(bool Switch, bool Size, bool Maximize, bool FullScreen, bool Settings, bool ClickThrough, bool Lock, bool Close, IReadOnlyList<string> Order)
 {
     public static readonly PlayerTools Default = new(true, true, true, true, true, true, true, true, PlayerToolIds.DefaultOrder);
+
+    public static PlayerTools ForPresentation(PlayerToolbarSettings toolbar) => new(
+        toolbar.Shows(PlayerToolIds.Switch), toolbar.Shows(PlayerToolIds.Size), toolbar.Shows(PlayerToolIds.Maximize),
+        toolbar.Shows(PlayerToolIds.FullScreen), toolbar.Shows(PlayerToolIds.Settings), false, false, false, toolbar.Order);
 }

@@ -33,6 +33,10 @@ public partial class SettingsWindow : Window
         DataContext = vm;
         LoadAppearance(MiniAppearance, vm.MiniLook);
         LoadAppearance(FloatingAppearance, vm.FloatingLook);
+        LoadAppearance(PresentationAppearance, vm.PresentationLook);
+        if (vm.MinimalLook is { } minimal)
+            LoadToolbar(FloatingToolbarEditor, minimal, minimal.MoveTool);
+        LoadToolbar(PresentationToolbarEditor, vm.PresentationToolbar, vm.PresentationToolbar.MoveTool);
         _spotify = spotify;
         _spotify.StatusChanged += OnSpotifyStatus;
         Loaded += (_, _) =>
@@ -65,6 +69,7 @@ public partial class SettingsWindow : Window
             LocalizationService.Changed -= OnSearchLanguageChanged;
             _vm.MiniLook?.SetPreviewActive(false);
             _vm.FloatingLook?.SetPreviewActive(false);
+            _vm.PresentationLook?.SetPreviewActive(false);
             _vm.MinimalLook?.SetActive(false);
         };
         OnSpotifyStatus(this, EventArgs.Empty);
@@ -79,7 +84,15 @@ public partial class SettingsWindow : Window
         // settings are in use they go above it, and back to a normal window once another one is.
         Activated += (_, _) => Topmost = Application.Current.Windows.OfType<MiniPlayerWindow>().Any(w => w.IsVisible && w.IsPinned);
         Deactivated += (_, _) => Topmost = false;
-        WirePlayerToolDrag(PlayerToolList);
+    }
+
+    private void LoadToolbar(ContentControl host, object viewModel, Action<PlayerToolItem, int> move)
+    {
+        var toolbar = (StackPanel)((DataTemplate)Resources["PlayerToolbar"]).LoadContent();
+        toolbar.DataContext = viewModel;
+        host.Content = toolbar;
+        if (toolbar.FindName("ToolList") is ItemsControl tools)
+            WirePlayerToolDrag(tools, move);
     }
 
     private void LoadAppearance(ContentControl host, MiniPlayerLookViewModel? look)
@@ -150,10 +163,10 @@ public partial class SettingsWindow : Window
 
             TextBlock? groupHeader = null;
             string? groupHint = null;
-            var sections = body.Children.OfType<FrameworkElement>().SelectMany(section =>
-                (ReferenceEquals(section, MiniAppearance) || ReferenceEquals(section, FloatingAppearance))
-                    && ((ContentControl)section).Content is StackPanel appearance
-                    ? appearance.Children.OfType<FrameworkElement>()
+            var sections = body.Children.OfType<FrameworkElement>()
+                .Where(section => section.Visibility != Visibility.Collapsed)
+                .SelectMany(section => section is ContentControl { Content: StackPanel panel }
+                    ? panel.Children.OfType<FrameworkElement>().Where(child => child.Visibility != Visibility.Collapsed)
                     : new[] { section });
             foreach (var section in sections)
             {
@@ -237,7 +250,7 @@ public partial class SettingsWindow : Window
     /// The floating player's simulated button bar: a click shows or hides a button; pressed, held
     /// and dragged, it lifts and takes the place of the one it passes (the player follows live).
     /// </summary>
-    private void WirePlayerToolDrag(ItemsControl PlayerToolList)
+    private static void WirePlayerToolDrag(ItemsControl PlayerToolList, Action<PlayerToolItem, int> move)
     {
         PlayerToolItem? pressed = null;
         FrameworkElement? pressedFace = null;
@@ -303,12 +316,12 @@ public partial class SettingsWindow : Window
         PlayerToolList.DragOver += (_, e) =>
         {
             e.Effects = DragDropEffects.None;
-            if (e.Data.GetData(typeof(PlayerToolItem)) is not PlayerToolItem item || _vm.MinimalLook is not { } look)
+            if (e.Data.GetData(typeof(PlayerToolItem)) is not PlayerToolItem item || !PlayerToolList.Items.Contains(item))
                 return;
             e.Effects = DragDropEffects.Move;
             e.Handled = true;
             if (ItemAt(e.OriginalSource) is { } target && !ReferenceEquals(target, item))
-                look.MoveTool(item, look.PlayerTools.IndexOf(target));
+                move(item, PlayerToolList.Items.IndexOf(target));
         };
         PlayerToolList.Drop += (_, e) => e.Handled = true;
     }
@@ -318,7 +331,8 @@ public partial class SettingsWindow : Window
         var page = SearchResults.Visibility == Visibility.Visible ? (SettingsPage?)null : (SettingsPage)Pages.SelectedIndex;
         _vm.MiniLook?.SetPreviewActive(page is SettingsPage.Bar or SettingsPage.MinimizedBar or SettingsPage.MiniPlayer,
             showLooks: page == SettingsPage.MiniPlayer);
-        _vm.FloatingLook?.SetPreviewActive(page == SettingsPage.Player);
+        _vm.FloatingLook?.SetPreviewActive(page == SettingsPage.Floating);
+        _vm.PresentationLook?.SetPreviewActive(page == SettingsPage.Player);
         if (page == SettingsPage.LyricsSources)
             _vm.RefreshCacheSummary();
         _vm.MinimalLook?.SetActive(page == SettingsPage.Minimal);
@@ -369,6 +383,7 @@ public enum SettingsPage
     MinimizedBar,
     MiniPlayer,
     Player,
+    Floating,
     Minimal,
     Lyrics,
     LyricsSources,

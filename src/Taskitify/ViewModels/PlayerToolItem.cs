@@ -3,24 +3,26 @@ using Taskitify.Services;
 
 namespace Taskitify.ViewModels;
 
-/// <summary>One of the floating player's hover buttons in Settings: its name, and whether it shows.</summary>
+/// <summary>A button in a player toolbar preview.</summary>
 public sealed class PlayerToolItem : ObservableObject
 {
     private readonly Func<bool> _get;
     private readonly Action<bool> _set;
+    private readonly string _settingsLabel;
 
-    public PlayerToolItem(string id, Func<bool> get, Action<bool> set)
+    public PlayerToolItem(string id, Func<bool> get, Action<bool> set, string settingsLabel = "FloatingPlayerSettings")
     {
         Id = id;
         _get = get;
         _set = set;
+        _settingsLabel = settingsLabel;
     }
 
     public string Id { get; }
 
     public string Label => LocalizationService.Get(Id switch
     {
-        PlayerToolIds.Settings => "FloatingPlayerSettings",
+        PlayerToolIds.Settings => _settingsLabel,
         PlayerToolIds.Size => "PlayerToolSize",
         PlayerToolIds.Maximize => "MaximizeWindow",
         PlayerToolIds.FullScreen => "FullScreen",

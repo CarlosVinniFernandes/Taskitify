@@ -53,7 +53,7 @@ public sealed class SettingsService
                     && Current.MiniPlayerLook.Typeface == Models.LyricsTypeface.System)
                     Current.MiniPlayerLook.Typeface = Models.LyricsTypeface.Modern;
                 // Older files shared these settings. Take the snapshot before either player is edited.
-                _ = Current.FloatingPlayerAppearance;
+                InitializePlayerProfiles();
                 return;
             }
             IsFirstRun = true;
@@ -67,7 +67,15 @@ public sealed class SettingsService
         }
         // New settings already have every button they default to; only older files are migrated.
         Current = new AppSettings { LikeButtonAdded = true };
+        InitializePlayerProfiles();
+    }
+
+    private void InitializePlayerProfiles()
+    {
         _ = Current.FloatingPlayerAppearance;
+        _ = Current.PresentationAppearance;
+        _ = Current.PresentationToolbar;
+        _ = Current.PlayerControlsOnHover;
     }
 
     /// <summary>Mutates the settings, notifies listeners and saves shortly after (debounced).</summary>

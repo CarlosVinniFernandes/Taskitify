@@ -31,7 +31,7 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     private readonly ISpotifyMonitor _monitor;
     private readonly LyricsSyncService _lyrics;
     private readonly ThemeService _theme;
-    private readonly bool _floating;
+    private readonly PlayerSurface _surface;
     private DispatcherOperation? _refresh;
     private bool _active;
     private bool _showLooks;
@@ -41,14 +41,14 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     private Brush? _pickerBackground;
     private object? _presetsKey;
 
-    public MiniPlayerLookViewModel(SettingsService settings, ISpotifyMonitor monitor, LyricsSyncService lyrics, ThemeService theme, bool floating = false)
+    public MiniPlayerLookViewModel(SettingsService settings, ISpotifyMonitor monitor, LyricsSyncService lyrics, ThemeService theme, PlayerSurface surface = PlayerSurface.Mini)
     {
         _settings = settings;
         _monitor = monitor;
         _lyrics = lyrics;
         _theme = theme;
-        _floating = floating;
-        Elements = new BarLayoutViewModel(settings, s => s.PlayerElements(floating), "SongTitle", "Artist", 310, 640,
+        _surface = surface;
+        Elements = new BarLayoutViewModel(settings, s => s.PlayerElements(surface), "SongTitle", "Artist", 310, 640,
             taskbar: false, observeSettings: false);
         Elements.Edited += (_, _) => PreviewRequested?.Invoke(this, EventArgs.Empty);
         Layouts =
@@ -66,7 +66,7 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
         {
             if (Editing?.Value.Personal is not { } p)
                 return;
-            _settings.Update(s => (p.Look, p.Elements) = (s.PlayerLook(_floating).Clone(), s.PlayerElements(_floating).Clone()));
+            _settings.Update(s => (p.Look, p.Elements) = (s.PlayerLook(_surface).Clone(), s.PlayerElements(_surface).Clone()));
             _presetsKey = null;
             OnPropertyChanged(nameof(Preset));
             OnPreviewChanged(this, EventArgs.Empty);
@@ -77,7 +77,7 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
                 return;
             Presets.Remove(option);
             Editing = null;
-            _settings.Update(s => s.PlayerPresets(_floating).Remove(p));
+            _settings.Update(s => s.PlayerPresets(_surface).Remove(p));
             OnPropertyChanged(nameof(Preset));
         }, () => Editing is not null);
         Motions = Options<LyricMotionMode>("Motion");
@@ -169,14 +169,15 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     }
 
     public BarLayoutViewModel Elements { get; }
+    public bool SupportsLayoutChoice => _surface != PlayerSurface.Player;
 
-    private MiniPlayerStyle Look => _settings.Current.PlayerLook(_floating);
-    private List<MiniPlayerPreset> SavedLooks => _settings.Current.PlayerPresets(_floating);
+    private MiniPlayerStyle Look => _settings.Current.PlayerLook(_surface);
+    private List<MiniPlayerPreset> SavedLooks => _settings.Current.PlayerPresets(_surface);
 
     public bool ShowKaraokeButton
     {
         get => Look.ShowKaraokeButton;
-        set { if (value != Look.ShowKaraokeButton) Change(s => s.PlayerLook(_floating).ShowKaraokeButton = value); }
+        set { if (value != Look.ShowKaraokeButton) Change(s => s.PlayerLook(_surface).ShowKaraokeButton = value); }
     }
 
     /// <summary>Something changed: the app shows the mini player, live, beside the settings.</summary>
@@ -198,7 +199,7 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     /// <summary>The template the current look is, if it is one (the user's own first: they hold more).</summary>
     public LookOption<LookPreset>? Preset
     {
-        get => Presets.FirstOrDefault(p => p.IsPersonal && p.Value.Personal!.Matches(_settings.Current, _floating))
+        get => Presets.FirstOrDefault(p => p.IsPersonal && p.Value.Personal!.Matches(_settings.Current, _surface))
             ?? Presets.FirstOrDefault(p => !p.IsPersonal && p.Value.Matches(Look));
         set
         {
@@ -208,11 +209,11 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
             Editing = value.IsPersonal ? value : null;
             if (value.Value.Personal is { } personal)
             {
-                if (!personal.Matches(_settings.Current, _floating))
-                    Change(s => personal.ApplyTo(s, _floating));
+                if (!personal.Matches(_settings.Current, _surface))
+                    Change(s => personal.ApplyTo(s, _surface));
             }
             else if (!value.Value.Matches(Look))
-                Change(s => value.Value.ApplyTo(s.PlayerLook(_floating)));
+                Change(s => value.Value.ApplyTo(s.PlayerLook(_surface)));
         }
     }
 
@@ -262,8 +263,8 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
         string name;
         do name = string.Format(LocalizationService.Get("LookPersonalName"), number++);
         while (SavedLooks.Any(p => p.Name == name));
-        var personal = MiniPlayerPreset.From(name, _settings.Current, _floating);
-        _settings.Update(s => s.PlayerPresets(_floating).Add(personal));
+        var personal = MiniPlayerPreset.From(name, _settings.Current, _surface);
+        _settings.Update(s => s.PlayerPresets(_surface).Add(personal));
         var option = PersonalOption(personal);
         Presets.Add(option);
         Editing = option;
@@ -285,7 +286,7 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     public LookOption<LyricMotionMode>? Motion
     {
         get => Motions.FirstOrDefault(option => option.Value == Look.Motion);
-        set { if (value is not null && value.Value != Look.Motion) Change(s => s.PlayerLook(_floating).Motion = value.Value); }
+        set { if (value is not null && value.Value != Look.Motion) Change(s => s.PlayerLook(_surface).Motion = value.Value); }
     }
 
     public IReadOnlyList<LookOption<LyricsHighlight>> Highlights { get; }
@@ -299,37 +300,37 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     public LookOption<MiniPlayerLayout>? Layout
     {
         get => Layouts.FirstOrDefault(o => o.Value == Look.Layout);
-        set { if (value is not null && value.Value != Look.Layout) Change(s => s.PlayerLook(_floating).Layout = value.Value); }
+        set { if (value is not null && value.Value != Look.Layout) Change(s => s.PlayerLook(_surface).Layout = value.Value); }
     }
 
     public LookOption<MiniPlayerBackground>? Background
     {
         get => Backgrounds.FirstOrDefault(o => o.Value == Look.Background);
-        set { if (value is not null && value.Value != Look.Background) Change(s => s.PlayerLook(_floating).Background = value.Value); }
+        set { if (value is not null && value.Value != Look.Background) Change(s => s.PlayerLook(_surface).Background = value.Value); }
     }
 
     public LookOption<LyricsHighlight>? Highlight
     {
         get => Highlights.FirstOrDefault(o => o.Value == Look.Highlight);
-        set { if (value is not null && value.Value != Look.Highlight) Change(s => s.PlayerLook(_floating).Highlight = value.Value); }
+        set { if (value is not null && value.Value != Look.Highlight) Change(s => s.PlayerLook(_surface).Highlight = value.Value); }
     }
 
     public LookOption<LyricsTypeface>? Typeface
     {
         get => Typefaces.FirstOrDefault(o => o.Value == Look.Typeface);
-        set { if (value is not null && value.Value != Look.Typeface) Change(s => s.PlayerLook(_floating).Typeface = value.Value); }
+        set { if (value is not null && value.Value != Look.Typeface) Change(s => s.PlayerLook(_surface).Typeface = value.Value); }
     }
 
     public LookOption<LyricsAlignment>? Alignment
     {
         get => Alignments.FirstOrDefault(o => o.Value == Look.Alignment);
-        set { if (value is not null && value.Value != Look.Alignment) Change(s => s.PlayerLook(_floating).Alignment = value.Value); }
+        set { if (value is not null && value.Value != Look.Alignment) Change(s => s.PlayerLook(_surface).Alignment = value.Value); }
     }
 
     public LookOption<ControlsLook>? ControlsStyle
     {
         get => Controls.FirstOrDefault(o => o.Value == Look.Controls);
-        set { if (value is not null && value.Value != Look.Controls) Change(s => s.PlayerLook(_floating).Controls = value.Value); }
+        set { if (value is not null && value.Value != Look.Controls) Change(s => s.PlayerLook(_surface).Controls = value.Value); }
     }
 
     // ---- The background's intensity: only what the chosen background has is enabled ----
@@ -347,16 +348,16 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     public double EffectPercent
     {
         get => Math.Round(MiniPlayerStyle.ClampEffect(Look.BackgroundEffect) * 100);
-        set { var v = MiniPlayerStyle.ClampEffect(value / 100); if (v != Look.BackgroundEffect) Change(s => s.PlayerLook(_floating).BackgroundEffect = v); }
+        set { var v = MiniPlayerStyle.ClampEffect(value / 100); if (v != Look.BackgroundEffect) Change(s => s.PlayerLook(_surface).BackgroundEffect = v); }
     }
 
     public double DimPercent
     {
         get => Math.Round(MiniPlayerStyle.ClampDim(Look.BackgroundDim) * 100);
-        set { var v = MiniPlayerStyle.ClampDim(value / 100); if (v != Look.BackgroundDim) Change(s => s.PlayerLook(_floating).BackgroundDim = v); }
+        set { var v = MiniPlayerStyle.ClampDim(value / 100); if (v != Look.BackgroundDim) Change(s => s.PlayerLook(_surface).BackgroundDim = v); }
     }
 
-    public bool InterludeDots { get => Look.InterludeDots; set { if (value != Look.InterludeDots) Change(s => s.PlayerLook(_floating).InterludeDots = value); } }
+    public bool InterludeDots { get => Look.InterludeDots; set { if (value != Look.InterludeDots) Change(s => s.PlayerLook(_surface).InterludeDots = value); } }
 
     /// <summary>The depth highlight is chosen: its light and blur can be tuned.</summary>
     public bool IsDepth => Look.Highlight == LyricsHighlight.Depth;
@@ -364,26 +365,26 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
     public double GlowPercent
     {
         get => Math.Round(MiniPlayerStyle.ClampGlow(Look.LyricsGlow) * 100);
-        set { var v = MiniPlayerStyle.ClampGlow(value / 100); if (v != Look.LyricsGlow) Change(s => s.PlayerLook(_floating).LyricsGlow = v); }
+        set { var v = MiniPlayerStyle.ClampGlow(value / 100); if (v != Look.LyricsGlow) Change(s => s.PlayerLook(_surface).LyricsGlow = v); }
     }
 
     public double DepthPercent
     {
         get => Math.Round(MiniPlayerStyle.ClampDepth(Look.LyricsDepth) * 100);
-        set { var v = MiniPlayerStyle.ClampDepth(value / 100); if (v != Look.LyricsDepth) Change(s => s.PlayerLook(_floating).LyricsDepth = v); }
+        set { var v = MiniPlayerStyle.ClampDepth(value / 100); if (v != Look.LyricsDepth) Change(s => s.PlayerLook(_surface).LyricsDepth = v); }
     }
 
     public double BlurPercent
     {
         get => Math.Round(MiniPlayerStyle.ClampBlur(Look.BackgroundBlur) * 100);
-        set { var v = MiniPlayerStyle.ClampBlur(value / 100); if (v != Look.BackgroundBlur) Change(s => s.PlayerLook(_floating).BackgroundBlur = v); }
+        set { var v = MiniPlayerStyle.ClampBlur(value / 100); if (v != Look.BackgroundBlur) Change(s => s.PlayerLook(_surface).BackgroundBlur = v); }
     }
 
     /// <summary>The lyrics' size in percent.</summary>
     public double LyricsPercent
     {
         get => Math.Round(Look.LyricsScale * 100);
-        set => Change(s => s.PlayerLook(_floating).LyricsScale = Math.Clamp(Math.Round(value / 5) * 5, 70, 220) / 100);
+        set => Change(s => s.PlayerLook(_surface).LyricsScale = Math.Clamp(Math.Round(value / 5) * 5, 70, 220) / 100);
     }
 
     private void UpdatePictures()
@@ -462,7 +463,7 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
             var backdrop = option.Value.Personal is { } own && BackdropTuning.From(own.Look) != tuning
                 ? MiniPlayerLookThumbnails.Background(look.Background, cover, palette, themeBackground, albumGradient, BackdropTuning.From(own.Look))
                 : Backdrop(look.Background);
-            option.Thumbnail = MiniPlayerLookThumbnails.Player(Look.Layout, look, sample, backdrop, Ink(look.Background));
+            option.Thumbnail = MiniPlayerLookThumbnails.Player(SupportsLayoutChoice ? Look.Layout : MiniPlayerLayout.Cinema, look, sample, backdrop, Ink(look.Background));
         }
 
     }

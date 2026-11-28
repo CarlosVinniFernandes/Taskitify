@@ -46,6 +46,7 @@ public sealed class SettingsViewModel : ObservableObject
         Monitors = CreateMonitors();
         _cache = cache;
         _sync = sync;
+        PresentationToolbar = new PresentationToolbarViewModel(settings);
         _isCalibrating = isCalibrating;
         _setCalibrating = setCalibrating;
         _startWithWindows = StartupService.IsEnabled;
@@ -102,6 +103,32 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>The mini player's appearance (set by the app, which knows the cover playing).</summary>
     public MiniPlayerLookViewModel? MiniLook { get; set; }
     public MiniPlayerLookViewModel? FloatingLook { get; set; }
+    public MiniPlayerLookViewModel? PresentationLook { get; set; }
+    public PresentationToolbarViewModel PresentationToolbar { get; }
+
+    public bool PlayerUsesFloatingLook
+    {
+        get => _settings.Current.PlayerUsesFloatingLook;
+        set
+        {
+            if (value == PlayerUsesFloatingLook)
+                return;
+            Update(s => s.PlayerUsesFloatingLook = value);
+        }
+    }
+
+    public bool HasIndependentPlayerLook => !PlayerUsesFloatingLook;
+
+    public bool PlayerControlsOnHover
+    {
+        get => _settings.Current.PlayerControlsOnHover;
+        set
+        {
+            if (value == PlayerControlsOnHover)
+                return;
+            Update(s => s.PlayerControlsOnHover = value);
+        }
+    }
 
     /// <summary>Minimal Mode's settings and pictures.</summary>
     public MinimalLookViewModel? MinimalLook { get; set; }

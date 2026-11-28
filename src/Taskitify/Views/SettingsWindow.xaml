@@ -210,8 +210,8 @@
                 </Border>
 
                 <!-- Appearance: each part on its own, any layout with any background. -->
-                <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookMode}" />
-                <Border Style="{StaticResource Group}" Padding="18,14,18,8">
+                <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookMode}" Visibility="{Binding SupportsLayoutChoice, Converter={StaticResource BoolToVisibility}}" />
+                <Border Style="{StaticResource Group}" Padding="18,14,18,8" Visibility="{Binding SupportsLayoutChoice, Converter={StaticResource BoolToVisibility}}">
                     <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding Layouts}"
                              SelectedItem="{Binding Layout}" AutomationProperties.Name="{DynamicResource Loc.LookMode}" />
                 </Border>
@@ -383,6 +383,70 @@
                         <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding Controls}"
                                  SelectedItem="{Binding ControlsStyle}" AutomationProperties.Name="{DynamicResource Loc.LookControls}" />
                     </Border>
+                </Border>
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="PlayerToolbar">
+            <StackPanel>
+                <!-- The hover buttons as the player draws them: a click shows or hides one, press, hold and drag moves it. -->
+                <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.PlayerToolsTitle}" />
+                <TextBlock Style="{StaticResource GroupHint}" Text="{DynamicResource Loc.PlayerToolsHint}" />
+                <Border Style="{StaticResource Stage}" Margin="0" Padding="22,18">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource FlatButton}" Padding="10,5" VerticalAlignment="Center"
+                                Content="{DynamicResource Loc.PlayerToolsReset}" Command="{Binding ResetToolOrderCommand}" />
+                        <Border HorizontalAlignment="Left" VerticalAlignment="Center" Padding="3" CornerRadius="10"
+                                Background="#F0262626" BorderBrush="#33FFFFFF" BorderThickness="1" Margin="0,0,16,0">
+                            <ItemsControl x:Name="ToolList" ItemsSource="{Binding PlayerTools}" AllowDrop="True"
+                                          AutomationProperties.Name="{DynamicResource Loc.PlayerToolsTitle}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="Tool" Width="34" Height="32" CornerRadius="7" Background="Transparent" Cursor="Hand"
+                                                ToolTip="{Binding Label}" RenderTransformOrigin="0.5,0.5" AutomationProperties.Name="{Binding Label}">
+                                            <Border.RenderTransform>
+                                                <ScaleTransform />
+                                            </Border.RenderTransform>
+                                            <Grid>
+                                                <Grid x:Name="ToolFace">
+                                                    <TextBlock x:Name="ToolGlyph" Text="{Binding Glyph}" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="White"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    <TextBlock x:Name="ToolSize" Visibility="Collapsed" FontFamily="{StaticResource UiFont}" FontWeight="SemiBold" Foreground="White"
+                                                               HorizontalAlignment="Center" VerticalAlignment="Center"><Run Text="A" FontSize="10" /><Run Text="A" FontSize="15" /></TextBlock>
+                                                    <Grid x:Name="ToolClickThrough" Width="16" Height="16" Visibility="Collapsed">
+                                                        <Path Data="M4,2 L4,12 L6.5,9.6 L8.6,13.8 L10.2,13 L8.2,8.9 L11.6,8.9 Z" Fill="White" />
+                                                        <Path Data="M2.5,14 L13.5,2.5" Stroke="White" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                                    </Grid>
+                                                </Grid>
+                                                <!-- Hidden: dimmed and struck through, still in its place. -->
+                                                <Path x:Name="ToolOff" Data="M8,24 L26,8" Stroke="#CCFF6B6B" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                      Visibility="Collapsed" IsHitTestVisible="False" />
+                                            </Grid>
+                                        </Border>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding Id}" Value="Size">
+                                                <Setter TargetName="ToolSize" Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Id}" Value="ClickThrough">
+                                                <Setter TargetName="ToolClickThrough" Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsShown}" Value="False">
+                                                <Setter TargetName="ToolFace" Property="Opacity" Value="0.3" />
+                                                <Setter TargetName="ToolOff" Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                            <Trigger SourceName="Tool" Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Tool" Property="Background" Value="#26FFFFFF" />
+                                            </Trigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+                    </DockPanel>
                 </Border>
             </StackPanel>
         </DataTemplate>
@@ -735,11 +799,48 @@
         </TabItem>
 
         <!-- ───────────── Not that minimal (the mini player, floating) ───────────── -->
-        <TabItem Style="{StaticResource NavItem}" Header="{DynamicResource Loc.NavPlayer}" Tag="&#xE718;">
+        <TabItem Style="{StaticResource NavItem}" Header="{DynamicResource Loc.NavPlayer}" Tag="&#xE790;">
             <ScrollViewer Style="{StaticResource Page}">
                 <StackPanel Style="{StaticResource PageBody}">
                     <TextBlock Style="{StaticResource PageTitle}" Text="{DynamicResource Loc.NavPlayer}" />
                     <TextBlock Style="{StaticResource PageHint}" Text="{DynamicResource Loc.PagePlayerHint}" />
+
+                    <Border Style="{StaticResource Group}" Margin="0,24,0,0">
+                        <StackPanel>
+                            <Border Style="{StaticResource FirstRow}">
+                                <DockPanel>
+                                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding PlayerUsesFloatingLook}"
+                                              AutomationProperties.Name="{DynamicResource Loc.PlayerUsesFloatingLook}" />
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.PlayerUsesFloatingLook}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.PlayerUsesFloatingLookHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <DockPanel>
+                                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding PlayerControlsOnHover}"
+                                              AutomationProperties.Name="{DynamicResource Loc.ControlsOnHover}" />
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.ControlsOnHover}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <ContentControl x:Name="PresentationToolbarEditor" HorizontalContentAlignment="Stretch" />
+                    <ContentControl x:Name="PresentationAppearance" HorizontalContentAlignment="Stretch"
+                                    Visibility="{Binding HasIndependentPlayerLook, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+
+        <TabItem Style="{StaticResource NavItem}" Header="{DynamicResource Loc.NavNotMinimal}" Tag="&#xE718;">
+            <ScrollViewer Style="{StaticResource Page}">
+                <StackPanel Style="{StaticResource PageBody}">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="{DynamicResource Loc.NavNotMinimal}" />
+                    <TextBlock Style="{StaticResource PageHint}" Text="{DynamicResource Loc.NotMinimalPageHint}" />
 
                     <Border Style="{StaticResource Stage}" Margin="0,24,0,0" Padding="22,18">
                         <DockPanel>
@@ -756,66 +857,7 @@
 
                     <ContentControl x:Name="FloatingAppearance" HorizontalContentAlignment="Stretch" />
 
-                    <!-- The hover buttons as the player draws them: a click shows or hides one, press, hold and drag moves it. -->
-                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.PlayerToolsTitle}" />
-                    <TextBlock Style="{StaticResource GroupHint}" Text="{DynamicResource Loc.PlayerToolsHint}" />
-                    <Border Style="{StaticResource Stage}" Margin="0" Padding="22,18">
-                        <DockPanel>
-                            <Button DockPanel.Dock="Right" Style="{StaticResource FlatButton}" Padding="10,5" VerticalAlignment="Center"
-                                    Content="{DynamicResource Loc.PlayerToolsReset}" Command="{Binding MinimalLook.ResetToolOrderCommand}" />
-                            <Border HorizontalAlignment="Left" VerticalAlignment="Center" Padding="3" CornerRadius="10"
-                                    Background="#F0262626" BorderBrush="#33FFFFFF" BorderThickness="1" Margin="0,0,16,0">
-                                <ItemsControl x:Name="PlayerToolList" ItemsSource="{Binding MinimalLook.PlayerTools}" AllowDrop="True"
-                                              AutomationProperties.Name="{DynamicResource Loc.PlayerToolsTitle}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <StackPanel Orientation="Horizontal" />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border x:Name="Tool" Width="34" Height="32" CornerRadius="7" Background="Transparent" Cursor="Hand"
-                                                    ToolTip="{Binding Label}" RenderTransformOrigin="0.5,0.5" AutomationProperties.Name="{Binding Label}">
-                                                <Border.RenderTransform>
-                                                    <ScaleTransform />
-                                                </Border.RenderTransform>
-                                                <Grid>
-                                                    <Grid x:Name="ToolFace">
-                                                        <TextBlock x:Name="ToolGlyph" Text="{Binding Glyph}" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="White"
-                                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                        <TextBlock x:Name="ToolSize" Visibility="Collapsed" FontFamily="{StaticResource UiFont}" FontWeight="SemiBold" Foreground="White"
-                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"><Run Text="A" FontSize="10" /><Run Text="A" FontSize="15" /></TextBlock>
-                                                        <Grid x:Name="ToolClickThrough" Width="16" Height="16" Visibility="Collapsed">
-                                                            <Path Data="M4,2 L4,12 L6.5,9.6 L8.6,13.8 L10.2,13 L8.2,8.9 L11.6,8.9 Z" Fill="White" />
-                                                            <Path Data="M2.5,14 L13.5,2.5" Stroke="White" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                                                        </Grid>
-                                                    </Grid>
-                                                    <!-- Hidden: dimmed and struck through, still in its place. -->
-                                                    <Path x:Name="ToolOff" Data="M8,24 L26,8" Stroke="#CCFF6B6B" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                          Visibility="Collapsed" IsHitTestVisible="False" />
-                                                </Grid>
-                                            </Border>
-                                            <DataTemplate.Triggers>
-                                                <DataTrigger Binding="{Binding Id}" Value="Size">
-                                                    <Setter TargetName="ToolSize" Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Id}" Value="ClickThrough">
-                                                    <Setter TargetName="ToolClickThrough" Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding IsShown}" Value="False">
-                                                    <Setter TargetName="ToolFace" Property="Opacity" Value="0.3" />
-                                                    <Setter TargetName="ToolOff" Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                                <Trigger SourceName="Tool" Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="Tool" Property="Background" Value="#26FFFFFF" />
-                                                </Trigger>
-                                            </DataTemplate.Triggers>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Border>
-                        </DockPanel>
-                    </Border>
+                    <ContentControl x:Name="FloatingToolbarEditor" HorizontalContentAlignment="Stretch" />
 
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.MinimalShortcut}" />
                     <!-- The shortcut that matters most here, drawn: Ctrl + Alt + left click on the lyrics. -->

@@ -284,9 +284,57 @@ public sealed class AppSettings
         set => _floatingPlayerAppearance = value;
     }
 
-    public BarLayout PlayerElements(bool floating) => floating ? FloatingPlayerAppearance.Elements : MiniPlayer;
-    public MiniPlayerStyle PlayerLook(bool floating) => floating ? FloatingPlayerAppearance.Look : MiniPlayerLook;
-    public List<MiniPlayerPreset> PlayerPresets(bool floating) => floating ? FloatingPlayerAppearance.Presets : MiniPlayerPresets;
+    private PlayerAppearance? _presentationAppearance;
+
+    public PlayerAppearance PresentationAppearance
+    {
+        get => _presentationAppearance ??= FloatingPlayerAppearance.Clone();
+        set => _presentationAppearance = value;
+    }
+
+    public bool PlayerUsesFloatingLook { get; set; }
+
+    public PlayerSurface EffectivePlayerSurface(PlayerSurface surface) =>
+        surface == PlayerSurface.Player && PlayerUsesFloatingLook ? PlayerSurface.Floating : surface;
+
+    private bool? _playerControlsOnHover;
+    public bool PlayerControlsOnHover
+    {
+        get => _playerControlsOnHover ??= Minimal.ControlsOnHover;
+        set => _playerControlsOnHover = value;
+    }
+
+    private PlayerToolbarSettings? _presentationToolbar;
+    public PlayerToolbarSettings PresentationToolbar
+    {
+        get => _presentationToolbar ??= new PlayerToolbarSettings
+        {
+            Order = PlayerToolIds.ForPresentation(Minimal.PlayerToolOrder),
+            Hidden =
+            [
+                .. new Dictionary<string, bool>
+                {
+                    [PlayerToolIds.Settings] = Minimal.PlayerShowSettingsButton,
+                    [PlayerToolIds.Size] = Minimal.PlayerShowSizeButtons,
+                    [PlayerToolIds.Switch] = Minimal.PlayerShowSwitchButton,
+                    [PlayerToolIds.FullScreen] = Minimal.PlayerShowFullScreenButton,
+                    [PlayerToolIds.Maximize] = Minimal.PlayerShowFillButton,
+                }.Where(tool => !tool.Value).Select(tool => tool.Key)
+            ],
+        };
+        set => _presentationToolbar = value;
+    }
+
+    private PlayerAppearance? Appearance(PlayerSurface surface) => surface switch
+    {
+        PlayerSurface.Floating => FloatingPlayerAppearance,
+        PlayerSurface.Player => PresentationAppearance,
+        _ => null,
+    };
+
+    public BarLayout PlayerElements(PlayerSurface surface) => Appearance(surface)?.Elements ?? MiniPlayer;
+    public MiniPlayerStyle PlayerLook(PlayerSurface surface) => Appearance(surface)?.Look ?? MiniPlayerLook;
+    public List<MiniPlayerPreset> PlayerPresets(PlayerSurface surface) => Appearance(surface)?.Presets ?? MiniPlayerPresets;
 
     /// <summary>Card settings the user saved under a name.</summary>
     public List<LyricCardPreset> LyricCardPresets { get; set; } = [];
@@ -665,11 +713,27 @@ public sealed class MiniPlayerStyle
         .All(p => Equals(p.GetValue(this), p.GetValue(other)));
 }
 
+public enum PlayerSurface { Mini, Floating, Player }
+
+public sealed class PlayerToolbarSettings
+{
+    public List<string> Order { get; set; } = PlayerToolIds.ForPresentation(null);
+    public List<string> Hidden { get; set; } = [];
+    public bool Shows(string id) => !Hidden.Contains(id);
+}
+
 public sealed class PlayerAppearance
 {
     public BarLayout Elements { get; set; } = BarLayout.DefaultMiniPlayer();
     public MiniPlayerStyle Look { get; set; } = new();
     public List<MiniPlayerPreset> Presets { get; set; } = [];
+
+    public PlayerAppearance Clone() => new()
+    {
+        Elements = Elements.Clone(),
+        Look = Look.Clone(),
+        Presets = Presets.Select(preset => preset.Clone()).ToList(),
+    };
 }
 
 /// <summary>A player look saved by the user: everything but the layout and the width.</summary>
@@ -682,22 +746,22 @@ public sealed class MiniPlayerPreset
     /// <summary>The elements shown (cover, title, buttons, progress); the width stays the user's.</summary>
     public BarLayout Elements { get; set; } = BarLayout.DefaultMiniPlayer();
 
-    public static MiniPlayerPreset From(string name, AppSettings settings, bool floating = false) => new()
+    public static MiniPlayerPreset From(string name, AppSettings settings, PlayerSurface surface = PlayerSurface.Mini) => new()
     {
         Name = name,
-        Look = settings.PlayerLook(floating).Clone(),
-        Elements = settings.PlayerElements(floating).Clone(),
+        Look = settings.PlayerLook(surface).Clone(),
+        Elements = settings.PlayerElements(surface).Clone(),
     };
 
     public MiniPlayerPreset Clone() => new() { Name = Name, Look = Look.Clone(), Elements = Elements.Clone() };
 
-    public bool Matches(AppSettings settings, bool floating = false) =>
-        Look.SameLook(settings.PlayerLook(floating)) && Elements.SameElements(settings.PlayerElements(floating));
+    public bool Matches(AppSettings settings, PlayerSurface surface = PlayerSurface.Mini) =>
+        Look.SameLook(settings.PlayerLook(surface)) && Elements.SameElements(settings.PlayerElements(surface));
 
-    public void ApplyTo(AppSettings settings, bool floating = false)
+    public void ApplyTo(AppSettings settings, PlayerSurface surface = PlayerSurface.Mini)
     {
-        Look.CopyLookTo(settings.PlayerLook(floating));
-        Elements.CopyElementsTo(settings.PlayerElements(floating));
+        Look.CopyLookTo(settings.PlayerLook(surface));
+        Elements.CopyElementsTo(settings.PlayerElements(surface));
     }
 }
 
@@ -973,6 +1037,9 @@ public static class PlayerToolIds
 
     /// <summary>Most used first; the window's own buttons last: full screen, maximize, then close, like any window.</summary>
     public static readonly IReadOnlyList<string> DefaultOrder = [Settings, Size, Switch, ClickThrough, Lock, FullScreen, Maximize, Close];
+
+    public static List<string> ForPresentation(IEnumerable<string>? order) =>
+        Normalize(order).Where(id => id is not (ClickThrough or Lock or Close)).ToList();
 
     // The first default (Nov 2026), saved by every settings file since: still untouched, it follows the new default.
     private static readonly IReadOnlyList<string> FirstDefaultOrder = [Settings, Size, Maximize, FullScreen, Switch, ClickThrough, Lock, Close];

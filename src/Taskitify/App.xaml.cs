@@ -7,6 +7,7 @@ using System.Windows.Threading;
 using Taskitify.Core.Lyrics;
 using Taskitify.Core.Net;
 using Taskitify.Infrastructure;
+using Taskitify.Models;
 using Taskitify.Services;
 using Taskitify.ViewModels;
 using Taskitify.Views;
@@ -211,7 +212,7 @@ public partial class App : Application
         // The popup's hover buttons.
         _miniPlayer.LyricsSizeRequested += (_, step) => _settings.Update(s =>
         {
-            var look = s.PlayerLook(_miniPlayer.IsPinned);
+            var look = s.PlayerLook(s.EffectivePlayerSurface(_miniPlayer.Surface));
             look.LyricsScale = Math.Clamp(Math.Round((look.LyricsScale + (step * 0.1)) * 10) / 10, 0.7, 2.2);
         });
         _miniPlayer.FloatRequested += (_, _) => _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, true));
@@ -321,17 +322,19 @@ public partial class App : Application
         _settingsVm = new SettingsViewModel(_settings, _cache, _sync, _overlay.IsCalibrating, _overlay.SetCalibrating)
         {
             MiniLook = new MiniPlayerLookViewModel(_settings, _monitor, _sync, _theme),
-            FloatingLook = new MiniPlayerLookViewModel(_settings, _monitor, _sync, _theme, floating: true),
+            FloatingLook = new MiniPlayerLookViewModel(_settings, _monitor, _sync, _theme, PlayerSurface.Floating),
+            PresentationLook = new MiniPlayerLookViewModel(_settings, _monitor, _sync, _theme, PlayerSurface.Player),
             MinimalLook = new MinimalLookViewModel(_settings, _monitor, _theme),
         };
         // Customizing the mini player shows it, live, beside the settings.
         _settingsVm.MiniLook!.PreviewRequested += (_, _) => PreviewMiniPlayer();
-        _settingsVm.FloatingLook!.PreviewRequested += (_, _) => PreviewMiniPlayer(floating: true);
+        _settingsVm.FloatingLook!.PreviewRequested += (_, _) => PreviewMiniPlayer(PlayerSurface.Floating);
+        _settingsVm.PresentationLook!.PreviewRequested += (_, _) => PreviewMiniPlayer(PlayerSurface.Player);
         _settingsVm.MinimalLook!.PreviewRequested += (_, _) =>
         {
-            if (_settingsWindow?.ActivePage == SettingsPage.Player)
+            if (_settingsWindow?.ActivePage == SettingsPage.Floating)
             {
-                PreviewMiniPlayer(floating: true);
+                PreviewMiniPlayer(PlayerSurface.Floating);
                 return;
             }
             if (_settingsWindow?.ActivePage != SettingsPage.Minimal)
@@ -591,24 +594,29 @@ public partial class App : Application
     }
 
     /// <summary>Show the mini player without taking focus after an appearance change.</summary>
-    private void PreviewMiniPlayer(bool floating = false)
+    private void PreviewMiniPlayer(PlayerSurface surface = PlayerSurface.Mini)
     {
         if (_miniPlayer is null || _overlay is null)
             return;
         // After the change is applied and the player has its new size.
         Dispatcher.InvokeAsync(() =>
         {
-            var page = floating ? SettingsPage.Player : SettingsPage.MiniPlayer;
+            var page = surface switch
+            {
+                PlayerSurface.Player => SettingsPage.Player,
+                PlayerSurface.Floating => SettingsPage.Floating,
+                _ => SettingsPage.MiniPlayer,
+            };
             if (_settingsWindow is not { IsVisible: true } || _settingsWindow.ActivePage != page ||
                 _miniPlayer.IsPinned || (_miniPlayer.IsVisible && !_miniPlayer.IsPreview))
                 return;
             var anchor = _overlay.IsShown ? _overlay.Bounds
                 : _overlay.Placement is { } p ? TaskbarPositionService.ComputeOverlayRect(p, _settings!.Current) : default;
-            OpenMiniPlayer(anchor, preview: true, floatingPreview: floating);
+            OpenMiniPlayer(anchor, preview: true, previewSurface: surface);
         }, DispatcherPriority.Loaded);
     }
 
-    private void OpenMiniPlayer(Core.Layout.PixelRect anchor, bool preview = false, bool floatingPreview = false)
+    private void OpenMiniPlayer(Core.Layout.PixelRect anchor, bool preview = false, PlayerSurface previewSurface = PlayerSurface.Mini)
     {
         if (_miniPlayer is null || _overlay is null)
             return;
@@ -619,7 +627,7 @@ public partial class App : Application
         if (anchor.IsEmpty)
             anchor = new Core.Layout.PixelRect(monitor.WorkArea.Right - 200, monitor.WorkArea.Bottom, 200, 0);
         var scale = _overlay.Placement?.Scale ?? WindowInterop.GetScale(_overlay.Handle);
-        _miniPlayer.ShowAt(anchor, monitor.WorkArea, scale, preview, floatingPreview);
+        _miniPlayer.ShowAt(anchor, monitor.WorkArea, scale, preview, previewSurface);
     }
 
     private void ApplySettings()
@@ -758,7 +766,7 @@ public partial class App : Application
                     () => _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, false)),
                     new PlayerTools(m.PlayerShowSwitchButton, m.PlayerShowSizeButtons, m.PlayerShowFillButton, m.PlayerShowFullScreenButton, m.PlayerShowSettingsButton,
                         m.PlayerShowClickThroughButton, m.PlayerShowLockButton, m.PlayerShowCloseButton, Models.PlayerToolIds.Normalize(m.PlayerToolOrder)),
-                    m.PlayerVerses));
+                    m.PlayerVerses, PlayerTools.ForPresentation(_settings.Current.PresentationToolbar), _settings.Current.PlayerControlsOnHover));
             return;
         }
         _miniPlayer?.Unpin();
