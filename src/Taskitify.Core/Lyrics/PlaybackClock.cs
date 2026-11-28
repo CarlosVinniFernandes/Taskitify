@@ -48,14 +48,20 @@ public sealed class PlaybackClock
     }
 
     /// <summary>Play/pause without a fresh timeline report: freeze or resume from the projected position.</summary>
-    public void SetPlaying(bool playing)
+    /// <param name="since">When the change really happened, if before now (a pause noticed late
+    /// stops the clock where it was then, not where it projected to since).</param>
+    public void SetPlaying(bool playing, DateTimeOffset? since = null)
     {
         if (playing == IsPlaying)
             return;
-        var p = Position;
+        var now = _now();
+        var at = since is { } s && s < now ? (s > _baseAt ? s : _baseAt) : now;
+        var p = IsPlaying ? _base + Project(at - _baseAt) : _base;
+        if (Duration is { } d && d > TimeSpan.Zero && p > d)
+            p = d;
         IsPlaying = playing;
-        _base = p;
-        _baseAt = _now();
+        _base = p < TimeSpan.Zero ? TimeSpan.Zero : p;
+        _baseAt = at;
     }
 
     public bool SetRate(double rate)

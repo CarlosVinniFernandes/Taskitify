@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using Microsoft.Win32;
 using Taskitify.Core.Imaging;
 using Taskitify.Core.Lyrics;
+using Taskitify.Core.Media;
 using Taskitify.Infrastructure;
 using Taskitify.Models;
 using MediaPlaybackAutoRepeatMode = Windows.Media.MediaPlaybackAutoRepeatMode;
@@ -80,9 +81,11 @@ public interface ISpotifyMonitor : IDisposable
 }
 
 /// <summary>
-/// Watches the Windows media session (GSMTC) that belongs to Spotify Desktop. Event driven;
-/// the only polling is a 1.5 s timeline/state check while playing, to correct drift in case
-/// Spotify does not raise an event, which also notices a new song whose event is late.
+/// Watches the Windows media session (GSMTC) that belongs to Spotify Desktop. Event driven,
+/// plus a 1.5 s timeline/state check while playing, to correct drift in case Spotify does not
+/// raise an event, which also notices a new song whose event is late. Spotify reports play/pause
+/// to the session ~3 s late (or never), so its audio level is also sampled while it has a session,
+/// and a play/pause sent from the app shows at once (see <see cref="PlaybackStateArbiter"/>).
 /// </summary>
 public sealed class SpotifyMonitor : ISpotifyMonitor
 {
@@ -94,6 +97,10 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
     private readonly PlaybackClock _clock = new();
     private readonly DispatcherTimer _correctionTimer;
     private readonly DispatcherTimer _coverRetry;
+    private readonly DispatcherTimer _audioTimer;
+    private readonly SpotifyAudioMeter _audioMeter = new();
+    private readonly PlaybackStateArbiter _arbiter = new();
+    private PlaybackState _reportedStatus = PlaybackState.NoSession;
     private int _coverRetries;
 
     private GlobalSystemMediaTransportControlsSessionManager? _manager;
@@ -110,6 +117,12 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
     private (TimeSpan Target, DateTimeOffset SentAt, DateTimeOffset Until)? _pendingSeek;
     private static readonly TimeSpan PendingSeekWindow = TimeSpan.FromSeconds(3);
 
+    // Audio level sampling: a resume shows within this, a pause within this + the arbiter's silence wait.
+    private static readonly TimeSpan AudioSampleInterval = TimeSpan.FromMilliseconds(100);
+
+    // While the position says the player plays on through a silence read as a pause, by this much.
+    private static readonly TimeSpan SilenceDisproof = TimeSpan.FromSeconds(1.5);
+
     // How long a just-sent shuffle/repeat change wins over (possibly stale) session reports.
     private static readonly TimeSpan PendingModeWindow = TimeSpan.FromSeconds(2);
 
@@ -121,6 +134,12 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
         {
             ReadPlaybackInfo();
             ReadTimeline();
+        };
+        _audioTimer = new DispatcherTimer(DispatcherPriority.Background, dispatcher) { Interval = AudioSampleInterval };
+        _audioTimer.Tick += (_, _) =>
+        {
+            _arbiter.Audio(_audioMeter.ReadPeak());
+            UpdateStatus();
         };
         _coverRetry = new DispatcherTimer(DispatcherPriority.Background, dispatcher);
         _coverRetry.Tick += async (_, _) =>
@@ -182,8 +201,16 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
 
     public async Task PlayPauseAsync()
     {
-        if (_session is { } s)
-            await TryControl(() => s.TryTogglePlayPauseAsync().AsTask(), "play/pause");
+        if (_session is not { } s)
+            return;
+        // Optimistic: Spotify reports the new state seconds later.
+        _arbiter.Commanded(Status != PlaybackState.Playing);
+        UpdateStatus();
+        if (!await TryControl(() => s.TryTogglePlayPauseAsync().AsTask(), "play/pause"))
+        {
+            _arbiter.CommandFailed();
+            UpdateStatus();
+        }
     }
 
     public async Task NextAsync()
@@ -272,10 +299,13 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
                 return;
             if (e.Mode == PowerModes.Suspend)
             {
+                _audioTimer.Stop();
                 _clock.SetPlaying(false);
                 return;
             }
 
+            _audioMeter.Refresh();
+            _audioTimer.Start();
             ReadPlaybackInfo();
             _clock.SetPlaying(Status == PlaybackState.Playing);
             ReadTimeline();
@@ -288,6 +318,8 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         _correctionTimer.Stop();
         _coverRetry.Stop();
+        _audioTimer.Stop();
+        _audioMeter.Dispose();
         if (_manager is not null)
             _manager.SessionsChanged -= OnSessionsChanged;
         Detach();
@@ -351,6 +383,8 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
         _session.PlaybackInfoChanged += OnPlaybackInfoChanged;
         _session.TimelinePropertiesChanged += OnTimelinePropertiesChanged;
 
+        _audioMeter.Refresh();
+        _audioTimer.Start();
         await LoadMediaPropertiesAsync();
         ReadPlaybackInfo();
         ReadTimeline();
@@ -370,6 +404,10 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
     {
         _correctionTimer.Stop();
         _coverRetry.Stop();
+        _audioTimer.Stop();
+        _audioMeter.Dispose();
+        _arbiter.Reset();
+        _reportedStatus = PlaybackState.NoSession;
         _clock.SetPlaying(false);
         _clock.Reset();
         _pendingSeek = null;
@@ -667,21 +705,35 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
         var rateChanged = _clock.SetRate(info.PlaybackRate ?? 1);
         if (rateChanged)
             TimelineChanged?.Invoke(this, EventArgs.Empty);
-        if (status == Status)
-        {
-            if (modesChanged)
-                PlaybackChanged?.Invoke(this, EventArgs.Empty);
-            return;
-        }
+        if (status != _reportedStatus)
+            Log.Debug($"Session reports: {_reportedStatus} -> {status}");
+        _reportedStatus = status;
+        _arbiter.Reported(status == PlaybackState.Playing);
+        if (!UpdateStatus() && modesChanged)
+            PlaybackChanged?.Invoke(this, EventArgs.Empty);
+    }
 
-        Log.Info($"Playback: {Status} -> {status}");
+    /// <summary>Apply the reported status, or what the audio level or a sent command says instead.</summary>
+    /// <returns>Whether the status changed (PlaybackChanged was raised).</returns>
+    private bool UpdateStatus()
+    {
+        var status = _reportedStatus;
+        var playing = status == PlaybackState.NoSession ? null : _arbiter.PlayingOverride;
+        if (playing is { } p)
+            status = p ? PlaybackState.Playing : PlaybackState.Paused;
+        if (status == Status)
+            return false;
+
+        Log.Info($"Playback: {Status} -> {status}" + (status != _reportedStatus ? $" (session still says {_reportedStatus})" : ""));
         Status = status;
-        _clock.SetPlaying(status == PlaybackState.Playing);
+        _clock.SetPlaying(status == PlaybackState.Playing, playing is null ? null : _arbiter.OverrideSince);
         if (status == PlaybackState.Playing)
             _correctionTimer.Start();
         else
             _correctionTimer.Stop();
         PlaybackChanged?.Invoke(this, EventArgs.Empty);
+        TimelineChanged?.Invoke(this, EventArgs.Empty);
+        return true;
     }
 
     /// <summary>
@@ -760,11 +812,33 @@ public sealed class SpotifyMonitor : ISpotifyMonitor
         // playing would project from the wrong origin after a pause.
         if (t.LastUpdatedTime != _lastTimelineStamp || position != _lastTimelinePosition)
         {
+            // Silence read as a pause, but the position moved on with the clock since the last
+            // report (not a seek): the player plays, muted or on another device.
+            var advanced = position - _lastTimelinePosition;
+            if (Status != PlaybackState.Playing && _reportedStatus == PlaybackState.Playing && _lastTimelineStamp != default
+                && advanced > SilenceDisproof
+                && Math.Abs((advanced - (t.LastUpdatedTime - _lastTimelineStamp) * PlaybackRate).TotalSeconds) < 1)
+            {
+                Log.Debug("Position advanced through a silence read as a pause");
+                _arbiter.SilenceDisproved();
+                _audioMeter.Refresh();
+                UpdateStatus();
+            }
             _lastTimelineStamp = t.LastUpdatedTime;
             _lastTimelinePosition = position;
             if (!IsStaleAfterSeek(position, t.LastUpdatedTime))
             {
-                _clock.Sync(position, t.LastUpdatedTime, Status == PlaybackState.Playing);
+                // A report sampled before a change the session has not reported yet describes the
+                // other state: project it to the moment of the change.
+                var reportedAt = t.LastUpdatedTime;
+                if (Status != _reportedStatus && _arbiter.OverrideSince is { } since && reportedAt < since)
+                {
+                    if (Status == PlaybackState.Playing)
+                        reportedAt = since; // still paused until then
+                    else if (_reportedStatus == PlaybackState.Playing)
+                        position += (since - reportedAt) * PlaybackRate; // still playing until then
+                }
+                _clock.Sync(position, reportedAt, Status == PlaybackState.Playing);
                 changed = true;
             }
         }
