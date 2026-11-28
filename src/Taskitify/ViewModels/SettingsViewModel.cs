@@ -56,11 +56,15 @@ public sealed class SettingsViewModel : ObservableObject
         MinimizedBar = new BarLayoutViewModel(settings, x => x.MinimizedBar, "SongTitle", "Artist", minimizedMin, minimizedMax);
         MiniPlayer = new BarLayoutViewModel(settings, x => x.MiniPlayer, "SongTitle", "Artist", 310, 640, taskbar: false);
         ResetPlacementCommand = new RelayCommand(() => Update(s => s.ManualPlacement = false), () => S.ManualPlacement);
+        LoadKaraokeSources();
+        MoveSourceUpCommand = new RelayCommand(p => { if (p is LyricsSourceItem i) MoveSource(i, KaraokeSources.IndexOf(i) - 1); });
+        MoveSourceDownCommand = new RelayCommand(p => { if (p is LyricsSourceItem i) MoveSource(i, KaraokeSources.IndexOf(i) + 1); });
         ClearCacheCommand = new RelayCommand(() =>
         {
             try
             {
                 _cache.Clear();
+                RefreshCacheSummary();
                 _sync.Reload();
             }
             catch (IOException ex)
@@ -309,6 +313,62 @@ public sealed class SettingsViewModel : ObservableObject
     }
 
     private AppSettings S => _settings.Current;
+
+    // ---- lyrics sources and karaoke
+
+    public bool KaraokeSearch { get => S.LyricsSources.KaraokeSearch; set => Update(s => s.LyricsSources.KaraokeSearch = value); }
+    public bool KaraokeAutoSearch { get => S.LyricsSources.KaraokeAutoSearch; set => Update(s => s.LyricsSources.KaraokeAutoSearch = value); }
+    public bool KaraokeOn { get => S.LyricsSources.KaraokeOn; set => Update(s => s.LyricsSources.KaraokeOn = value); }
+    public bool AllowEstimatedFill { get => S.LyricsSources.AllowEstimatedFill; set => Update(s => s.LyricsSources.AllowEstimatedFill = value); }
+
+    /// <summary>The karaoke sources, in the user's order.</summary>
+    public System.Collections.ObjectModel.ObservableCollection<LyricsSourceItem> KaraokeSources { get; } = [];
+
+    public ICommand MoveSourceUpCommand { get; }
+    public ICommand MoveSourceDownCommand { get; }
+
+    private void LoadKaraokeSources()
+    {
+        KaraokeSources.Clear();
+        foreach (var choice in KaraokeSourceIds.Normalize(S.LyricsSources.Karaoke))
+        {
+            var id = choice.Id;
+            KaraokeSources.Add(new LyricsSourceItem(id,
+                () => KaraokeSourceIds.Normalize(S.LyricsSources.Karaoke).First(c => c.Id == id).Enabled,
+                on => Update(s =>
+                {
+                    var list = KaraokeSourceIds.Normalize(s.LyricsSources.Karaoke);
+                    list.First(c => c.Id == id).Enabled = on;
+                    s.LyricsSources.Karaoke = list;
+                })));
+        }
+    }
+
+    private void MoveSource(LyricsSourceItem item, int index)
+    {
+        var from = KaraokeSources.IndexOf(item);
+        if (from < 0 || index < 0 || index >= KaraokeSources.Count || index == from)
+            return;
+        KaraokeSources.Move(from, index);
+        var order = KaraokeSources.Select(i => i.Id).ToList();
+        Update(s =>
+        {
+            var list = KaraokeSourceIds.Normalize(s.LyricsSources.Karaoke);
+            s.LyricsSources.Karaoke = [.. order.Select(id => list.First(c => c.Id == id))];
+        });
+    }
+
+    private string _cacheSummary = "";
+
+    /// <summary>"120 lyrics and 34 karaoke lyrics · 1.2 MB": measured when the page opens and after clearing.</summary>
+    public string CacheSummary { get => _cacheSummary; private set => Set(ref _cacheSummary, value); }
+
+    public void RefreshCacheSummary()
+    {
+        var (lyrics, karaoke, bytes) = _cache.Measure();
+        var size = bytes < 1024 * 1024 ? $"{Math.Max(1, bytes / 1024.0):0} KB" : $"{bytes / (1024.0 * 1024):0.0} MB";
+        CacheSummary = LocalizationService.Format("CacheSummary", lyrics, karaoke, size);
+    }
 
     private void Update(Action<AppSettings> change)
     {

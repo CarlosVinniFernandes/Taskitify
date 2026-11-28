@@ -312,7 +312,7 @@ public sealed class TourWindow : Window
 
         var foot = Stack(Body(T("SourcesReady"), 16, brush: CreamBrush));
         ((TextBlock)foot.Children[0]).TextAlignment = TextAlignment.Center;
-        var connect = Ghost("\uE713  " + T("SourcesConnect"), () => _openSettings(SettingsPage.Lyrics));
+        var connect = Ghost("\uE713  " + T("SourcesConnect"), () => _openSettings(SettingsPage.LyricsSources));
         connect.Margin = new Thickness(0, 14, 0, 0);
         connect.HorizontalAlignment = HorizontalAlignment.Center;
         foot.Children.Add(connect);

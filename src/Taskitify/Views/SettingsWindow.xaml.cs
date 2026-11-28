@@ -45,7 +45,6 @@ public partial class SettingsWindow : Window
         Activated += (_, _) => Topmost = Application.Current.Windows.OfType<MiniPlayerWindow>().Any(w => w.IsVisible && w.IsPinned);
         Deactivated += (_, _) => Topmost = false;
         WirePlayerToolDrag(PlayerToolList);
-        WirePlayerToolDrag(PopupToolList);
         // A saved look gets its name right away: the cursor waits in it, the default name selected.
         if (vm.MiniLook is { } look)
             look.LookSaved += (_, _) => Dispatcher.InvokeAsync(() =>
@@ -135,11 +134,16 @@ public partial class SettingsWindow : Window
         PlayerToolList.Drop += (_, e) => e.Handled = true;
     }
 
+    /// <summary>The mini player's and floating player's pages: their look is on the Player page.</summary>
+    private void OnOpenPlayerPage(object sender, RoutedEventArgs e) => ShowPage(SettingsPage.Player);
+
     private void UpdatePlayerPreviews()
     {
         var page = (SettingsPage)Pages.SelectedIndex;
-        _vm.MiniLook?.SetPreviewActive(page is SettingsPage.Bar or SettingsPage.MinimizedBar or SettingsPage.MiniPlayer or SettingsPage.NotMinimal,
-            showLooks: page is SettingsPage.MiniPlayer or SettingsPage.NotMinimal);
+        _vm.MiniLook?.SetPreviewActive(page is SettingsPage.Bar or SettingsPage.MinimizedBar or SettingsPage.Player or SettingsPage.MiniPlayer or SettingsPage.NotMinimal,
+            showLooks: page is SettingsPage.Player or SettingsPage.MiniPlayer or SettingsPage.NotMinimal);
+        if (page == SettingsPage.LyricsSources)
+            _vm.RefreshCacheSummary();
         _vm.MinimalLook?.SetActive(page == SettingsPage.Minimal);
     }
 
@@ -181,10 +185,12 @@ public enum SettingsPage
     General,
     Bar,
     MinimizedBar,
+    Player,
     MiniPlayer,
     NotMinimal,
     Minimal,
     Lyrics,
+    LyricsSources,
     Position,
     Advanced,
 }

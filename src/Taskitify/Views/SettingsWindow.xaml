@@ -488,11 +488,12 @@
         </TabItem>
 
         <!-- ───────────── Mini player (popup) ───────────── -->
-        <TabItem Style="{StaticResource NavItem}" Header="{DynamicResource Loc.NavMiniPlayer}" Tag="&#xE8A7;">
+        <!-- ───────────── Player: the look of the mini player and the floating player ───────────── -->
+        <TabItem Style="{StaticResource NavItem}" Header="{DynamicResource Loc.NavPlayer}" Tag="&#xE790;">
             <ScrollViewer Style="{StaticResource Page}">
                 <StackPanel Style="{StaticResource PageBody}">
-                    <TextBlock Style="{StaticResource PageTitle}" Text="{DynamicResource Loc.NavMiniPlayer}" />
-                    <TextBlock Style="{StaticResource PageHint}" Text="{DynamicResource Loc.PageMiniPlayerHint}" />
+                    <TextBlock Style="{StaticResource PageTitle}" Text="{DynamicResource Loc.NavPlayer}" />
+                    <TextBlock Style="{StaticResource PageHint}" Text="{DynamicResource Loc.PagePlayerHint}" />
 
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.Elements}" />
                     <Border Style="{StaticResource Group}" Padding="18,14,18,18">
@@ -596,7 +597,7 @@
                                     Content="{DynamicResource Loc.PlayerToolsReset}" Command="{Binding MinimalLook.ResetToolOrderCommand}" />
                             <Border HorizontalAlignment="Left" VerticalAlignment="Center" Padding="3" CornerRadius="10"
                                     Background="#F0262626" BorderBrush="#33FFFFFF" BorderThickness="1" Margin="0,0,16,0">
-                                <ItemsControl x:Name="PopupToolList" ItemsSource="{Binding MinimalLook.PlayerTools}" AllowDrop="True"
+                                <ItemsControl x:Name="PlayerToolList" ItemsSource="{Binding MinimalLook.PlayerTools}" AllowDrop="True"
                                               AutomationProperties.Name="{DynamicResource Loc.PlayerToolsTitle}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
@@ -729,6 +730,30 @@
                             <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Controls}"
                                      SelectedItem="{Binding MiniLook.ControlsStyle}" AutomationProperties.Name="{DynamicResource Loc.LookControls}" />
                         </Border>
+                    </Border>
+
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+
+        <TabItem Style="{StaticResource NavItem}" Header="{DynamicResource Loc.NavMiniPlayer}" Tag="&#xE8A7;">
+            <ScrollViewer Style="{StaticResource Page}">
+                <StackPanel Style="{StaticResource PageBody}">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="{DynamicResource Loc.NavMiniPlayer}" />
+                    <TextBlock Style="{StaticResource PageHint}" Text="{DynamicResource Loc.PageMiniPlayerHint}" />
+
+                    <!-- The player's look lives on its own page (shared by the mini player and the floating player). -->
+                    <Border Style="{StaticResource Stage}" Margin="0,24,0,0" Padding="22,16">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Style="{StaticResource AccentButton}" VerticalAlignment="Center" Click="OnOpenPlayerPage"
+                                    Content="{DynamicResource Loc.PlayerLookOpen}" AutomationProperties.Name="{DynamicResource Loc.PlayerLookOpen}" />
+                            <TextBlock DockPanel.Dock="Left" Text="&#xE790;" FontFamily="{StaticResource IconFont}" FontSize="24" Foreground="#FF1ED760"
+                                       VerticalAlignment="Center" Margin="0,0,16,0" />
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                <TextBlock Text="{DynamicResource Loc.PlayerLookLink}" Foreground="White" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <TextBlock Text="{DynamicResource Loc.PlayerLookLinkHint}" Foreground="#B3FFFFFF" FontSize="12.5" TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </DockPanel>
                     </Border>
 
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.Size}" />
@@ -975,256 +1000,20 @@
                         </WrapPanel>
                     </Border>
 
-                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.Elements}" />
-                    <Border Style="{StaticResource Group}" Padding="18,14,18,18">
-                        <StackPanel>
-                            <Border Style="{StaticResource Stage}">
-                                <StackPanel>
-                                    <local:MiniPlayerPicker HorizontalAlignment="Center" />
-                                    <ContentControl Template="{StaticResource Legend}" />
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- The hover buttons as the player draws them: a click shows or hides one, press, hold and drag moves it. -->
-                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.PlayerToolsTitle}" />
-                    <TextBlock Style="{StaticResource GroupHint}" Text="{DynamicResource Loc.PlayerToolsHint}" />
-                    <Border Style="{StaticResource Stage}" Margin="0" Padding="22,18">
+                    <!-- The player's look lives on its own page (shared by the mini player and the floating player). -->
+                    <Border Style="{StaticResource Stage}" Margin="0,24,0,0" Padding="22,16">
                         <DockPanel>
-                            <Button DockPanel.Dock="Right" Style="{StaticResource FlatButton}" Padding="10,5" VerticalAlignment="Center"
-                                    Content="{DynamicResource Loc.PlayerToolsReset}" Command="{Binding MinimalLook.ResetToolOrderCommand}" />
-                            <Border HorizontalAlignment="Left" VerticalAlignment="Center" Padding="3" CornerRadius="10"
-                                    Background="#F0262626" BorderBrush="#33FFFFFF" BorderThickness="1" Margin="0,0,16,0">
-                                <ItemsControl x:Name="PlayerToolList" ItemsSource="{Binding MinimalLook.PlayerTools}" AllowDrop="True"
-                                              AutomationProperties.Name="{DynamicResource Loc.PlayerToolsTitle}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <StackPanel Orientation="Horizontal" />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border x:Name="Tool" Width="34" Height="32" CornerRadius="7" Background="Transparent" Cursor="Hand"
-                                                    ToolTip="{Binding Label}" RenderTransformOrigin="0.5,0.5" AutomationProperties.Name="{Binding Label}">
-                                                <Border.RenderTransform>
-                                                    <ScaleTransform />
-                                                </Border.RenderTransform>
-                                                <Grid>
-                                                    <Grid x:Name="ToolFace">
-                                                        <TextBlock x:Name="ToolGlyph" Text="{Binding Glyph}" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="White"
-                                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                        <TextBlock x:Name="ToolSize" Visibility="Collapsed" FontFamily="{StaticResource UiFont}" FontWeight="SemiBold" Foreground="White"
-                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"><Run Text="A" FontSize="10" /><Run Text="A" FontSize="15" /></TextBlock>
-                                                        <Grid x:Name="ToolClickThrough" Width="16" Height="16" Visibility="Collapsed">
-                                                            <Path Data="M4,2 L4,12 L6.5,9.6 L8.6,13.8 L10.2,13 L8.2,8.9 L11.6,8.9 Z" Fill="White" />
-                                                            <Path Data="M2.5,14 L13.5,2.5" Stroke="White" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                                                        </Grid>
-                                                    </Grid>
-                                                    <!-- Hidden: dimmed and struck through, still in its place. -->
-                                                    <Path x:Name="ToolOff" Data="M8,24 L26,8" Stroke="#CCFF6B6B" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                                                          Visibility="Collapsed" IsHitTestVisible="False" />
-                                                </Grid>
-                                            </Border>
-                                            <DataTemplate.Triggers>
-                                                <DataTrigger Binding="{Binding Id}" Value="Size">
-                                                    <Setter TargetName="ToolSize" Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Id}" Value="ClickThrough">
-                                                    <Setter TargetName="ToolClickThrough" Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding IsShown}" Value="False">
-                                                    <Setter TargetName="ToolFace" Property="Opacity" Value="0.3" />
-                                                    <Setter TargetName="ToolOff" Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                                <Trigger SourceName="Tool" Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="Tool" Property="Background" Value="#26FFFFFF" />
-                                                </Trigger>
-                                            </DataTemplate.Triggers>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </Border>
+                            <Button DockPanel.Dock="Right" Style="{StaticResource AccentButton}" VerticalAlignment="Center" Click="OnOpenPlayerPage"
+                                    Content="{DynamicResource Loc.PlayerLookOpen}" AutomationProperties.Name="{DynamicResource Loc.PlayerLookOpen}" />
+                            <TextBlock DockPanel.Dock="Left" Text="&#xE790;" FontFamily="{StaticResource IconFont}" FontSize="24" Foreground="#FF1ED760"
+                                       VerticalAlignment="Center" Margin="0,0,16,0" />
+                            <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+                                <TextBlock Text="{DynamicResource Loc.PlayerLookLink}" Foreground="White" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <TextBlock Text="{DynamicResource Loc.PlayerLookLinkHint}" Foreground="#B3FFFFFF" FontSize="12.5" TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
                         </DockPanel>
                     </Border>
 
-                    <!-- Appearance: each part on its own, any layout with any background. -->
-                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookMode}" />
-                    <Border Style="{StaticResource Group}" Padding="18,14,18,8">
-                        <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Layouts}"
-                                 SelectedItem="{Binding MiniLook.Layout}" AutomationProperties.Name="{DynamicResource Loc.LookMode}" />
-                    </Border>
-
-                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookTemplates}" />
-                    <Border Style="{StaticResource Group}" Padding="18,14,18,14">
-                        <StackPanel>
-                            <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource PresetTile}" ItemsSource="{Binding MiniLook.Presets}"
-                                     SelectedItem="{Binding MiniLook.Preset}" AutomationProperties.Name="{DynamicResource Loc.LookTemplates}" />
-                            <!-- The user's own looks: save the current one here; the one picked or saved can be renamed, updated or deleted. -->
-                            <WrapPanel Margin="0,4,0,0">
-                                <Button Style="{StaticResource AccentButton}" Command="{Binding MiniLook.SaveLookCommand}" Margin="0,0,16,6"
-                                        AutomationProperties.Name="{DynamicResource Loc.LookSave}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="&#xE74E;" FontFamily="{StaticResource IconFont}" FontSize="13" Margin="0,1,8,0" VerticalAlignment="Center" />
-                                        <TextBlock Text="{DynamicResource Loc.LookSave}" />
-                                    </StackPanel>
-                                </Button>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6" Visibility="{Binding MiniLook.IsEditing, Converter={StaticResource BoolToVisibility}}">
-                                    <TextBox Style="{StaticResource NameField}" Width="190" MaxLength="40"
-                                             Text="{Binding MiniLook.EditingName, UpdateSourceTrigger=PropertyChanged}"
-                                             AutomationProperties.Name="{DynamicResource Loc.LookName}" ToolTip="{DynamicResource Loc.LookName}" />
-                                    <Button Style="{StaticResource FlatButton}" Command="{Binding MiniLook.UpdateLookCommand}" Margin="8,0,0,0"
-                                            Content="{DynamicResource Loc.LookUpdate}" ToolTip="{DynamicResource Loc.LookUpdateHint}" />
-                                    <Button Style="{StaticResource FlatButton}" Command="{Binding MiniLook.DeleteLookCommand}" Margin="8,0,0,0"
-                                            Content="{DynamicResource Loc.LookDelete}" />
-                                </StackPanel>
-                            </WrapPanel>
-                            <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.LookSaveHint}" />
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookBackground}" />
-                    <Border Style="{StaticResource Group}">
-                        <StackPanel>
-                            <Border Style="{StaticResource FirstRow}" Padding="18,14,18,8">
-                                <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Backgrounds}"
-                                         SelectedItem="{Binding MiniLook.Background}" AutomationProperties.Name="{DynamicResource Loc.LookBackground}" />
-                            </Border>
-                            <Border Style="{StaticResource Row}">
-                                <StackPanel>
-                                    <DockPanel IsEnabled="{Binding MiniLook.HasEffect}">
-                                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource ValueText}" Text="{Binding MiniLook.EffectPercent, StringFormat={}{0:0}%}" />
-                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookEffect}" />
-                                    </DockPanel>
-                                    <Slider Minimum="30" Maximum="150" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,8,0,0" IsEnabled="{Binding MiniLook.HasEffect}"
-                                            Value="{Binding MiniLook.EffectPercent}" AutomationProperties.Name="{DynamicResource Loc.LookEffect}" />
-                                    <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.LookEffectNone}"
-                                               Visibility="{Binding MiniLook.NoEffect, Converter={StaticResource BoolToVisibility}}" />
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource Row}">
-                                <StackPanel>
-                                    <DockPanel IsEnabled="{Binding MiniLook.HasDim}">
-                                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource ValueText}" Text="{Binding MiniLook.DimPercent, StringFormat={}{0:0}%}" />
-                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookDim}" />
-                                    </DockPanel>
-                                    <Slider Minimum="0" Maximum="60" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,8,0,0" IsEnabled="{Binding MiniLook.HasDim}"
-                                            Value="{Binding MiniLook.DimPercent}" AutomationProperties.Name="{DynamicResource Loc.LookDim}" />
-                                    <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.LookDimNone}"
-                                               Visibility="{Binding MiniLook.NoDim, Converter={StaticResource BoolToVisibility}}" />
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource Row}">
-                                <StackPanel>
-                                    <DockPanel IsEnabled="{Binding MiniLook.HasBlur}">
-                                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource ValueText}" Text="{Binding MiniLook.BlurPercent, StringFormat={}{0:0}%}" />
-                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookBlur}" />
-                                    </DockPanel>
-                                    <Slider Minimum="40" Maximum="180" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,8,0,0" IsEnabled="{Binding MiniLook.HasBlur}"
-                                            Value="{Binding MiniLook.BlurPercent}" AutomationProperties.Name="{DynamicResource Loc.LookBlur}" />
-                                    <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.LookBlurNone}"
-                                               Visibility="{Binding MiniLook.NoBlur, Converter={StaticResource BoolToVisibility}}" />
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookLyrics}" />
-                    <Border Style="{StaticResource Group}">
-                        <StackPanel>
-                            <Border Style="{StaticResource FirstRow}">
-                                <StackPanel>
-                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookHighlight}" />
-                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Highlights}"
-                                             SelectedItem="{Binding MiniLook.Highlight}" Margin="0,8,0,0" AutomationProperties.Name="{DynamicResource Loc.LookHighlight}" />
-                                    <!-- Depth: its two dials, right under the style (a preview of each is the player itself). -->
-                                    <StackPanel Margin="0,14,0,0" Visibility="{Binding MiniLook.IsDepth, Converter={StaticResource BoolToVisibility}}">
-                                        <DockPanel>
-                                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource ValueText}" Text="{Binding MiniLook.GlowPercent, StringFormat={}{0:0}%}" />
-                                            <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookGlow}" />
-                                        </DockPanel>
-                                        <Slider Minimum="0" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,8,0,0"
-                                                Value="{Binding MiniLook.GlowPercent}" AutomationProperties.Name="{DynamicResource Loc.LookGlow}" />
-                                        <DockPanel Margin="0,12,0,0">
-                                            <TextBlock DockPanel.Dock="Right" Style="{StaticResource ValueText}" Text="{Binding MiniLook.DepthPercent, StringFormat={}{0:0}%}" />
-                                            <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookDepthBlur}" />
-                                        </DockPanel>
-                                        <Slider Minimum="0" Maximum="160" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,8,0,0"
-                                                Value="{Binding MiniLook.DepthPercent}" AutomationProperties.Name="{DynamicResource Loc.LookDepthBlur}" />
-                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.LookDepthHint}" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource Row}">
-                                <DockPanel>
-                                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding MiniLook.InterludeDots}" AutomationProperties.Name="{DynamicResource Loc.LookInterludeDots}" />
-                                    <!-- The choice, shown: three dots, the first lit. -->
-                                    <Canvas DockPanel.Dock="Left" Width="34" Height="14" Margin="0,0,14,0" VerticalAlignment="Center">
-                                        <Ellipse Canvas.Left="2" Canvas.Top="3" Width="8" Height="8" Fill="{DynamicResource TextPrimaryBrush}" />
-                                        <Ellipse Canvas.Left="13" Canvas.Top="4" Width="7" Height="7" Fill="{DynamicResource TextPrimaryBrush}" Opacity="0.55" />
-                                        <Ellipse Canvas.Left="24" Canvas.Top="4.5" Width="6" Height="6" Fill="{DynamicResource TextPrimaryBrush}" Opacity="0.3" />
-                                    </Canvas>
-                                    <StackPanel Style="{StaticResource RowText}">
-                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookInterludeDots}" />
-                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.LookInterludeDotsHint}" />
-                                    </StackPanel>
-                                </DockPanel>
-                            </Border>
-                            <Border Style="{StaticResource Row}">
-                                <StackPanel>
-                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.MotionTitle}" />
-                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Motions}"
-                                             SelectedItem="{Binding MiniLook.Motion}" Margin="0,8,0,0" AutomationProperties.Name="{DynamicResource Loc.MotionTitle}" />
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource Row}">
-                                <StackPanel>
-                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookAlignment}" />
-                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Alignments}"
-                                             SelectedItem="{Binding MiniLook.Alignment}" Margin="0,8,0,0" AutomationProperties.Name="{DynamicResource Loc.LookAlignment}" />
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource Row}">
-                                <StackPanel>
-                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookTypeface}" />
-                                    <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Typefaces}"
-                                             SelectedItem="{Binding MiniLook.Typeface}" Margin="0,8,0,0" AutomationProperties.Name="{DynamicResource Loc.LookTypeface}" />
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource Row}">
-                                <StackPanel>
-                                    <DockPanel>
-                                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource ValueText}" Text="{Binding MiniLook.LyricsPercent, StringFormat={}{0:0}%}" />
-                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LookLyricsSize}" />
-                                    </DockPanel>
-                                    <Slider Minimum="70" Maximum="220" TickFrequency="5" IsSnapToTickEnabled="True" Margin="0,8,0,0"
-                                            Value="{Binding MiniLook.LyricsPercent}" AutomationProperties.Name="{DynamicResource Loc.LookLyricsSize}" />
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </Border>
-
-                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LookControls}" />
-                    <Border Style="{StaticResource Group}">
-                        <Border Style="{StaticResource FirstRow}">
-                            <ListBox Style="{StaticResource ChoiceList}" ItemContainerStyle="{StaticResource ThumbTile}" ItemsSource="{Binding MiniLook.Controls}"
-                                     SelectedItem="{Binding MiniLook.ControlsStyle}" AutomationProperties.Name="{DynamicResource Loc.LookControls}" />
-                        </Border>
-                    </Border>
-
-                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.Size}" />
-                    <Border Style="{StaticResource Group}">
-                        <Border Style="{StaticResource FirstRow}">
-                            <StackPanel>
-                                <DockPanel>
-                                    <TextBlock DockPanel.Dock="Right" Style="{StaticResource ValueText}" Text="{Binding MiniPlayer.Width, StringFormat={}{0} px}" />
-                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.Width}" />
-                                </DockPanel>
-                                <Slider Minimum="{Binding MiniPlayer.MinWidth, Mode=OneTime}" Maximum="{Binding MiniPlayer.MaxWidth, Mode=OneTime}" TickFrequency="10" Margin="0,8,0,0"
-                                        Value="{Binding MiniPlayer.Width}" AutomationProperties.Name="{DynamicResource Loc.LyricsPlayerWidth}" />
-                            </StackPanel>
-                        </Border>
-                    </Border>
                 </StackPanel>
             </ScrollViewer>
         </TabItem>
@@ -1734,45 +1523,6 @@
                         </StackPanel>
                     </Border>
 
-                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LyricsSource}" />
-                    <Border Style="{StaticResource Group}">
-                        <StackPanel>
-                            <Border Style="{StaticResource FirstRow}">
-                                <StackPanel>
-                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.SpotifyLyricsTitle}" />
-                                    <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.SpotifyLyricsHint}" />
-                                    <Border CornerRadius="4" Padding="10,6" Margin="0,10,0,0" HorizontalAlignment="Left" Background="{DynamicResource SubtleFillBrush}">
-                                        <TextBlock x:Name="SpotifyLyricsStatus" TextWrapping="Wrap" FontSize="13" />
-                                    </Border>
-                                    <WrapPanel Margin="0,12,0,0">
-                                        <Button x:Name="ConnectSpotifyButton" Style="{StaticResource AccentButton}" Content="{DynamicResource Loc.SpotifyLyricsConnect}" Click="OnConnectSpotify" Margin="0,0,8,0" />
-                                        <Button x:Name="DisconnectSpotifyButton" Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.SpotifyLyricsDisconnect}" Click="OnDisconnectSpotify" />
-                                    </WrapPanel>
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource Row}">
-                                <DockPanel>
-                                    <Button DockPanel.Dock="Right" Style="{StaticResource FlatButton}" VerticalAlignment="Center" Content="{DynamicResource Loc.OpenFolder}"
-                                            Command="{Binding OpenLyricsFolderCommand}" AutomationProperties.Name="{DynamicResource Loc.OpenLyricsFolder}" />
-                                    <StackPanel Style="{StaticResource RowText}">
-                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LocalLyrics}" />
-                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.OpenLyricsFolderHint}" />
-                                    </StackPanel>
-                                </DockPanel>
-                            </Border>
-                            <Border Style="{StaticResource Row}">
-                                <DockPanel>
-                                    <Button DockPanel.Dock="Right" Style="{StaticResource FlatButton}" VerticalAlignment="Center" Content="{DynamicResource Loc.ClearCache}"
-                                            Command="{Binding ClearCacheCommand}" />
-                                    <StackPanel Style="{StaticResource RowText}">
-                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LyricsCache}" />
-                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.LyricsCacheHint}" />
-                                    </StackPanel>
-                                </DockPanel>
-                            </Border>
-                        </StackPanel>
-                    </Border>
-
                     <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.Sync}" />
                     <Border Style="{StaticResource Group}">
                         <StackPanel>
@@ -1834,6 +1584,145 @@
                             </DockPanel>
                         </Border>
                         </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+
+        <!-- ───────────── Lyrics sources: where lyrics and karaoke lyrics come from ───────────── -->
+        <TabItem Style="{StaticResource NavItem}" Header="{DynamicResource Loc.NavLyricsSources}" Tag="&#xE8F1;">
+            <ScrollViewer Style="{StaticResource Page}">
+                <StackPanel Style="{StaticResource PageBody}">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="{DynamicResource Loc.NavLyricsSources}" />
+                    <TextBlock Style="{StaticResource PageHint}" Text="{DynamicResource Loc.PageLyricsSourcesHint}" />
+
+                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.LyricsSource}" />
+                    <Border Style="{StaticResource Group}">
+                        <StackPanel>
+                            <Border Style="{StaticResource FirstRow}">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.SpotifyLyricsTitle}" />
+                                    <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.SpotifyLyricsHint}" />
+                                    <Border CornerRadius="4" Padding="10,6" Margin="0,10,0,0" HorizontalAlignment="Left" Background="{DynamicResource SubtleFillBrush}">
+                                        <TextBlock x:Name="SpotifyLyricsStatus" TextWrapping="Wrap" FontSize="13" />
+                                    </Border>
+                                    <WrapPanel Margin="0,12,0,0">
+                                        <Button x:Name="ConnectSpotifyButton" Style="{StaticResource AccentButton}" Content="{DynamicResource Loc.SpotifyLyricsConnect}" Click="OnConnectSpotify" Margin="0,0,8,0" />
+                                        <Button x:Name="DisconnectSpotifyButton" Style="{StaticResource FlatButton}" Content="{DynamicResource Loc.SpotifyLyricsDisconnect}" Click="OnDisconnectSpotify" />
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource FlatButton}" VerticalAlignment="Center" Content="{DynamicResource Loc.OpenFolder}"
+                                            Command="{Binding OpenLyricsFolderCommand}" AutomationProperties.Name="{DynamicResource Loc.OpenLyricsFolder}" />
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LocalLyrics}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.OpenLyricsFolderHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource FlatButton}" VerticalAlignment="Center" Content="{DynamicResource Loc.ClearCache}"
+                                            Command="{Binding ClearCacheCommand}" />
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.LyricsCache}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.LyricsCacheHint}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{Binding CacheSummary}" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.KaraokeGroup}" />
+                    <TextBlock Style="{StaticResource GroupHint}" Text="{DynamicResource Loc.KaraokeGroupHint}" />
+                    <Border Style="{StaticResource Group}">
+                        <StackPanel>
+                            <Border Style="{StaticResource FirstRow}">
+                                <DockPanel>
+                                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding KaraokeSearch}" AutomationProperties.Name="{DynamicResource Loc.KaraokeSearchLabel}" />
+                                    <!-- The karaoke button, as it is on the player. -->
+                                    <TextBlock DockPanel.Dock="Left" Text="&#xE720;" FontFamily="{StaticResource IconFont}" FontSize="18" Foreground="#FF1ED760" VerticalAlignment="Center" Margin="0,0,14,0" />
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.KaraokeSearchLabel}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.KaraokeSearchHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}" IsEnabled="{Binding KaraokeSearch}">
+                                <DockPanel>
+                                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding KaraokeOn}" AutomationProperties.Name="{DynamicResource Loc.KaraokeOnLabel}" />
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.KaraokeOnLabel}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.KaraokeOnHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}" IsEnabled="{Binding KaraokeSearch}">
+                                <DockPanel>
+                                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding KaraokeAutoSearch}" AutomationProperties.Name="{DynamicResource Loc.KaraokeAutoLabel}" />
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.KaraokeAutoLabel}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.KaraokeAutoHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <Border Style="{StaticResource Row}">
+                                <DockPanel>
+                                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding AllowEstimatedFill}" AutomationProperties.Name="{DynamicResource Loc.EstimatedFillLabel}" />
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.EstimatedFillLabel}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.EstimatedFillHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.KaraokeSourcesGroup}" />
+                    <TextBlock Style="{StaticResource GroupHint}" Text="{DynamicResource Loc.KaraokeSourcesHint}" />
+                    <Border Style="{StaticResource Group}" IsEnabled="{Binding KaraokeSearch}">
+                        <ItemsControl ItemsSource="{Binding KaraokeSources}" AutomationProperties.Name="{DynamicResource Loc.KaraokeSourcesGroup}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="18,14" BorderBrush="{DynamicResource SubtleFillHoverBrush}" BorderThickness="0,0,0,1">
+                                        <DockPanel>
+                                            <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding IsEnabled}" VerticalAlignment="Center"
+                                                      AutomationProperties.Name="{Binding Name}" />
+                                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                                                <Button Style="{StaticResource IconButton}" Width="30" Height="30" FontSize="11" Content="&#xE70E;"
+                                                        Command="{Binding DataContext.MoveSourceUpCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                                        ToolTip="{DynamicResource Loc.MoveUp}" AutomationProperties.Name="{DynamicResource Loc.MoveUp}" />
+                                                <Button Style="{StaticResource IconButton}" Width="30" Height="30" FontSize="11" Content="&#xE70D;"
+                                                        Command="{Binding DataContext.MoveSourceDownCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                                        ToolTip="{DynamicResource Loc.MoveDown}" AutomationProperties.Name="{DynamicResource Loc.MoveDown}" />
+                                            </StackPanel>
+                                            <StackPanel Style="{StaticResource RowText}">
+                                                <TextBlock Style="{StaticResource SettingLabel}" Text="{Binding Name}" />
+                                                <TextBlock Style="{StaticResource SettingHint}" Text="{Binding Description}" />
+                                                <!-- What its lyrics can have, as tags. -->
+                                                <ItemsControl ItemsSource="{Binding Capabilities}" Margin="0,8,0,0" Focusable="False">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <Border CornerRadius="9" Padding="8,2" Margin="0,0,6,4" Background="{DynamicResource SubtleFillHoverBrush}">
+                                                                <TextBlock Text="{Binding}" FontSize="11.5" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </DockPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </Border>
                 </StackPanel>
             </ScrollViewer>
