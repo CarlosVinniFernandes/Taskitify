@@ -767,5 +767,7 @@
   "LookGlow": "Bagliore del verso attuale",
   "LookDepthBlur": "Sfocatura degli altri versi",
   "LookDepthHint": "La sfocatura cresce con la distanza dal verso attuale e con la dimensione del testo.",
-  "FloatingKeepTaskbarHint": "Attivo: il player flottante e quello della barra insieme; un clic sulla barra porta in primo piano il player flottante."
+  "FloatingKeepTaskbarHint": "Attivo: il player flottante e quello della barra insieme; un clic sulla barra porta in primo piano il player flottante.",
+  "LookInterludeDots": "Pause strumentali a punti",
+  "LookInterludeDotsHint": "Tre punti si accendono uno dopo l’altro mentre la musica suona senza voce, mostrando quanto manca al suo ritorno. Disattivato: una nota."
 }

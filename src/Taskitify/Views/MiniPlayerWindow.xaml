@@ -116,7 +116,11 @@
                                         <DataTemplate>
                                             <!-- The emphasis (opacity, scale, weight) comes from the highlight style; scaling is a render
                                                  transform, so a growing line never moves the others or resizes the window. -->
-                                            <local:LyricMotionText Text="{Binding Text}" TextWrapping="Wrap" Cursor="Hand"
+                                            <local:LyricMotionText Text="{Binding DisplayText}" TextWrapping="Wrap" Cursor="Hand"
+                                                       Interlude="{Binding ShowsDots}" InterludeActive="{Binding IsCurrent}"
+                                                       InterludeStart="{Binding Time}" InterludeEnd="{Binding End}"
+                                                       PositionClock="{Binding DataContext.PositionClock, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                       Playing="{Binding DataContext.IsPlaying, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                        LineStackingStrategy="BlockLineHeight"
                                                        LineHeight="{Binding DataContext.MotionLineHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                                        Expressive="{Binding DataContext.ExpressiveMotion, RelativeSource={RelativeSource AncestorType=ItemsControl}}"

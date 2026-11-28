@@ -767,5 +767,7 @@
   "LookGlow": "Glow of the current line",
   "LookDepthBlur": "Blur of the other lines",
   "LookDepthHint": "The blur grows with the distance from the current line and with the size of the text.",
-  "FloatingKeepTaskbarHint": "On: the floating player and the taskbar player together; a click on the bar brings the floating player forward."
+  "FloatingKeepTaskbarHint": "On: the floating player and the taskbar player together; a click on the bar brings the floating player forward.",
+  "LookInterludeDots": "Instrumental breaks as dots",
+  "LookInterludeDotsHint": "Three dots light up one after another while the music plays without a voice, showing how long until it returns. Off: a note."
 }

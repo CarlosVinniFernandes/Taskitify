@@ -767,5 +767,7 @@
   "LookGlow": "Brillo del verso actual",
   "LookDepthBlur": "Desenfoque de los otros versos",
   "LookDepthHint": "El desenfoque crece con la distancia al verso actual y con el tamaño de la letra.",
-  "FloatingKeepTaskbarHint": "Activado: el reproductor flotante y el de la barra juntos; un clic en la barra trae el flotante al frente."
+  "FloatingKeepTaskbarHint": "Activado: el reproductor flotante y el de la barra juntos; un clic en la barra trae el flotante al frente.",
+  "LookInterludeDots": "Pausas instrumentales con puntos",
+  "LookInterludeDotsHint": "Tres puntos se encienden uno tras otro mientras la música suena sin voz, mostrando cuánto falta para que vuelva. Desactivado: una nota."
 }

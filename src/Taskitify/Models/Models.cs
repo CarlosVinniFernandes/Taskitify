@@ -594,6 +594,9 @@ public sealed class MiniPlayerStyle
     /// <summary>The blurred cover's blur: 0.4 to 1.8; 1 as it always was.</summary>
     public double BackgroundBlur { get; set; } = 1;
 
+    /// <summary>Instrumental breaks as three animated dots that fill across the break (off: a note).</summary>
+    public bool InterludeDots { get; set; } = true;
+
     public const double DefaultGlow = 0.6;
     public const double DefaultDepth = 1;
 

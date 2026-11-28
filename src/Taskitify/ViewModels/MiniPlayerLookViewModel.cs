@@ -341,6 +341,8 @@ public sealed class MiniPlayerLookViewModel : ObservableObject
         set { var v = MiniPlayerStyle.ClampDim(value / 100); if (v != Look.BackgroundDim) Change(s => s.MiniPlayerLook.BackgroundDim = v); }
     }
 
+    public bool InterludeDots { get => Look.InterludeDots; set { if (value != Look.InterludeDots) Change(s => s.MiniPlayerLook.InterludeDots = value); } }
+
     /// <summary>The depth highlight is chosen: its light and blur can be tuned.</summary>
     public bool IsDepth => Look.Highlight == LyricsHighlight.Depth;
 

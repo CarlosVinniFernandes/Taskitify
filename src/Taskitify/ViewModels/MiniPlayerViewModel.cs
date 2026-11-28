@@ -26,6 +26,31 @@ public sealed class LyricLineViewModel : ObservableObject
 
     public string Text { get; }
 
+    /// <summary>An instrumental break: an empty line, or only music notes.</summary>
+    public bool IsInterlude => Text.All(c => c is '♪' or '♫' or '♬' or '♩' || char.IsWhiteSpace(c));
+
+    /// <summary>When the next line starts (zero for the last one).</summary>
+    public TimeSpan End { get; set; }
+
+    private bool _dots;
+
+    /// <summary>Breaks drawn as animated dots (the look's choice) instead of a note.</summary>
+    public bool ShowsDots
+    {
+        get => _dots && IsInterlude;
+        set
+        {
+            if (_dots == value)
+                return;
+            _dots = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(DisplayText));
+        }
+    }
+
+    /// <summary>The text drawn: a blank of the same height under the dots.</summary>
+    public string DisplayText => ShowsDots ? "\u00A0" : Text;
+
     public bool IsCurrent { get => _isCurrent; set => Set(ref _isCurrent, value); }
 
     public bool IsPast { get => _isPast; set => Set(ref _isPast, value); }
@@ -72,6 +97,25 @@ public sealed class LyricLineViewModel : ObservableObject
         return effect;
     }
 
+    /// <summary>
+    /// The light comes up with the line instead of switching on: over the first part of the line
+    /// (half of it, between 0.3 and 1.5 s), like a voice filling the room.
+    /// </summary>
+    private static System.Windows.Media.Effects.Effect? RampedGlow(System.Windows.Media.Effects.Effect? glow, double milliseconds)
+    {
+        if (glow is not System.Windows.Media.Effects.DropShadowEffect shared || milliseconds <= 0)
+            return glow;
+        var ramp = shared.Clone();
+        var target = ramp.Opacity;
+        ramp.Opacity = 0;
+        ramp.BeginAnimation(System.Windows.Media.Effects.DropShadowEffect.OpacityProperty,
+            new System.Windows.Media.Animation.DoubleAnimation(0, target, TimeSpan.FromMilliseconds(milliseconds))
+            {
+                EasingFunction = new System.Windows.Media.Animation.SineEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseInOut },
+            });
+        return ramp;
+    }
+
     /// <summary>The current line's soft light, sized to the type.</summary>
     private static System.Windows.Media.Effects.Effect? GlowFor(double size, double strength)
     {
@@ -106,7 +150,7 @@ public sealed class LyricLineViewModel : ObservableObject
     /// music apps set lyrics, and the current one stands out by brightness and size.
     /// </summary>
     public void Emphasize(LyricsHighlight highlight, int distance, bool started, bool heavy, LyricMotionMode motion = LyricMotionMode.Off, double size = 1,
-        double glow = MiniPlayerStyle.DefaultGlow, double depth = MiniPlayerStyle.DefaultDepth)
+        double glow = MiniPlayerStyle.DefaultGlow, double depth = MiniPlayerStyle.DefaultDepth, double glowRampMs = 0)
     {
         var current = started && distance == 0;
         var away = Math.Abs(distance);
@@ -120,7 +164,7 @@ public sealed class LyricLineViewModel : ObservableObject
             Scale = !started ? .86 : current ? 1 : steps switch { 1 => .84, 2 => .79, 3 => .75, _ => .72 };
             Emphasis = !started ? .5 : current ? 1 : steps switch { 1 => .36, 2 => .24, 3 => .15, _ => .1 };
             Soften = !started ? null
-                : current ? GlowFor(size, glow)
+                : current ? RampedGlow(GlowFor(size, glow), glowRampMs)
                 : depth <= 0.01 ? null : BlurFor(size * depth * steps switch { 1 => 1.1, 2 => 2.3, 3 => 3.5, _ => 4.6 });
             return;
         }
@@ -540,6 +584,8 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
             OnPropertyChanged(name);
         if (ShowVolume)
             Volume.Refresh();
+        foreach (var line in Lines)
+            line.ShowsDots = Look.InterludeDots;
         UpdateCurrentLine();
         LyricPositionChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -566,6 +612,9 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         UpdateProgress();
         LyricPositionChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>Where the lyrics are now (the projected clock), for what animates between line changes.</summary>
+    public Func<TimeSpan> PositionClock => () => _sync.LyricsPosition;
 
     private bool _wantsLargeCover;
 
@@ -617,7 +666,13 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
         if (_sync.Timeline is { } timeline)
         {
             for (var i = 0; i < timeline.Count; i++)
-                Lines.Add(new LyricLineViewModel(i, timeline.Lines[i].Time, timeline.Lines[i].Text));
+            {
+                Lines.Add(new LyricLineViewModel(i, timeline.Lines[i].Time, timeline.Lines[i].Text)
+                {
+                    End = i + 1 < timeline.Count ? timeline.Lines[i + 1].Time : TimeSpan.Zero,
+                    ShowsDots = Look.InterludeDots,
+                });
+            }
         }
 
         Credit = Lines.Count > 0 ? LyricsCredit.For(_sync.Result) : null;
@@ -649,8 +704,10 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
             Lines[i].MotionMilliseconds = animateLine ? ScrollMilliseconds : 0;
             Lines[i].IsCurrent = i == index;
             Lines[i].IsPast = i < index;
+            var ramp = i == index && natural && _settings.Current.EnableAnimations && Lines[i].End > Lines[i].Time
+                ? Math.Clamp((Lines[i].End - Lines[i].Time).TotalMilliseconds * 0.5, 300, 1500) : 0;
             Lines[i].Emphasize(highlight, i - Math.Max(index, 0), started: index >= 0, heavy: DisplayType, motion: LayoutMotion, size: LyricsFontSize / 23,
-                glow: Look.LyricsGlow, depth: Look.LyricsDepth);
+                glow: Look.LyricsGlow, depth: Look.LyricsDepth, glowRampMs: ramp);
         }
         CurrentIndex = index;
         CurrentLineChanged?.Invoke(this, EventArgs.Empty);
