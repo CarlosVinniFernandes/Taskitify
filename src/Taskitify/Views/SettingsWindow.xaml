@@ -789,6 +789,17 @@
                                     </StackPanel>
                                 </DockPanel>
                             </Border>
+                            <Border Style="{StaticResource Row}">
+                                <DockPanel>
+                                    <ComboBox DockPanel.Dock="Right" ItemsSource="{Binding MinimalLook.VerseCounts}" DisplayMemberPath="Label"
+                                              SelectedValuePath="Value" SelectedValue="{Binding MinimalLook.PlayerVerses}" MinWidth="150"
+                                              AutomationProperties.Name="{DynamicResource Loc.PlayerVerses}" />
+                                    <StackPanel Style="{StaticResource RowText}">
+                                        <TextBlock Style="{StaticResource SettingLabel}" Text="{DynamicResource Loc.PlayerVerses}" />
+                                        <TextBlock Style="{StaticResource SettingHint}" Text="{DynamicResource Loc.PlayerVersesHint}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
                         </StackPanel>
                     </Border>
 

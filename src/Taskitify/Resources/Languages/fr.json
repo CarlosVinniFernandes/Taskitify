@@ -757,5 +757,11 @@
   "PlayerToolsHint": "Les boutons qui apparaissent sur le lecteur flottant, de gauche à droite. Faites glisser une ligne (ou utilisez les flèches) pour changer l’ordre ; désactivez ceux que vous n’utilisez pas.",
   "PlayerToolsReset": "Rétablir l’ordre par défaut",
   "MoveLeft": "Déplacer vers la gauche",
-  "MoveRight": "Déplacer vers la droite"
+  "MoveRight": "Déplacer vers la droite",
+  "LookHighlightDepth": "Profondeur",
+  "PlayerVerses": "Vers affichés",
+  "PlayerVersesHint": "Les paroles font cette hauteur en vers ; la poignée ne change plus que la largeur. Libre : la poignée règle la hauteur. Un vers long est réduit plutôt que coupé.",
+  "PlayerVersesFree": "Libre (poignée)",
+  "PlayerVersesOne": "1 vers",
+  "PlayerVersesMany": "{0} vers"
 }

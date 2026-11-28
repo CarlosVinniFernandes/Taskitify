@@ -57,6 +57,39 @@ public sealed class LyricLineViewModel : ObservableObject
 
     private static readonly System.Windows.Media.Effects.BlurEffect DistantBlur = CreateDistantBlur();
 
+    private static readonly Dictionary<int, System.Windows.Media.Effects.Effect> SizedEffects = [];
+
+    /// <summary>A shared, frozen blur of about <paramref name="radius"/> (half-pixel steps).</summary>
+    private static System.Windows.Media.Effects.Effect BlurFor(double radius)
+    {
+        var key = (int)Math.Round(Math.Clamp(radius, 0.5, 24) * 2);
+        if (!SizedEffects.TryGetValue(key, out var effect))
+        {
+            var blur = new System.Windows.Media.Effects.BlurEffect { Radius = key / 2.0, KernelType = System.Windows.Media.Effects.KernelType.Gaussian };
+            blur.Freeze();
+            SizedEffects[key] = effect = blur;
+        }
+        return effect;
+    }
+
+    /// <summary>The current line's soft light, sized to the type.</summary>
+    private static System.Windows.Media.Effects.Effect GlowFor(double size)
+    {
+        var radius = (int)Math.Round(Math.Clamp(12 * size, 8, 40));
+        var key = -radius;
+        if (!SizedEffects.TryGetValue(key, out var effect))
+        {
+            var glow = new System.Windows.Media.Effects.DropShadowEffect
+            {
+                Color = System.Windows.Media.Colors.White, ShadowDepth = 0, BlurRadius = radius, Opacity = 0.38,
+                RenderingBias = System.Windows.Media.Effects.RenderingBias.Performance,
+            };
+            glow.Freeze();
+            SizedEffects[key] = effect = glow;
+        }
+        return effect;
+    }
+
     private static System.Windows.Media.Effects.BlurEffect CreateDistantBlur()
     {
         var blur = new System.Windows.Media.Effects.BlurEffect { Radius = 0.7 };
@@ -69,10 +102,22 @@ public sealed class LyricLineViewModel : ObservableObject
     /// negative = past). With a display typeface (<paramref name="heavy"/>) every line is bold, as
     /// music apps set lyrics, and the current one stands out by brightness and size.
     /// </summary>
-    public void Emphasize(LyricsHighlight highlight, int distance, bool started, bool heavy, LyricMotionMode motion = LyricMotionMode.Off)
+    public void Emphasize(LyricsHighlight highlight, int distance, bool started, bool heavy, LyricMotionMode motion = LyricMotionMode.Off, double size = 1)
     {
         var current = started && distance == 0;
         var away = Math.Abs(distance);
+        if (highlight == LyricsHighlight.Depth)
+        {
+            // Like a lens focused on the current line: the others step back (smaller, fainter) and
+            // blur the further they are. Radii follow the type: 2 px reads on a 23 px line, not on 60.
+            var steps = Math.Min(away, 4);
+            Weight = current ? (heavy ? System.Windows.FontWeights.ExtraBold : System.Windows.FontWeights.Bold)
+                : heavy ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.SemiBold;
+            Scale = !started ? .86 : current ? 1 : steps switch { 1 => .84, 2 => .79, 3 => .75, _ => .72 };
+            Emphasis = !started ? .5 : current ? 1 : steps switch { 1 => .36, 2 => .24, 3 => .15, _ => .1 };
+            Soften = !started ? null : current ? GlowFor(size) : BlurFor(size * steps switch { 1 => 1.1, 2 => 2.3, 3 => 3.5, _ => 4.6 });
+            return;
+        }
         if (motion != LyricMotionMode.Off)
         {
             Weight = heavy ? System.Windows.FontWeights.Bold : System.Windows.FontWeights.SemiBold;
@@ -557,7 +602,7 @@ public sealed class MiniPlayerViewModel : ObservableObject, IDisposable
             Lines[i].MotionMilliseconds = animateLine ? ScrollMilliseconds : 0;
             Lines[i].IsCurrent = i == index;
             Lines[i].IsPast = i < index;
-            Lines[i].Emphasize(highlight, i - Math.Max(index, 0), started: index >= 0, heavy: DisplayType, motion: LayoutMotion);
+            Lines[i].Emphasize(highlight, i - Math.Max(index, 0), started: index >= 0, heavy: DisplayType, motion: LayoutMotion, size: LyricsFontSize / 23);
         }
         CurrentIndex = index;
         CurrentLineChanged?.Invoke(this, EventArgs.Empty);

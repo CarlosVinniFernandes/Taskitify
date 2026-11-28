@@ -757,5 +757,11 @@
   "PlayerToolsHint": "I pulsanti che compaiono sul player flottante, da sinistra a destra. Trascina una riga (o usa le frecce) per cambiare l’ordine; disattiva quelli che non usi.",
   "PlayerToolsReset": "Ripristina l’ordine predefinito",
   "MoveLeft": "Sposta a sinistra",
-  "MoveRight": "Sposta a destra"
+  "MoveRight": "Sposta a destra",
+  "LookHighlightDepth": "Profondità",
+  "PlayerVerses": "Versi visibili",
+  "PlayerVersesHint": "Il testo è alto questo numero di versi; la maniglia cambia solo la larghezza. Libero: la maniglia decide l’altezza. Un verso lungo viene rimpicciolito invece di essere tagliato.",
+  "PlayerVersesFree": "Libero (maniglia)",
+  "PlayerVersesOne": "1 verso",
+  "PlayerVersesMany": "{0} versi"
 }

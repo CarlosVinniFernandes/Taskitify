@@ -108,6 +108,7 @@ public partial class MiniPlayerWindow : Window
         // The pointer's own state: IsMouseOver can still be true while MouseLeave is raised.
         MouseEnter += (_, _) => { _pointerOver = true; UpdateHoverChrome(); UpdatePinnedToolbar(); };
         MouseLeave += (_, _) => { _pointerOver = false; UpdateHoverChrome(); UpdatePinnedToolbar(); };
+        MouseMove += (_, e) => OnPresentPointerMoved(e.GetPosition(this));
         IsVisibleChanged += (_, _) => { if (!IsVisible) _pointerOver = false; };
         PinnedSwitch.Click += (_, _) =>
         {
@@ -429,6 +430,7 @@ public partial class MiniPlayerWindow : Window
             SetAppWindow(false);
         }
         _presenting = false;
+        StopPresentIdle();
         _beforeFill = null;
         IsPinned = false;
         _pinned = null;
@@ -472,7 +474,7 @@ public partial class MiniPlayerWindow : Window
         if (o.Topmost && _pinnedForeground is null)
             _pinnedForeground = new ForegroundWatcher(h =>
             {
-                if (h != _hwnd && IsPinned && _pinned?.Topmost == true)
+                if (h != _hwnd && IsPinned && _pinned?.Topmost == true && !IsOwnWindow(h))
                     WindowInterop.BringToTopmost(_hwnd);
             });
         else if (!o.Topmost && _pinnedForeground is not null)
@@ -550,6 +552,8 @@ public partial class MiniPlayerWindow : Window
         {
             _presentEsc.Stop();
         }
+        _presentIdle = true;
+        WakePresentation();
         UpdatePinnedToolbar();
         ScrollToCurrent(animate: false);
         QueueLyrics(animate: false);
@@ -646,6 +650,7 @@ public partial class MiniPlayerWindow : Window
             return;
         _beforeFill = null;
         _presenting = false;
+        StopPresentIdle();
         if (WindowState != WindowState.Normal)
             WindowState = WindowState.Normal;
         SetAppWindow(false);
@@ -793,7 +798,7 @@ public partial class MiniPlayerWindow : Window
     private void UpdateFit()
     {
         var usual = _vm.IsCinema ? (_vm.ShowCover ? 268 : 200) : 176;
-        _vm.FitScale = IsPinned && _pinned is { AutoFit: true } ? _lyricsBase / usual : 1;
+        _vm.FitScale = IsPinned && _pinned is { AutoFit: true } && Verses == 0 ? _lyricsBase / usual : 1;
     }
 
     /// <summary>One click from Settings: the floating player moved to a spot of its screen.</summary>
@@ -852,7 +857,9 @@ public partial class MiniPlayerWindow : Window
             maxLyrics = Math.Max(70, _gripFrom.Lyrics + ((monitor.WorkArea.Bottom - bounds.Bottom) / scale) + (ShadowRoom / 2));
         }
         _beforeFill = null;
-        _gripPending = (Math.Clamp(_gripFrom.Width + dx, min, max), Math.Clamp(_gripFrom.Lyrics + dy, 70, maxLyrics), 1);
+        // A set number of verses fixes the height: the grip then changes the width only.
+        var lyrics = Verses > 0 ? _gripFrom.Lyrics : Math.Clamp(_gripFrom.Lyrics + dy, 70, maxLyrics);
+        _gripPending = (Math.Clamp(_gripFrom.Width + dx, min, max), lyrics, 1);
     }
 
     /// <summary>Once per frame while the grip moves: one layout per frame, however fast the mouse.</summary>
@@ -1066,6 +1073,10 @@ public partial class MiniPlayerWindow : Window
                 _lyricInk.Invalidate();
                 QueueLyrics(animate: false);
                 break;
+            case nameof(MiniPlayerViewModel.LyricsFontSize):
+                if (IsVisible)
+                    ApplyVerses();
+                break;
             case nameof(MiniPlayerViewModel.WindowWidth):
                 // Not a XAML binding: the window writes its HWND's size to Width, which drops one.
                 if (!(IsPinned && _pinned is { Width: > 0 }))
@@ -1276,8 +1287,32 @@ public partial class MiniPlayerWindow : Window
     private void SetLyricsHeight(double height)
     {
         _lyricsMargin = LyricsPart.Margin;
-        _lyricsBase = height;
+        _lyricsBase = Verses > 0 ? VersesHeight(Verses) : height;
         ApplyToolbarRoom();
+    }
+
+    /// <summary>Floating with a set number of verses (0: free, as the grip left it; maximized and full screen use the screen).</summary>
+    private int Verses => IsPinned && !_presenting && _pinned is { Verses: > 0 } o ? o.Verses : 0;
+
+    /// <summary>Room for <paramref name="verses"/> lines of the current type, plus a little for the fades at the edges.</summary>
+    private double VersesHeight(int verses)
+    {
+        var line = _vm.MotionLineHeight;
+        var padding = _vm.LyricsLinePadding.Top + _vm.LyricsLinePadding.Bottom;
+        return Math.Round(Math.Max(60, (verses * (line + padding)) + (line * (verses == 1 ? 0.35 : 0.6))));
+    }
+
+    /// <summary>The type size changed (A-, A+, a look): a set number of verses keeps fitting.</summary>
+    private void ApplyVerses()
+    {
+        if (Verses == 0)
+            return;
+        var height = VersesHeight(Verses);
+        if (Math.Abs(height - _lyricsBase) < 0.5)
+            return;
+        ResizeLyrics(height);
+        AdaptToSize();
+        QueueLyrics(animate: false);
     }
 
     /// <summary>From the grip: only the height changes.</summary>
@@ -1319,6 +1354,68 @@ public partial class MiniPlayerWindow : Window
         }
         PinnedToolbar.Opacity = shown;
         PinnedToolbar.IsHitTestVisible = shown > 0.5;
+        CaptionButtons.Opacity = _presenting ? shown : 1;
+        CaptionButtons.IsHitTestVisible = !_presenting || shown > 0.5;
+    }
+
+    // Maximized or full screen: the pointer has rested (buttons and cursor hidden) since this long.
+    private static readonly TimeSpan PresentIdleAfter = TimeSpan.FromSeconds(2.5);
+    private bool _presentIdle;
+    private Point _presentPointer = new(double.NaN, double.NaN);
+    private DispatcherTimer? _presentIdleTimer;
+
+    /// <summary>A real pointer move (not a layout change under a still pointer): buttons and cursor back, for a while.</summary>
+    private void OnPresentPointerMoved(Point at)
+    {
+        if (!_presenting)
+            return;
+        if (Math.Abs(at.X - _presentPointer.X) < 2 && Math.Abs(at.Y - _presentPointer.Y) < 2)
+            return;
+        _presentPointer = at;
+        WakePresentation();
+    }
+
+    private void WakePresentation()
+    {
+        _presentIdleTimer ??= CreatePresentIdleTimer();
+        _presentIdleTimer.Stop();
+        _presentIdleTimer.Start();
+        if (!_presentIdle)
+            return;
+        _presentIdle = false;
+        ClearValue(CursorProperty);
+        UpdatePinnedToolbar();
+    }
+
+    private DispatcherTimer CreatePresentIdleTimer()
+    {
+        var timer = new DispatcherTimer { Interval = PresentIdleAfter };
+        timer.Tick += (_, _) =>
+        {
+            // Over the buttons the pointer may rest: they stay.
+            if (!_presenting || PinnedToolbar.IsMouseOver || CaptionButtons.IsMouseOver)
+                return;
+            timer.Stop();
+            _presentIdle = true;
+            Cursor = Cursors.None;
+            UpdatePinnedToolbar();
+        };
+        return timer;
+    }
+
+    private void StopPresentIdle()
+    {
+        _presentIdleTimer?.Stop();
+        _presentIdle = false;
+        _presentPointer = new Point(double.NaN, double.NaN);
+        ClearValue(CursorProperty);
+    }
+
+    /// <summary>A window of this app (the settings): the floating player does not jump over it.</summary>
+    private static bool IsOwnWindow(IntPtr hwnd)
+    {
+        NativeMethods.GetWindowThreadProcessId(hwnd, out var pid);
+        return pid == (uint)Environment.ProcessId;
     }
 
     /// <summary>The hover buttons in the given order (the popup's own two first); moved only when it changed.</summary>
@@ -1390,7 +1487,9 @@ public partial class MiniPlayerWindow : Window
         System.Windows.Automation.AutomationProperties.SetName(PopupKeepOpen, (string)PopupKeepOpen.ToolTip);
         PinnedSettings.ToolTip = LocalizationService.Get(IsPinned ? "FloatingPlayerSettings" : "MiniPlayerSettings");
         System.Windows.Automation.AutomationProperties.SetName(PinnedSettings, (string)PinnedSettings.ToolTip);
-        var target = available && (_pointerOver || _gripping || (IsPinned && o is { PlayerButtonsOnHover: false })) ? 1.0 : 0.0;
+        // Maximized and full screen: like a video player, the buttons come with the pointer and leave when it rests.
+        var hover = _presenting ? !_presentIdle : _pointerOver || _gripping || (IsPinned && o is { PlayerButtonsOnHover: false });
+        var target = available && hover ? 1.0 : 0.0;
         if (IsPinned && o is { } p)
         {
             PinnedLock.Content = p.Locked ? "\uE72E" : "\uE785";
@@ -1537,6 +1636,74 @@ public partial class MiniPlayerWindow : Window
             : (viewport / 2) - top - (container.ActualHeight / 2);
     }
 
+    private FrameworkElement? _fittedLine;
+
+    /// <summary>
+    /// A long verse never shows cut: the fades at the edges narrow to leave the current line whole,
+    /// and a line still taller than the lyrics' room is set smaller (and wider: it rewraps into
+    /// fewer lines) until it fits. The others keep their size.
+    /// </summary>
+    private void FitCurrentLine(FrameworkElement? line, double viewport)
+    {
+        if (_fittedLine is { } previous && !ReferenceEquals(previous, line))
+        {
+            previous.LayoutTransform = Transform.Identity;
+            _fittedLine = null;
+            LyricsList.UpdateLayout();
+        }
+        if (line is not null && viewport > 0)
+        {
+            var room = viewport * 0.94;
+            var scale = line.LayoutTransform is ScaleTransform s ? s.ScaleX : 1;
+            if (line.ActualHeight * scale > room + 0.5 || scale < 1)
+            {
+                // Measured untransformed: try the size that fits, then check again (rewrapped lines are shorter).
+                line.LayoutTransform = Transform.Identity;
+                LyricsList.UpdateLayout();
+                var natural = line.ActualHeight;
+                if (natural > room)
+                {
+                    var fit = Math.Max(0.5, room / natural);
+                    for (var i = 0; i < 3; i++)
+                    {
+                        line.LayoutTransform = new ScaleTransform(fit, fit);
+                        LyricsList.UpdateLayout();
+                        var height = line.ActualHeight * fit;
+                        if (height <= room + 0.5)
+                        {
+                            // Rewrapped into fewer lines: grow back as much as still fits.
+                            var grown = Math.Min(1, fit * Math.Sqrt(room / Math.Max(1, height)));
+                            if (grown > fit + 0.01)
+                            {
+                                line.LayoutTransform = new ScaleTransform(grown, grown);
+                                LyricsList.UpdateLayout();
+                                if (line.ActualHeight * grown > room + 0.5)
+                                {
+                                    line.LayoutTransform = new ScaleTransform(fit, fit);
+                                    LyricsList.UpdateLayout();
+                                }
+                            }
+                            break;
+                        }
+                        fit = Math.Max(0.5, fit * room / height);
+                    }
+                    _fittedLine = line;
+                }
+            }
+        }
+
+        // The fades take at most what the current line leaves free.
+        var lineHeight = line is null ? 0 : line.ActualHeight * (line.LayoutTransform is ScaleTransform t ? t.ScaleX : 1);
+        var edge = viewport > 0 ? Math.Clamp((viewport - lineHeight) / 2 / viewport, 0.02, 0.16) : 0.16;
+        if (LyricsFade.GradientStops.Count == 4 && Math.Abs(LyricsFade.GradientStops[1].Offset - edge) > 0.002)
+        {
+            if (LyricsFade.IsFrozen)
+                return;
+            LyricsFade.GradientStops[1].Offset = edge;
+            LyricsFade.GradientStops[2].Offset = 1 - edge;
+        }
+    }
+
     /// <summary>Translate the list so the current line is vertically centred in the viewport.</summary>
     private void ScrollToCurrent(bool animate)
     {
@@ -1552,6 +1719,7 @@ public partial class MiniPlayerWindow : Window
         var container = LyricsList.ItemContainerGenerator.ContainerFromIndex(Math.Max(0, index)) as FrameworkElement;
         if (container is null)
             return;
+        FitCurrentLine(index >= 0 ? container : null, viewport);
 
         var top = container.TranslatePoint(new Point(0, 0), LyricsList).Y;
         target = index < 0
@@ -1574,7 +1742,7 @@ public partial class MiniPlayerWindow : Window
 
 /// <summary>How the floating player behaves (Minimal Mode's settings) and where its changes go.</summary>
 public sealed record PinnedOptions(bool ClickThrough, bool Locked, bool Topmost, bool ShowMark, bool AutoFit, bool ControlsOnHover, bool PlayerButtonsOnHover,
-    int Width, int LyricsHeight, double Zoom, Action<bool> SetClickThrough, Action<PixelRect, int, int, double> Saved, Action<bool> SetLocked, Action TurnOff, Action SwitchMode, PlayerTools? Tools = null);
+    int Width, int LyricsHeight, double Zoom, Action<bool> SetClickThrough, Action<PixelRect, int, int, double> Saved, Action<bool> SetLocked, Action TurnOff, Action SwitchMode, PlayerTools? Tools = null, int Verses = 0);
 
 /// <summary>Which of the floating player's own buttons are shown.</summary>
 public sealed record PlayerTools(bool Switch, bool Size, bool Maximize, bool FullScreen, bool Settings, bool ClickThrough, bool Lock, bool Close, IReadOnlyList<string> Order)

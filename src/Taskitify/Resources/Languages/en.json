@@ -757,5 +757,11 @@
   "PlayerToolsHint": "The buttons that appear over the floating player, left to right. Drag a row (or use the arrows) to change the order; switch off the ones you do not use.",
   "PlayerToolsReset": "Restore the default order",
   "MoveLeft": "Move left",
-  "MoveRight": "Move right"
+  "MoveRight": "Move right",
+  "LookHighlightDepth": "Depth",
+  "PlayerVerses": "Verses shown",
+  "PlayerVersesHint": "The lyrics are this many verses tall; the grip then changes only the width. Free: the grip sets the height. A long verse is set smaller rather than cut.",
+  "PlayerVersesFree": "Free (grip)",
+  "PlayerVersesOne": "1 verse",
+  "PlayerVersesMany": "{0} verses"
 }

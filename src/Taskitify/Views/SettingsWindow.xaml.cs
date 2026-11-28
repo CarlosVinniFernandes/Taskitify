@@ -40,6 +40,10 @@ public partial class SettingsWindow : Window
                 e.Handled = true;
         };
         Deactivated += (_, _) => { if (vm.MinimalLook is { IsCapturing: true } look) look.IsCapturing = false; };
+        // The floating player stays on top of everything (maximized and full screen too): while the
+        // settings are in use they go above it, and back to a normal window once another one is.
+        Activated += (_, _) => Topmost = Application.Current.Windows.OfType<MiniPlayerWindow>().Any(w => w.IsVisible && w.IsPinned);
+        Deactivated += (_, _) => Topmost = false;
         WirePlayerToolDrag();
         // A saved look gets its name right away: the cursor waits in it, the default name selected.
         if (vm.MiniLook is { } look)

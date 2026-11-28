@@ -24,8 +24,24 @@ public class PlayerToolOrderTests
     public void A_button_added_later_takes_its_default_place()
     {
         // An order saved before full screen existed.
-        var saved = new[] { "Settings", "Size", "Maximize", "Switch", "ClickThrough", "Lock", "Close" };
+        var saved = new[] { "Settings", "Size", "Switch", "ClickThrough", "Lock", "Maximize", "Close" };
         Assert.Equal(PlayerToolIds.DefaultOrder, PlayerToolIds.Normalize(saved));
+    }
+
+    [Fact]
+    public void Window_buttons_come_last_full_screen_then_maximize_then_close()
+    {
+        Assert.Equal(new[] { "FullScreen", "Maximize", "Close" }, PlayerToolIds.DefaultOrder.TakeLast(3));
+    }
+
+    [Fact]
+    public void The_first_default_order_left_untouched_follows_the_new_default()
+    {
+        var first = new[] { "Settings", "Size", "Maximize", "FullScreen", "Switch", "ClickThrough", "Lock", "Close" };
+        Assert.Equal(PlayerToolIds.DefaultOrder, PlayerToolIds.Normalize(first));
+        // An order the user changed is kept.
+        var mine = new[] { "Close", "Settings", "Size", "Maximize", "FullScreen", "Switch", "ClickThrough", "Lock" };
+        Assert.Equal(mine, PlayerToolIds.Normalize(mine));
     }
 
     [Fact]

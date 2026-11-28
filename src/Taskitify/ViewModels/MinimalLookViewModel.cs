@@ -69,6 +69,13 @@ public sealed class MinimalLookViewModel : ObservableObject
         LoadPlayerTools();
     }
 
+    /// <summary>The floating player's lyrics height, in verses (0: free).</summary>
+    public IReadOnlyList<VerseCount> VerseCounts { get; } =
+        [new(0, LocalizationService.Get("PlayerVersesFree")), new(1, LocalizationService.Get("PlayerVersesOne")),
+         .. new[] { 2, 3, 5, 7 }.Select(n => new VerseCount(n, LocalizationService.Format("PlayerVersesMany", n)))];
+
+    public int PlayerVerses { get => S.PlayerVerses; set => Change(s => s.PlayerVerses = Math.Clamp(value, 0, 12)); }
+
     /// <summary>The floating player's hover buttons, in their order on the player (left to right).</summary>
     public ObservableCollection<PlayerToolItem> PlayerTools { get; } = [];
 
@@ -455,3 +462,6 @@ public sealed class MinimalLookViewModel : ObservableObject
             o.Thumbnail = MiniPlayerLookThumbnails.MinimalScene(MinimalBackdrop.Clear, 0, S.TextColor, o.Value, cover, palette, verse);
     }
 }
+
+/// <summary>A choice of the floating player's lyrics height.</summary>
+public sealed record VerseCount(int Value, string Label);

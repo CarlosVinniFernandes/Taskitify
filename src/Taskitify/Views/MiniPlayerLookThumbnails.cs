@@ -237,6 +237,7 @@ internal static class MiniPlayerLookThumbnails
     }
 
     private static byte LineOpacity(LyricsHighlight highlight, int distance) => distance == 0 ? (byte)0xFF
+        : highlight == LyricsHighlight.Depth ? (Math.Abs(distance) == 1 ? (byte)0x70 : (byte)0x30)
         : highlight == LyricsHighlight.Progressive && Math.Abs(distance) == 1 ? (byte)0xA0 : (byte)0x55;
 
     private static void Line(DrawingContext dc, double x, double y, double width, double length, TextAlignment alignment,

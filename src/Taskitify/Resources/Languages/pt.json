@@ -757,5 +757,11 @@
   "PlayerToolsHint": "Os botões que aparecem sobre o Player Flutuante, da esquerda para a direita. Arraste uma linha (ou use as setas) para mudar a ordem; desligue os que você não usa.",
   "PlayerToolsReset": "Restaurar a ordem padrão",
   "MoveLeft": "Mover para a esquerda",
-  "MoveRight": "Mover para a direita"
+  "MoveRight": "Mover para a direita",
+  "LookHighlightDepth": "Profundidade",
+  "PlayerVerses": "Versos visíveis",
+  "PlayerVersesHint": "A letra fica com essa altura em versos; a alça passa a mudar só a largura. Livre: a alça define a altura. Um verso longo fica menor em vez de cortado.",
+  "PlayerVersesFree": "Livre (alça)",
+  "PlayerVersesOne": "1 verso",
+  "PlayerVersesMany": "{0} versos"
 }

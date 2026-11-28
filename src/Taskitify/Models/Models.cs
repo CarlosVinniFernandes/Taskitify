@@ -523,6 +523,12 @@ public enum LyricsHighlight
 
     /// <summary>Lines fade the further they are from the current one.</summary>
     Progressive,
+
+    /// <summary>
+    /// Depth of field: the current line full size and lit, the others smaller, fainter and more
+    /// blurred the further they are, the blur sized to the type so it reads at any size.
+    /// </summary>
+    Depth,
 }
 
 public enum LyricsTypeface
@@ -856,6 +862,9 @@ public sealed class MinimalModeSettings
     /// <summary>The floating player's buttons, left to right (see <see cref="PlayerToolIds"/>); unknown ids are dropped, missing ones added.</summary>
     public List<string> PlayerToolOrder { get; set; } = [.. PlayerToolIds.DefaultOrder];
 
+    /// <summary>The floating player's lyrics: this many verses tall (0: free, the grip sets the height).</summary>
+    public int PlayerVerses { get; set; }
+
     public int X { get; set; }
 
     public int Y { get; set; }
@@ -915,12 +924,17 @@ public static class PlayerToolIds
     public const string Lock = "Lock";
     public const string Close = "Close";
 
-    /// <summary>Most used first, the window's own buttons last with close at the end, like any window.</summary>
-    public static readonly IReadOnlyList<string> DefaultOrder = [Settings, Size, Maximize, FullScreen, Switch, ClickThrough, Lock, Close];
+    /// <summary>Most used first; the window's own buttons last: full screen, maximize, then close, like any window.</summary>
+    public static readonly IReadOnlyList<string> DefaultOrder = [Settings, Size, Switch, ClickThrough, Lock, FullScreen, Maximize, Close];
+
+    // The first default (Nov 2026), saved by every settings file since: still untouched, it follows the new default.
+    private static readonly IReadOnlyList<string> FirstDefaultOrder = [Settings, Size, Maximize, FullScreen, Switch, ClickThrough, Lock, Close];
 
     /// <summary>A saved order made whole: known ids once each, in its order, then any missing ones in the default order.</summary>
     public static List<string> Normalize(IEnumerable<string>? order)
     {
+        if (order is not null && order.SequenceEqual(FirstDefaultOrder, StringComparer.OrdinalIgnoreCase))
+            return [.. DefaultOrder];
         var result = new List<string>();
         foreach (var id in order ?? [])
         {

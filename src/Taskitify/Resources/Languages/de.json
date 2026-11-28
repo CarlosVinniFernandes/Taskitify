@@ -757,5 +757,11 @@
   "PlayerToolsHint": "Die Schaltflächen über dem schwebenden Player, von links nach rechts. Ziehe eine Zeile (oder nutze die Pfeile), um die Reihenfolge zu ändern; schalte aus, was du nicht brauchst.",
   "PlayerToolsReset": "Standardreihenfolge wiederherstellen",
   "MoveLeft": "Nach links",
-  "MoveRight": "Nach rechts"
+  "MoveRight": "Nach rechts",
+  "LookHighlightDepth": "Tiefe",
+  "PlayerVerses": "Sichtbare Zeilen",
+  "PlayerVersesHint": "Der Songtext ist so viele Zeilen hoch; der Griff ändert dann nur die Breite. Frei: Der Griff bestimmt die Höhe. Eine lange Zeile wird verkleinert statt abgeschnitten.",
+  "PlayerVersesFree": "Frei (Griff)",
+  "PlayerVersesOne": "1 Zeile",
+  "PlayerVersesMany": "{0} Zeilen"
 }

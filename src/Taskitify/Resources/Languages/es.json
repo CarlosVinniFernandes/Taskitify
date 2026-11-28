@@ -757,5 +757,11 @@
   "PlayerToolsHint": "Los botones que aparecen sobre el reproductor flotante, de izquierda a derecha. Arrastra una fila (o usa las flechas) para cambiar el orden; desactiva los que no uses.",
   "PlayerToolsReset": "Restaurar el orden predeterminado",
   "MoveLeft": "Mover a la izquierda",
-  "MoveRight": "Mover a la derecha"
+  "MoveRight": "Mover a la derecha",
+  "LookHighlightDepth": "Profundidad",
+  "PlayerVerses": "Versos visibles",
+  "PlayerVersesHint": "La letra mide esta cantidad de versos; el tirador solo cambia el ancho. Libre: el tirador define la altura. Un verso largo se reduce en lugar de cortarse.",
+  "PlayerVersesFree": "Libre (tirador)",
+  "PlayerVersesOne": "1 verso",
+  "PlayerVersesMany": "{0} versos"
 }
