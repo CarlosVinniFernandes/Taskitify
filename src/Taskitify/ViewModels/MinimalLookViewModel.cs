@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -58,6 +59,49 @@ public sealed class MinimalLookViewModel : ObservableObject
         });
         foreach (var app in _settings.Current.Minimal.AutoApps)
             AutoApps.Add(app);
+        MoveToolUpCommand = new RelayCommand(p => { if (p is PlayerToolItem t) MoveTool(t, PlayerTools.IndexOf(t) - 1); });
+        MoveToolDownCommand = new RelayCommand(p => { if (p is PlayerToolItem t) MoveTool(t, PlayerTools.IndexOf(t) + 1); });
+        ResetToolOrderCommand = new RelayCommand(() =>
+        {
+            Change(s => s.PlayerToolOrder = [.. PlayerToolIds.DefaultOrder]);
+            LoadPlayerTools();
+        });
+        LoadPlayerTools();
+    }
+
+    /// <summary>The floating player's hover buttons, in their order on the player (left to right).</summary>
+    public ObservableCollection<PlayerToolItem> PlayerTools { get; } = [];
+
+    public ICommand MoveToolUpCommand { get; }
+    public ICommand MoveToolDownCommand { get; }
+    public ICommand ResetToolOrderCommand { get; }
+
+    /// <summary>Put a button at another place (the list's drag and drop, and its arrows).</summary>
+    public void MoveTool(PlayerToolItem tool, int index)
+    {
+        var from = PlayerTools.IndexOf(tool);
+        if (from < 0 || index < 0 || index >= PlayerTools.Count || index == from)
+            return;
+        PlayerTools.Move(from, index);
+        var order = PlayerTools.Select(t => t.Id).ToList();
+        Change(s => s.PlayerToolOrder = order);
+    }
+
+    private void LoadPlayerTools()
+    {
+        PlayerTools.Clear();
+        foreach (var id in PlayerToolIds.Normalize(S.PlayerToolOrder))
+            PlayerTools.Add(id switch
+            {
+                PlayerToolIds.Settings => new PlayerToolItem(id, () => S.PlayerShowSettingsButton, v => Change(s => s.PlayerShowSettingsButton = v)),
+                PlayerToolIds.Size => new PlayerToolItem(id, () => S.PlayerShowSizeButtons, v => Change(s => s.PlayerShowSizeButtons = v)),
+                PlayerToolIds.Maximize => new PlayerToolItem(id, () => S.PlayerShowFillButton, v => Change(s => s.PlayerShowFillButton = v)),
+                PlayerToolIds.FullScreen => new PlayerToolItem(id, () => S.PlayerShowFullScreenButton, v => Change(s => s.PlayerShowFullScreenButton = v)),
+                PlayerToolIds.Switch => new PlayerToolItem(id, () => S.PlayerShowSwitchButton, v => Change(s => s.PlayerShowSwitchButton = v)),
+                PlayerToolIds.ClickThrough => new PlayerToolItem(id, () => S.PlayerShowClickThroughButton, v => Change(s => s.PlayerShowClickThroughButton = v)),
+                PlayerToolIds.Lock => new PlayerToolItem(id, () => S.PlayerShowLockButton, v => Change(s => s.PlayerShowLockButton = v)),
+                _ => new PlayerToolItem(id, () => S.PlayerShowCloseButton, v => Change(s => s.PlayerShowCloseButton = v)),
+            });
     }
 
     private static LookOption<T>[] Options<T>(string key) where T : struct, Enum =>

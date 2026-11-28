@@ -746,5 +746,16 @@
   "Field.Result": "Risultato",
   "Field.Light square (#hex)": "Casa chiara (#hex)",
   "Field.Dark square (#hex)": "Casa scura (#hex)",
-  "Field.Comment": "Commento"
+  "Field.Comment": "Commento",
+  "FloatingPlayerSettings": "Impostazioni del player flottante",
+  "FloatingPlayerClose": "Chiudi il player flottante",
+  "MaximizeWindow": "Ingrandisci (tutta la finestra, barra delle applicazioni visibile)",
+  "FullScreen": "Schermo intero",
+  "ExitFullScreen": "Esci dallo schermo intero (Esc)",
+  "PlayerToolSize": "Dimensione del testo (A- e A+)",
+  "PlayerToolsTitle": "Pulsanti al passaggio del mouse",
+  "PlayerToolsHint": "I pulsanti che compaiono sul player flottante, da sinistra a destra. Trascina una riga (o usa le frecce) per cambiare l’ordine; disattiva quelli che non usi.",
+  "PlayerToolsReset": "Ripristina l’ordine predefinito",
+  "MoveLeft": "Sposta a sinistra",
+  "MoveRight": "Sposta a destra"
 }

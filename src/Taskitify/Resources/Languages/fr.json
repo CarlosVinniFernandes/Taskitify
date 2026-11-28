@@ -746,5 +746,16 @@
   "Field.Result": "Résultat",
   "Field.Light square (#hex)": "Case claire (#hex)",
   "Field.Dark square (#hex)": "Case foncée (#hex)",
-  "Field.Comment": "Commentaire"
+  "Field.Comment": "Commentaire",
+  "FloatingPlayerSettings": "Réglages du lecteur flottant",
+  "FloatingPlayerClose": "Fermer le lecteur flottant",
+  "MaximizeWindow": "Agrandir (toute la fenêtre, barre des tâches visible)",
+  "FullScreen": "Plein écran",
+  "ExitFullScreen": "Quitter le plein écran (Échap)",
+  "PlayerToolSize": "Taille des paroles (A- et A+)",
+  "PlayerToolsTitle": "Boutons au survol",
+  "PlayerToolsHint": "Les boutons qui apparaissent sur le lecteur flottant, de gauche à droite. Faites glisser une ligne (ou utilisez les flèches) pour changer l’ordre ; désactivez ceux que vous n’utilisez pas.",
+  "PlayerToolsReset": "Rétablir l’ordre par défaut",
+  "MoveLeft": "Déplacer vers la gauche",
+  "MoveRight": "Déplacer vers la droite"
 }

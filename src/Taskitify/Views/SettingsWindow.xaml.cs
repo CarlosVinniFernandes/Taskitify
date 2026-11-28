@@ -40,6 +40,7 @@ public partial class SettingsWindow : Window
                 e.Handled = true;
         };
         Deactivated += (_, _) => { if (vm.MinimalLook is { IsCapturing: true } look) look.IsCapturing = false; };
+        WirePlayerToolDrag();
         // A saved look gets its name right away: the cursor waits in it, the default name selected.
         if (vm.MiniLook is { } look)
             look.LookSaved += (_, _) => Dispatcher.InvokeAsync(() =>
@@ -47,6 +48,55 @@ public partial class SettingsWindow : Window
                 LookNameBox.Focus();
                 LookNameBox.SelectAll();
             }, System.Windows.Threading.DispatcherPriority.Input);
+    }
+
+    /// <summary>
+    /// The floating player's button list: a row dragged over another takes its place at once (the
+    /// player follows live), and the order is saved as it changes. The arrows and switches still click.
+    /// </summary>
+    private void WirePlayerToolDrag()
+    {
+        PlayerToolItem? pressed = null;
+        Point pressedAt = default;
+        static PlayerToolItem? ItemAt(object source) =>
+            (source as FrameworkElement ?? (source as FrameworkContentElement)?.Parent as FrameworkElement)?.DataContext as PlayerToolItem;
+        static bool OnControl(DependencyObject? d)
+        {
+            for (; d is not null and not ContentPresenter; d = d is System.Windows.Media.Visual or System.Windows.Media.Media3D.Visual3D ? System.Windows.Media.VisualTreeHelper.GetParent(d) : LogicalTreeHelper.GetParent(d))
+            {
+                if (d is System.Windows.Controls.Primitives.ButtonBase)
+                    return true;
+            }
+            return false;
+        }
+
+        PlayerToolList.PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            pressed = OnControl(e.OriginalSource as DependencyObject) ? null : ItemAt(e.OriginalSource);
+            pressedAt = e.GetPosition(PlayerToolList);
+        };
+        PlayerToolList.PreviewMouseLeftButtonUp += (_, _) => pressed = null;
+        PlayerToolList.PreviewMouseMove += (_, e) =>
+        {
+            if (pressed is not { } item || e.LeftButton != System.Windows.Input.MouseButtonState.Pressed)
+                return;
+            var moved = e.GetPosition(PlayerToolList) - pressedAt;
+            if (Math.Abs(moved.Y) < SystemParameters.MinimumVerticalDragDistance && Math.Abs(moved.X) < SystemParameters.MinimumHorizontalDragDistance)
+                return;
+            pressed = null;
+            DragDrop.DoDragDrop(PlayerToolList, new DataObject(typeof(PlayerToolItem), item), DragDropEffects.Move);
+        };
+        PlayerToolList.DragOver += (_, e) =>
+        {
+            e.Effects = DragDropEffects.None;
+            if (e.Data.GetData(typeof(PlayerToolItem)) is not PlayerToolItem dragged || _vm.MinimalLook is not { } look)
+                return;
+            e.Effects = DragDropEffects.Move;
+            e.Handled = true;
+            if (ItemAt(e.OriginalSource) is { } target && !ReferenceEquals(target, dragged))
+                look.MoveTool(dragged, look.PlayerTools.IndexOf(target));
+        };
+        PlayerToolList.Drop += (_, e) => e.Handled = true;
     }
 
     private void UpdatePlayerPreviews()

@@ -120,7 +120,8 @@ public partial class MiniPlayerWindow : Window
         PopupFloat.Click += (_, _) => FloatRequested?.Invoke(this, EventArgs.Empty);
         LyricsSmaller.Click += (_, _) => LyricsSizeRequested?.Invoke(this, -1);
         LyricsBigger.Click += (_, _) => LyricsSizeRequested?.Invoke(this, 1);
-        PinnedMaximize.Click += (_, _) => ToggleFillScreen();
+        PinnedMaximize.Click += (_, _) => TogglePresentation(fullScreen: false);
+        PinnedFullScreen.Click += (_, _) => TogglePresentation(fullScreen: true);
         CaptionRestore.Click += (_, _) => ExitPresentation();
         CaptionClose.Click += (_, _) => _pinned?.TurnOff();
         CaptionMinimize.Click += (_, _) => WindowState = WindowState.Minimized;
@@ -128,12 +129,7 @@ public partial class MiniPlayerWindow : Window
         StateChanged += (_, _) =>
         {
             if (_presenting && WindowState == WindowState.Normal)
-                Dispatcher.BeginInvoke(() =>
-                {
-                    var margin = (int)Math.Round(ShadowRoom / 2 * WindowInterop.GetScale(_hwnd));
-                    WindowInterop.SetPosition(_hwnd, _presentMonitor.X - margin, _presentMonitor.Y - margin);
-                    WindowInterop.BringToTopmost(_hwnd);
-                });
+                Dispatcher.BeginInvoke(PlacePresentation);
         };
         PopupKeepOpen.Click += (_, _) =>
         {
@@ -506,48 +502,75 @@ public partial class MiniPlayerWindow : Window
     /// <summary>Floating, the player resizes further than as a popup.</summary>
     private static (double Min, double Max) PinnedWidthRange(bool cinema) => cinema ? (400, 4000) : (280, 4000);
 
-    // Full screen: the monitor (in pixels) and the room around the content.
+    // Maximized or full screen: the area it covers (in pixels) and the room around the content.
     private bool _presenting;
+    // Presenting: over the whole monitor (taskbar included) rather than its work area.
+    private bool _fullScreen;
     private PixelRect _presentMonitor;
     private Thickness _presentPadding;
     private DispatcherTimer? _presentEsc;
 
     /// <summary>
-    /// Floating: full screen on the monitor it is on, at that monitor's own resolution (taskbar
-    /// included), laid out like a listening room: the cover and the song on the left, large lyrics
-    /// on the right, over a backdrop made from the cover. Again (or Esc): back where it was.
+    /// Floating: maximized (the monitor's work area, the taskbar still there) or full screen (the
+    /// whole monitor at its own resolution), laid out like a listening room: the cover and the song
+    /// on the left, large lyrics on the right, over a backdrop made from the cover. The same button
+    /// again: back where it was; the other one: switch between the two. Full screen also leaves with Esc.
     /// </summary>
-    private void ToggleFillScreen()
+    private void TogglePresentation(bool fullScreen)
     {
         if (!IsPinned || _hwnd == IntPtr.Zero)
             return;
-        if (_beforeFill is not null)
+        if (_beforeFill is not null && _fullScreen == fullScreen)
         {
             ExitPresentation();
             return;
         }
-        var bounds = WindowInterop.GetBounds(_hwnd);
+        var bounds = _beforeFill?.Bounds ?? WindowInterop.GetBounds(_hwnd);
         if (WindowInterop.MonitorForRect(bounds) is not { } monitor)
             return;
-        _beforeFill = (bounds, _baseWidth, _lyricsBase);
-        _presentMonitor = monitor.Bounds;
+        _beforeFill ??= (bounds, _baseWidth, _lyricsBase);
+        _fullScreen = fullScreen;
+        _presentMonitor = fullScreen ? monitor.Bounds : monitor.WorkArea;
         _presenting = true;
         SetAppWindow(true);
         ApplyLayout();
         ApplyBackground();
         UpdateLayout();
-        var margin = (int)Math.Round(ShadowRoom / 2 * WindowInterop.GetScale(_hwnd));
-        WindowInterop.SetPosition(_hwnd, monitor.Bounds.X - margin, monitor.Bounds.Y - margin);
-        WindowInterop.BringToTopmost(_hwnd);
+        PlacePresentation();
         // The player never takes the focus, so Esc is watched rather than received.
         _presentEsc ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(80) };
         _presentEsc.Tick -= OnPresentEsc;
-        _presentEsc.Tick += OnPresentEsc;
-        NativeMethods.GetAsyncKeyState(NativeMethods.VK_ESCAPE);
-        _presentEsc.Start();
+        if (fullScreen)
+        {
+            _presentEsc.Tick += OnPresentEsc;
+            NativeMethods.GetAsyncKeyState(NativeMethods.VK_ESCAPE);
+            _presentEsc.Start();
+        }
+        else
+        {
+            _presentEsc.Stop();
+        }
         UpdatePinnedToolbar();
         ScrollToCurrent(animate: false);
         QueueLyrics(animate: false);
+    }
+
+    /// <summary>Over its area: full screen in front of everything; maximized, on top only when the floating player is set so.</summary>
+    private void PlacePresentation()
+    {
+        if (!_presenting || _hwnd == IntPtr.Zero)
+            return;
+        var margin = (int)Math.Round(ShadowRoom / 2 * WindowInterop.GetScale(_hwnd));
+        int x = _presentMonitor.X - margin, y = _presentMonitor.Y - margin;
+        if (_fullScreen || _pinned is { Topmost: true })
+        {
+            WindowInterop.SetPosition(_hwnd, x, y);
+            WindowInterop.BringToTopmost(_hwnd);
+        }
+        else
+        {
+            NativeMethods.SetWindowPos(_hwnd, IntPtr.Zero, x, y, 0, 0, NativeMethods.SWP_NOSIZE | NativeMethods.SWP_NOZORDER | NativeMethods.SWP_NOACTIVATE);
+        }
     }
 
     /// <summary>
@@ -1298,6 +1321,33 @@ public partial class MiniPlayerWindow : Window
         PinnedToolbar.IsHitTestVisible = shown > 0.5;
     }
 
+    /// <summary>The hover buttons in the given order (the popup's own two first); moved only when it changed.</summary>
+    private void OrderToolbar(IEnumerable<string> order)
+    {
+        var panel = (Panel)PinnedToolbar.Child;
+        var wanted = new List<UIElement> { PopupKeepOpen, PopupFloat };
+        foreach (var id in PlayerToolIds.Normalize(order))
+        {
+            wanted.AddRange(id switch
+            {
+                PlayerToolIds.Settings => [PinnedSettings],
+                PlayerToolIds.Size => [LyricsSmaller, LyricsBigger],
+                PlayerToolIds.Maximize => [PinnedMaximize],
+                PlayerToolIds.FullScreen => [PinnedFullScreen],
+                PlayerToolIds.Switch => [PinnedSwitch],
+                PlayerToolIds.ClickThrough => [PinnedClickThrough],
+                PlayerToolIds.Lock => [PinnedLock],
+                PlayerToolIds.Close => [PinnedClose],
+                _ => Array.Empty<UIElement>(),
+            });
+        }
+        if (panel.Children.Cast<UIElement>().SequenceEqual(wanted))
+            return;
+        panel.Children.Clear();
+        foreach (var element in wanted)
+            panel.Children.Add(element);
+    }
+
     /// <summary>The floating toolbar: shown, or (buttons on hover) only while the pointer is over the player.</summary>
     private void UpdatePinnedToolbar()
     {
@@ -1306,7 +1356,6 @@ public partial class MiniPlayerWindow : Window
         var available = IsPinned ? o is { ClickThrough: false } : !IsPreview;
         PinnedToolbar.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
         var popupOnly = IsPinned ? Visibility.Collapsed : Visibility.Visible;
-        var pinnedOnly = IsPinned ? Visibility.Visible : Visibility.Collapsed;
         PopupFloat.Visibility = PopupKeepOpen.Visibility = popupOnly;
         PopupKeepOpen.Content = _keepOpen ? "\uE840" : "\uE718";
         PopupKeepOpen.ToolTip = LocalizationService.Get(_keepOpen ? "KeepOpenOff" : "KeepOpen");
@@ -1314,28 +1363,33 @@ public partial class MiniPlayerWindow : Window
             PopupKeepOpen.SetResourceReference(ForegroundProperty, "AccentBrush");
         else
             PopupKeepOpen.ClearValue(ForegroundProperty);
-        PinnedClickThrough.Visibility = PinnedLock.Visibility = PinnedClose.Visibility = PinnedMaximize.Visibility = pinnedOnly;
-        PinnedMaximize.Content = _beforeFill is null ? "\uE740" : "\uE73F";
-        // The floating player's buttons the user chose to hide (the popup keeps all of its own).
-        var tools = IsPinned ? o?.Tools : null;
+        // The floating player's buttons the user chose to show, in the user's order (the popup keeps all of its own).
+        var tools = IsPinned ? o?.Tools ?? PlayerTools.Default : null;
         static Visibility Vis(bool on) => on ? Visibility.Visible : Visibility.Collapsed;
         PinnedSwitch.Visibility = Vis(tools?.Switch ?? true);
         LyricsSmaller.Visibility = LyricsBigger.Visibility = Vis(tools?.Size ?? true);
         PinnedSettings.Visibility = Vis(tools?.Settings ?? true);
-        if (tools is not null)
-        {
-            PinnedMaximize.Visibility = Vis(tools.Fill);
-            PinnedClickThrough.Visibility = Vis(tools.ClickThrough);
-            PinnedLock.Visibility = Vis(tools.Lock);
-            PinnedClose.Visibility = Vis(tools.Close);
-        }
+        PinnedMaximize.Visibility = Vis(tools?.Maximize ?? false);
+        PinnedFullScreen.Visibility = Vis(tools?.FullScreen ?? false);
+        PinnedClickThrough.Visibility = Vis(tools?.ClickThrough ?? false);
+        PinnedLock.Visibility = Vis(tools?.Lock ?? false);
+        PinnedClose.Visibility = Vis(tools?.Close ?? false);
+        // Maximized or full screen, the window buttons beside these restore and close.
         if (_presenting)
-            PinnedMaximize.Visibility = PinnedClose.Visibility = PinnedLock.Visibility = PinnedClickThrough.Visibility = Visibility.Collapsed;
+            PinnedClose.Visibility = PinnedLock.Visibility = PinnedClickThrough.Visibility = Visibility.Collapsed;
+        OrderToolbar(tools?.Order ?? PlayerToolIds.DefaultOrder);
         ApplyToolbarLook();
-        PinnedMaximize.ToolTip = LocalizationService.Get(_beforeFill is null ? "FillScreen" : "RestoreSize");
+        var maximized = _presenting && !_fullScreen;
+        var full = _presenting && _fullScreen;
+        PinnedMaximize.Content = maximized ? "\uE923" : "\uE922";
+        PinnedMaximize.ToolTip = LocalizationService.Get(maximized ? "RestoreSize" : "MaximizeWindow");
+        PinnedFullScreen.Content = full ? "\uE73F" : "\uE740";
+        PinnedFullScreen.ToolTip = LocalizationService.Get(full ? "ExitFullScreen" : "FullScreen");
         System.Windows.Automation.AutomationProperties.SetName(PinnedMaximize, (string)PinnedMaximize.ToolTip);
+        System.Windows.Automation.AutomationProperties.SetName(PinnedFullScreen, (string)PinnedFullScreen.ToolTip);
         System.Windows.Automation.AutomationProperties.SetName(PopupKeepOpen, (string)PopupKeepOpen.ToolTip);
-        PinnedSettings.ToolTip = LocalizationService.Get(IsPinned ? "MinimalSettings" : "MiniPlayerSettings");
+        PinnedSettings.ToolTip = LocalizationService.Get(IsPinned ? "FloatingPlayerSettings" : "MiniPlayerSettings");
+        System.Windows.Automation.AutomationProperties.SetName(PinnedSettings, (string)PinnedSettings.ToolTip);
         var target = available && (_pointerOver || _gripping || (IsPinned && o is { PlayerButtonsOnHover: false })) ? 1.0 : 0.0;
         if (IsPinned && o is { } p)
         {
@@ -1523,4 +1577,7 @@ public sealed record PinnedOptions(bool ClickThrough, bool Locked, bool Topmost,
     int Width, int LyricsHeight, double Zoom, Action<bool> SetClickThrough, Action<PixelRect, int, int, double> Saved, Action<bool> SetLocked, Action TurnOff, Action SwitchMode, PlayerTools? Tools = null);
 
 /// <summary>Which of the floating player's own buttons are shown.</summary>
-public sealed record PlayerTools(bool Switch, bool Size, bool Fill, bool Settings, bool ClickThrough, bool Lock, bool Close);
+public sealed record PlayerTools(bool Switch, bool Size, bool Maximize, bool FullScreen, bool Settings, bool ClickThrough, bool Lock, bool Close, IReadOnlyList<string> Order)
+{
+    public static readonly PlayerTools Default = new(true, true, true, true, true, true, true, true, PlayerToolIds.DefaultOrder);
+}

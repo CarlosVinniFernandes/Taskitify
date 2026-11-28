@@ -746,5 +746,16 @@
   "Field.Result": "Resultado",
   "Field.Light square (#hex)": "Casilla clara (#hex)",
   "Field.Dark square (#hex)": "Casilla oscura (#hex)",
-  "Field.Comment": "Comentario"
+  "Field.Comment": "Comentario",
+  "FloatingPlayerSettings": "Configuración del reproductor flotante",
+  "FloatingPlayerClose": "Cerrar el reproductor flotante",
+  "MaximizeWindow": "Maximizar (ocupar toda la ventana, con la barra de tareas)",
+  "FullScreen": "Pantalla completa",
+  "ExitFullScreen": "Salir de pantalla completa (Esc)",
+  "PlayerToolSize": "Tamaño de la letra (A- y A+)",
+  "PlayerToolsTitle": "Botones al pasar el ratón",
+  "PlayerToolsHint": "Los botones que aparecen sobre el reproductor flotante, de izquierda a derecha. Arrastra una fila (o usa las flechas) para cambiar el orden; desactiva los que no uses.",
+  "PlayerToolsReset": "Restaurar el orden predeterminado",
+  "MoveLeft": "Mover a la izquierda",
+  "MoveRight": "Mover a la derecha"
 }

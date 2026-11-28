@@ -746,5 +746,16 @@
   "Field.Result": "Ergebnis",
   "Field.Light square (#hex)": "Helles Feld (#hex)",
   "Field.Dark square (#hex)": "Dunkles Feld (#hex)",
-  "Field.Comment": "Kommentar"
+  "Field.Comment": "Kommentar",
+  "FloatingPlayerSettings": "Einstellungen des schwebenden Players",
+  "FloatingPlayerClose": "Schwebenden Player schließen",
+  "MaximizeWindow": "Maximieren (ganzes Fenster, Taskleiste sichtbar)",
+  "FullScreen": "Vollbild",
+  "ExitFullScreen": "Vollbild beenden (Esc)",
+  "PlayerToolSize": "Songtextgröße (A- und A+)",
+  "PlayerToolsTitle": "Schaltflächen beim Überfahren",
+  "PlayerToolsHint": "Die Schaltflächen über dem schwebenden Player, von links nach rechts. Ziehe eine Zeile (oder nutze die Pfeile), um die Reihenfolge zu ändern; schalte aus, was du nicht brauchst.",
+  "PlayerToolsReset": "Standardreihenfolge wiederherstellen",
+  "MoveLeft": "Nach links",
+  "MoveRight": "Nach rechts"
 }

@@ -261,10 +261,12 @@
                     ToolTip="{DynamicResource Loc.LyricsBigger}" AutomationProperties.Name="{DynamicResource Loc.LyricsBigger}">
                 <TextBlock FontFamily="{StaticResource UiFont}" FontWeight="SemiBold" VerticalAlignment="Center"><Run Text="A" FontSize="16" /><Run Text="+" FontSize="11" /></TextBlock>
             </Button>
-            <Button x:Name="PinnedMaximize" Style="{StaticResource PinnedTool}" Content="&#xE740;"
-                    ToolTip="{DynamicResource Loc.FillScreen}" AutomationProperties.Name="{DynamicResource Loc.FillScreen}" />
+            <Button x:Name="PinnedMaximize" Style="{StaticResource PinnedTool}" Content="&#xE922;"
+                    ToolTip="{DynamicResource Loc.MaximizeWindow}" AutomationProperties.Name="{DynamicResource Loc.MaximizeWindow}" />
+            <Button x:Name="PinnedFullScreen" Style="{StaticResource PinnedTool}" Content="&#xE740;"
+                    ToolTip="{DynamicResource Loc.FullScreen}" AutomationProperties.Name="{DynamicResource Loc.FullScreen}" />
             <Button x:Name="PinnedSettings" Style="{StaticResource PinnedTool}" Content="&#xE713;"
-                    ToolTip="{DynamicResource Loc.MinimalSettings}" AutomationProperties.Name="{DynamicResource Loc.MinimalSettings}" />
+                    ToolTip="{DynamicResource Loc.MiniPlayerSettings}" AutomationProperties.Name="{DynamicResource Loc.MiniPlayerSettings}" />
             <Button x:Name="PinnedClickThrough" Style="{StaticResource PinnedTool}"
                     ToolTip="{DynamicResource Loc.MinimalClickThroughTip}" AutomationProperties.Name="{DynamicResource Loc.MinimalClickThroughTip}">
                 <Grid Width="16" Height="16">
@@ -275,7 +277,7 @@
             <Button x:Name="PinnedLock" Style="{StaticResource PinnedTool}" Content="&#xE785;"
                     ToolTip="{DynamicResource Loc.MinimalLock}" AutomationProperties.Name="{DynamicResource Loc.MinimalLock}" />
             <Button x:Name="PinnedClose" Style="{StaticResource PinnedTool}" Content="&#xE711;"
-                    ToolTip="{DynamicResource Loc.MinimalClose}" AutomationProperties.Name="{DynamicResource Loc.MinimalClose}" />
+                    ToolTip="{DynamicResource Loc.FloatingPlayerClose}" AutomationProperties.Name="{DynamicResource Loc.FloatingPlayerClose}" />
             </StackPanel>
         </Border>
         <!-- Full screen: the window buttons of any app (minimize, back to a window, close). -->
@@ -313,7 +315,7 @@
             <Button x:Name="CaptionRestore" Style="{StaticResource Caption}" Content="&#xE923;"
                     ToolTip="{DynamicResource Loc.RestoreSize}" AutomationProperties.Name="{DynamicResource Loc.RestoreSize}" />
             <Button x:Name="CaptionClose" Content="&#xE8BB;"
-                    ToolTip="{DynamicResource Loc.MinimalClose}" AutomationProperties.Name="{DynamicResource Loc.MinimalClose}">
+                    ToolTip="{DynamicResource Loc.FloatingPlayerClose}" AutomationProperties.Name="{DynamicResource Loc.FloatingPlayerClose}">
                 <Button.Style>
                     <Style TargetType="Button" BasedOn="{StaticResource Caption}">
                         <Setter Property="Template">

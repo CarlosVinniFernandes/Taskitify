@@ -746,5 +746,16 @@
   "Field.Result": "Resultado",
   "Field.Light square (#hex)": "Casa clara (#hex)",
   "Field.Dark square (#hex)": "Casa escura (#hex)",
-  "Field.Comment": "Comentário"
+  "Field.Comment": "Comentário",
+  "FloatingPlayerSettings": "Configurações do Player Flutuante",
+  "FloatingPlayerClose": "Fechar o Player Flutuante",
+  "MaximizeWindow": "Maximizar (ocupar a janela inteira, com a barra de tarefas)",
+  "FullScreen": "Tela cheia",
+  "ExitFullScreen": "Sair da tela cheia (Esc)",
+  "PlayerToolSize": "Tamanho da letra (A- e A+)",
+  "PlayerToolsTitle": "Botões do hover",
+  "PlayerToolsHint": "Os botões que aparecem sobre o Player Flutuante, da esquerda para a direita. Arraste uma linha (ou use as setas) para mudar a ordem; desligue os que você não usa.",
+  "PlayerToolsReset": "Restaurar a ordem padrão",
+  "MoveLeft": "Mover para a esquerda",
+  "MoveRight": "Mover para a direita"
 }

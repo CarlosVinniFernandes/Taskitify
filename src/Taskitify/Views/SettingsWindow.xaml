@@ -872,35 +872,68 @@
                                     <ContentControl Template="{StaticResource Legend}" />
                                 </StackPanel>
                             </Border>
-                            <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.MinimalButtons}" Margin="0,18,0,8" />
-                            <Border Style="{StaticResource Stage}">
-                                <Border.Resources>
-                                    <ResourceDictionary Source="/Taskitify;component/Resources/PickerStyles.xaml" />
-                                </Border.Resources>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                    <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding MinimalLook.PlayerShowSwitchButton}"
-                                                  ToolTip="{DynamicResource Loc.SwitchToMinimal}" AutomationProperties.Name="{DynamicResource Loc.SwitchToMinimal}">&#xE8D6;</ToggleButton>
-                                    <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding MinimalLook.PlayerShowSizeButtons}"
-                                                  ToolTip="{DynamicResource Loc.LyricsBigger}" AutomationProperties.Name="{DynamicResource Loc.LyricsBigger}">
-                                        <TextBlock FontFamily="{StaticResource UiFont}" FontWeight="SemiBold" VerticalAlignment="Center"><Run Text="A" FontSize="10" /><Run Text="A" FontSize="15" /></TextBlock>
-                                    </ToggleButton>
-                                    <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding MinimalLook.PlayerShowFillButton}"
-                                                  ToolTip="{DynamicResource Loc.FillScreen}" AutomationProperties.Name="{DynamicResource Loc.FillScreen}">&#xE740;</ToggleButton>
-                                    <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding MinimalLook.PlayerShowSettingsButton}"
-                                                  ToolTip="{DynamicResource Loc.MinimalSettings}" AutomationProperties.Name="{DynamicResource Loc.MinimalSettings}">&#xE713;</ToggleButton>
-                                    <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding MinimalLook.PlayerShowClickThroughButton}"
-                                                  ToolTip="{DynamicResource Loc.MinimalClickThroughTip}" AutomationProperties.Name="{DynamicResource Loc.MinimalClickThroughTip}">
-                                        <Grid Width="16" Height="16">
-                                            <Path Data="M4,2 L4,12 L6.5,9.6 L8.6,13.8 L10.2,13 L8.2,8.9 L11.6,8.9 Z" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}" />
-                                            <Path Data="M2.5,14 L13.5,2.5" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                                        </Grid>
-                                    </ToggleButton>
-                                    <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding MinimalLook.PlayerShowLockButton}"
-                                                  ToolTip="{DynamicResource Loc.MinimalLock}" AutomationProperties.Name="{DynamicResource Loc.MinimalLock}">&#xE785;</ToggleButton>
-                                    <ToggleButton Style="{StaticResource PickGlyph}" IsChecked="{Binding MinimalLook.PlayerShowCloseButton}"
-                                                  ToolTip="{DynamicResource Loc.MinimalClose}" AutomationProperties.Name="{DynamicResource Loc.MinimalClose}">&#xE711;</ToggleButton>
-                                </StackPanel>
-                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- The hover buttons: drag a row (or use its arrows) to reorder, its switch to show or hide. -->
+                    <TextBlock Style="{StaticResource GroupHeader}" Text="{DynamicResource Loc.PlayerToolsTitle}" />
+                    <TextBlock Style="{StaticResource GroupHint}" Text="{DynamicResource Loc.PlayerToolsHint}" />
+                    <Border Style="{StaticResource Group}">
+                        <StackPanel>
+                            <ItemsControl x:Name="PlayerToolList" ItemsSource="{Binding MinimalLook.PlayerTools}" AllowDrop="True"
+                                          AutomationProperties.Name="{DynamicResource Loc.PlayerToolsTitle}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border x:Name="ToolRow" Padding="10,8,18,8" Background="Transparent" Cursor="SizeAll"
+                                                BorderBrush="{DynamicResource SubtleFillHoverBrush}" BorderThickness="0,0,0,1">
+                                            <DockPanel>
+                                                <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}" IsChecked="{Binding IsShown}" Cursor="Hand"
+                                                          VerticalAlignment="Center" AutomationProperties.Name="{Binding Label}" />
+                                                <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Width="32" Height="32" FontSize="12" Margin="0,0,4,0"
+                                                        Content="&#xE70D;" Command="{Binding DataContext.MinimalLook.MoveToolDownCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}" ToolTip="{DynamicResource Loc.MoveRight}" AutomationProperties.Name="{DynamicResource Loc.MoveRight}" />
+                                                <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Width="32" Height="32" FontSize="12" Margin="0,0,2,0"
+                                                        Content="&#xE70E;" Command="{Binding DataContext.MinimalLook.MoveToolUpCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                        CommandParameter="{Binding}" ToolTip="{DynamicResource Loc.MoveLeft}" AutomationProperties.Name="{DynamicResource Loc.MoveLeft}" />
+                                                <!-- The grip, then the button as it looks on the player. -->
+                                                <TextBlock DockPanel.Dock="Left" Text="&#xE784;" FontFamily="{StaticResource IconFont}" FontSize="14"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                                                <Border DockPanel.Dock="Left" Width="34" Height="30" CornerRadius="8" Background="{DynamicResource SubtleFillBrush}" Margin="0,0,14,0">
+                                                    <Grid>
+                                                        <TextBlock x:Name="ToolGlyph" Text="{Binding Glyph}" FontFamily="{StaticResource IconFont}" FontSize="13"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                        <TextBlock x:Name="ToolSize" Visibility="Collapsed" FontFamily="{StaticResource UiFont}" FontWeight="SemiBold"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"><Run Text="A" FontSize="10" /><Run Text="A" FontSize="15" /></TextBlock>
+                                                        <Grid x:Name="ToolClickThrough" Width="16" Height="16" Visibility="Collapsed">
+                                                            <Path Data="M4,2 L4,12 L6.5,9.6 L8.6,13.8 L10.2,13 L8.2,8.9 L11.6,8.9 Z" Fill="{DynamicResource TextPrimaryBrush}" />
+                                                            <Path Data="M2.5,14 L13.5,2.5" Stroke="{DynamicResource TextPrimaryBrush}" StrokeThickness="1.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                                        </Grid>
+                                                    </Grid>
+                                                </Border>
+                                                <TextBlock Style="{StaticResource SettingLabel}" Text="{Binding Label}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                            </DockPanel>
+                                        </Border>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding Id}" Value="Size">
+                                                <Setter TargetName="ToolSize" Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Id}" Value="ClickThrough">
+                                                <Setter TargetName="ToolClickThrough" Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsShown}" Value="False">
+                                                <Setter TargetName="ToolGlyph" Property="Opacity" Value="0.4" />
+                                                <Setter TargetName="ToolSize" Property="Opacity" Value="0.4" />
+                                                <Setter TargetName="ToolClickThrough" Property="Opacity" Value="0.4" />
+                                            </DataTrigger>
+                                            <Trigger SourceName="ToolRow" Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="ToolRow" Property="Background" Value="{DynamicResource SubtleFillBrush}" />
+                                            </Trigger>
+                                        </DataTemplate.Triggers>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Button Style="{StaticResource FlatButton}" HorizontalAlignment="Left" Margin="18,12,18,14" Padding="12,6"
+                                    Content="{DynamicResource Loc.PlayerToolsReset}" Command="{Binding MinimalLook.ResetToolOrderCommand}" />
                         </StackPanel>
                     </Border>
 

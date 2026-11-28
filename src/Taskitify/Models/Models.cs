@@ -851,6 +851,10 @@ public sealed class MinimalModeSettings
     public bool PlayerShowClickThroughButton { get; set; } = true;
     public bool PlayerShowLockButton { get; set; } = true;
     public bool PlayerShowCloseButton { get; set; } = true;
+    public bool PlayerShowFullScreenButton { get; set; } = true;
+
+    /// <summary>The floating player's buttons, left to right (see <see cref="PlayerToolIds"/>); unknown ids are dropped, missing ones added.</summary>
+    public List<string> PlayerToolOrder { get; set; } = [.. PlayerToolIds.DefaultOrder];
 
     public int X { get; set; }
 
@@ -897,4 +901,38 @@ public sealed class MinimalModeSettings
     };
 
     public static double ClampSpacing(double spacing) => Math.Clamp(Math.Round(spacing * 10) / 10, 0.6, 1.8);
+}
+
+/// <summary>The floating player's hover buttons, by id, in the order the settings keep them.</summary>
+public static class PlayerToolIds
+{
+    public const string Settings = "Settings";
+    public const string Size = "Size";
+    public const string Maximize = "Maximize";
+    public const string FullScreen = "FullScreen";
+    public const string Switch = "Switch";
+    public const string ClickThrough = "ClickThrough";
+    public const string Lock = "Lock";
+    public const string Close = "Close";
+
+    /// <summary>Most used first, the window's own buttons last with close at the end, like any window.</summary>
+    public static readonly IReadOnlyList<string> DefaultOrder = [Settings, Size, Maximize, FullScreen, Switch, ClickThrough, Lock, Close];
+
+    /// <summary>A saved order made whole: known ids once each, in its order, then any missing ones in the default order.</summary>
+    public static List<string> Normalize(IEnumerable<string>? order)
+    {
+        var result = new List<string>();
+        foreach (var id in order ?? [])
+        {
+            var known = DefaultOrder.FirstOrDefault(d => string.Equals(d, id, StringComparison.OrdinalIgnoreCase));
+            if (known is not null && !result.Contains(known))
+                result.Add(known);
+        }
+        foreach (var id in DefaultOrder)
+        {
+            if (!result.Contains(id))
+                result.Insert(Math.Min(DefaultOrder.ToList().IndexOf(id), result.Count), id);
+        }
+        return result;
+    }
 }

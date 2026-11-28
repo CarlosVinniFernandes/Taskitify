@@ -746,5 +746,16 @@
   "Field.Result": "Result",
   "Field.Light square (#hex)": "Light square (#hex)",
   "Field.Dark square (#hex)": "Dark square (#hex)",
-  "Field.Comment": "Comment"
+  "Field.Comment": "Comment",
+  "FloatingPlayerSettings": "Floating player settings",
+  "FloatingPlayerClose": "Close the floating player",
+  "MaximizeWindow": "Maximize (fill the window area, taskbar visible)",
+  "FullScreen": "Full screen",
+  "ExitFullScreen": "Exit full screen (Esc)",
+  "PlayerToolSize": "Lyrics size (A- and A+)",
+  "PlayerToolsTitle": "Hover buttons",
+  "PlayerToolsHint": "The buttons that appear over the floating player, left to right. Drag a row (or use the arrows) to change the order; switch off the ones you do not use.",
+  "PlayerToolsReset": "Restore the default order",
+  "MoveLeft": "Move left",
+  "MoveRight": "Move right"
 }

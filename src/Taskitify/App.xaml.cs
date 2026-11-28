@@ -692,8 +692,8 @@ public partial class App : Application
                     locked => _settings.Update(s => s.Minimal.Locked = locked),
                     () => _settings.Update(s => s.Minimal.Enabled = false),
                     () => _settings.Update(s => (s.Minimal.Enabled, s.Minimal.NotThatMinimal) = (true, false)),
-                    new PlayerTools(m.PlayerShowSwitchButton, m.PlayerShowSizeButtons, m.PlayerShowFillButton, m.PlayerShowSettingsButton,
-                        m.PlayerShowClickThroughButton, m.PlayerShowLockButton, m.PlayerShowCloseButton)));
+                    new PlayerTools(m.PlayerShowSwitchButton, m.PlayerShowSizeButtons, m.PlayerShowFillButton, m.PlayerShowFullScreenButton, m.PlayerShowSettingsButton,
+                        m.PlayerShowClickThroughButton, m.PlayerShowLockButton, m.PlayerShowCloseButton, Models.PlayerToolIds.Normalize(m.PlayerToolOrder))));
             return;
         }
         _miniPlayer?.Unpin();
